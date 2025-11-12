@@ -1,7 +1,8 @@
-import Banner from './components/Banner';
+import HeroBanner from './components/HeroBanner';
+import CategorySidebar from './components/CategorySidebar';
+import PromoCarousel from './components/PromoCarousel';
 import CategorySection from './components/CategorySection';
 import {
-  bannerSlides,
   featuredProducts,
   desktopProducts,
   monitorProducts,
@@ -13,10 +14,30 @@ import {
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      {/* Hero Banner */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section with Sidebar */}
       <div className="container mx-auto px-4 pt-6 pb-8">
-        <Banner slides={bannerSlides} />
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Sidebar - Categories */}
+          <div className="hidden lg:block">
+            <CategorySidebar />
+          </div>
+
+          {/* Main Hero Banner */}
+          <div className="flex-1">
+            <HeroBanner />
+          </div>
+        </div>
+      </div>
+
+      {/* Promo Carousel */}
+      <div className="container mx-auto px-4 pb-8">
+        <PromoCarousel />
+      </div>
+
+      {/* Mobile Category Menu */}
+      <div className="lg:hidden container mx-auto px-4 pb-6">
+        <CategorySidebar />
       </div>
 
       {/* Main Content */}

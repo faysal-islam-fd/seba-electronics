@@ -26,3 +26,4 @@ export const getBannerPlaceholder = (title: string): string => {
   return `https://via.placeholder.com/1200x450/2563eb/ffffff?text=${encodeURIComponent(title)}`;
 };
 
+
