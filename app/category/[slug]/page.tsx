@@ -14,9 +14,21 @@ import {
 } from '@/app/data/dummyData';
 
 // Map category slugs to their data
+type ProductType = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  originalPrice?: number;
+  discount?: number;
+  badge?: string;
+  rating?: number;
+  inStock?: boolean;
+};
+
 const categoryData: Record<string, {
   name: string;
-  products: typeof featuredProducts;
+  products: ProductType[];
   filters: Array<{ title: string; options: string[] }>;
 }> = {
   'smartphones': {
