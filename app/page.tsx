@@ -2,6 +2,7 @@ import HeroBanner from './components/HeroBanner';
 import CategorySidebar from './components/CategorySidebar';
 import PromoCarousel from './components/PromoCarousel';
 import CategorySection from './components/CategorySection';
+import CategoryCardSection from './components/CategoryCardSection';
 import {
   featuredProducts,
   desktopProducts,
@@ -38,6 +39,85 @@ export default function Home() {
       {/* Mobile Category Menu */}
       <div className="lg:hidden container mx-auto px-4 pb-6">
         <CategorySidebar />
+      </div>
+
+      {/* Category Card Sections */}
+      <div className="container mx-auto px-4 py-8">
+        {/* Destination for Authentic Products with Warranty */}
+        <CategoryCardSection
+          title="Destination for Authentic Products with Warranty"
+          viewAllLink="/categories"
+          categories={[
+            {
+              name: 'Home Appliances',
+              image: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=400&h=300&fit=crop',
+              description: 'Official Warranty | Easy EMI',
+              href: '/category/home-appliances',
+            },
+            {
+              name: '5G Smartphones',
+              image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop',
+              description: 'Official Phones | Best Prices',
+              href: '/category/smartphones',
+            },
+            {
+              name: 'Gadgets',
+              image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
+              description: 'Fast Delivery | Official Warranty',
+              href: '/category/gadgets',
+            },
+            {
+              name: 'Networking & Accessories',
+              image: 'https://images.unsplash.com/photo-1614624532983-4ce03382d63d?w=400&h=300&fit=crop',
+              description: 'Official Warranty | Fast Delivery',
+              href: '/category/networking',
+            },
+            {
+              name: 'Kitchen Appliances',
+              image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&h=300&fit=crop',
+              description: 'Easy EMI | Same-day Delivery',
+              href: '/category/kitchen-appliances',
+            },
+          ]}
+        />
+
+        {/* Home Makeover Deals */}
+        <CategoryCardSection
+          title="Home Makeover Deals"
+          viewAllLink="/category/home-makeover"
+          categories={[
+            {
+              name: 'Washing Machines',
+              image: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400&h=300&fit=crop',
+              description: 'Top Brands | Official Warranty',
+              href: '/category/washing-machines',
+            },
+            {
+              name: 'Refrigerators',
+              image: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400&h=300&fit=crop',
+              description: 'Easy EMI | Fast Delivery',
+              href: '/category/refrigerators',
+            },
+            {
+              name: 'Air Fryer',
+              image: 'https://images.unsplash.com/photo-1608039829570-587539b5532e?w=400&h=300&fit=crop',
+              description: 'Official Warranty | Best Brands',
+              href: '/category/air-fryer',
+            },
+            {
+              name: 'Kitchen Appliances',
+              image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&h=300&fit=crop',
+              description: 'Best Picks | Same-Day Delivery',
+              href: '/category/kitchen-appliances',
+            },
+            {
+              name: 'Television',
+              image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop',
+              description: 'Official Warranty | Top Brands',
+              href: '/category/television',
+            },
+          ]}
+        />
       </div>
 
       {/* Main Content */}

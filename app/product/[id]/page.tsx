@@ -3,7 +3,6 @@ import ProductGallery from '@/app/components/ProductGallery';
 import ProductInfo from '@/app/components/ProductInfo';
 import ProductTabs from '@/app/components/ProductTabs';
 import RelatedProducts from '@/app/components/RelatedProducts';
-import CategorySidebar from '@/app/components/CategorySidebar';
 import Breadcrumb from '@/app/components/Breadcrumb';
 
 // Mock product data - in real app, this would come from API/database
@@ -70,13 +69,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - Categories */}
-          <div className="hidden lg:block">
-            <CategorySidebar />
-          </div>
-
           {/* Main Content */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-6 max-w-7xl mx-auto w-full">
             {/* Breadcrumb */}
             <Breadcrumb 
               items={[

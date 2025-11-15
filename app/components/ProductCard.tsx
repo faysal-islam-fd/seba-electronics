@@ -1,6 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiShoppingCart, FiHeart, FiEye } from 'react-icons/fi';
+import { useCart } from '@/app/context/CartContext';
+import { useState } from 'react';
 
 interface ProductCardProps {
   id: string;
@@ -25,6 +29,31 @@ export default function ProductCard({
   rating = 0,
   inStock = true
 }: ProductCardProps) {
+  const { addToCart } = useCart();
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!inStock) return;
+    
+    setIsAdding(true);
+    addToCart({
+      id,
+      name,
+      image,
+      seller: 'Official Store',
+      price,
+      originalPrice,
+      discount,
+      quantity: 1,
+    });
+    
+    setTimeout(() => {
+      setIsAdding(false);
+    }, 500);
+  };
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200 group relative h-full flex flex-col">
       {/* Badges */}
@@ -47,7 +76,7 @@ export default function ProductCard({
       </button>
 
       {/* Product Image */}
-      <Link href={`/product/${id}`}>
+      <Link href={`/product/${id}`} className="block">
         <div className="relative w-full h-56 bg-gray-50 flex items-center justify-center p-4">
           <Image
             src={image}
@@ -102,11 +131,12 @@ export default function ProductCard({
 
         {/* Add to Cart Button */}
         <button
-          disabled={!inStock}
+          onClick={handleAddToCart}
+          disabled={!inStock || isAdding}
           className="w-full mt-auto bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium text-sm"
         >
           <FiShoppingCart size={16} />
-          {inStock ? 'Add to Cart' : 'Out of Stock'}
+          {isAdding ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}
         </button>
       </div>
     </div>

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FiStar, FiHeart, FiShare2, FiShoppingCart, FiCheck, FiTruck, FiShield, FiRefreshCw } from 'react-icons/fi';
+import { useCart } from '@/app/context/CartContext';
 
 interface Product {
   id: string;
@@ -16,6 +18,7 @@ interface Product {
   inStock: boolean;
   stockCount: number;
   sku: string;
+  images?: string[];
 }
 
 interface ProductInfoProps {
@@ -25,6 +28,9 @@ interface ProductInfoProps {
 export default function ProductInfo({ product }: ProductInfoProps) {
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const { addToCart } = useCart();
+  const router = useRouter();
 
   const increaseQuantity = () => {
     if (quantity < product.stockCount) {
@@ -36,6 +42,32 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     if (quantity > 1) {
       setQuantity(quantity - 1);
     }
+  };
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    addToCart({
+      id: product.id,
+      name: product.name,
+      image: product.images?.[0] || '/products/placeholder.jpg',
+      seller: `${product.brand} Official`,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      discount: product.discount,
+      quantity: quantity,
+    });
+    
+    // Show feedback
+    setTimeout(() => {
+      setIsAdding(false);
+    }, 500);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    setTimeout(() => {
+      router.push('/cart');
+    }, 500);
   };
 
   return (
@@ -147,11 +179,12 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
         <button
-          disabled={!product.inStock}
+          onClick={handleAddToCart}
+          disabled={!product.inStock || isAdding}
           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 text-lg"
         >
           <FiShoppingCart size={22} />
-          Add to Cart
+          {isAdding ? 'Adding...' : 'Add to Cart'}
         </button>
         <button
           onClick={() => setIsWishlisted(!isWishlisted)}
@@ -168,7 +201,10 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
       {/* Buy Now Button */}
       {product.inStock && (
-        <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg">
+        <button
+          onClick={handleBuyNow}
+          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg"
+        >
           Buy Now
         </button>
       )}
