@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight } from 'react-icons/fi';
+import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown } from 'react-icons/fi';
 import { useState } from 'react';
 import { useCart } from '@/app/context/CartContext';
+import { useAuth } from '@/app/context/AuthContext';
 
 const categories = [
   { 
@@ -86,16 +87,19 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const { getCartCount } = useCart();
+  const { user, isLoggedIn, logout } = useAuth();
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-[9998]">
       {/* Main Header */}
       <div className="bg-blue-600">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-4">
+        <div className="container  mx-auto px-4 py-4">
+          <div className="flex  items-center justify-between gap-4">
             {/* Categories Hamburger Menu - Desktop (with hover) */}
-            <div className="relative hidden lg:block">
+           <div className="flex items-center gap-4 ">
+           <div className="relative hidden lg:block">
               <div
                 onMouseEnter={() => setCategoriesOpen(true)}
                 onMouseLeave={() => {
@@ -108,7 +112,7 @@ export default function Header() {
                   className="flex items-center gap-2   text-white px-3 py-2.5 rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
                   aria-label="Categories"
                 >
-                  <FiMenu size={24} />
+                  <FiMenu size={25} />
                 </button>
 
                 {/* Categories Dropdown - Overlays existing sidebar */}
@@ -213,6 +217,7 @@ export default function Header() {
                 Sheba
               </div>
             </Link>
+           </div>
 
             {/* Mobile Menu Icon */}
             <button
@@ -244,14 +249,67 @@ export default function Header() {
             </div>
 
             {/* User Actions */}
-            <div className="flex items-center gap-3">
-              {/* Login Button */}
-              <Link 
-                href="/login" 
-                className="hidden md:block border-2 border-white text-white hover:bg-white hover:text-blue-600 transition-all px-6 py-2 rounded-lg font-semibold"
-              >
-                Login
-              </Link>
+            <div className="flex items-center gap-4">
+              {/* My Account / Login */}
+              {isLoggedIn ? (
+                <div className="relative hidden md:block">
+                  <button
+                    onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                    onBlur={() => setTimeout(() => setAccountDropdownOpen(false), 200)}
+                    className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
+                  >
+                    <div className="bg-white rounded-full p-1.5">
+                      <FiUser className="text-blue-600" size={20} />
+                    </div>
+                    <span className="font-medium">My Account</span>
+                    <FiChevronDown size={16} />
+                  </button>
+
+                  {/* Account Dropdown */}
+                  {accountDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[10001]">
+                      <Link
+                        href="/account"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={() => setAccountDropdownOpen(false)}
+                      >
+                        My Account
+                      </Link>
+                      <Link
+                        href="/account/orders"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={() => setAccountDropdownOpen(false)}
+                      >
+                        My Orders
+                      </Link>
+                      <Link
+                        href="/account/reviews"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={() => setAccountDropdownOpen(false)}
+                      >
+                        My Reviews
+                      </Link>
+                      <div className="border-t border-gray-200 my-1"></div>
+                      <button
+                        onClick={() => {
+                          setAccountDropdownOpen(false);
+                          logout();
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link 
+                  href="/login" 
+                  className="hidden md:block border-2 border-white text-white hover:bg-white hover:text-blue-600 transition-all px-6 py-2 rounded-lg font-semibold"
+                >
+                  Login
+                </Link>
+              )}
 
               {/* Cart */}
               <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
