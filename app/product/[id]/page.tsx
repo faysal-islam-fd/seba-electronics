@@ -88,31 +88,31 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb 
-          items={[
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Breadcrumb */}
+            <Breadcrumb 
+              items={[
             { label: 'Home', href: '/' },
-            { label: 'Products', href: '/products' },
-            { label: product.brand, href: `/brand/${product.brand.toLowerCase()}` },
-            { label: product.name },
-          ]}
-        />
+                { label: 'Products', href: '/products' },
+                { label: product.brand, href: `/brand/${product.brand.toLowerCase()}` },
+                { label: product.name },
+              ]}
+            />
 
         {/* Product detail presentation */}
         <ProductDetailContent product={product} />
 
-        {/* Product Details Tabs */}
-        <ProductTabs 
-          description={product.description}
-          specifications={product.specifications}
-          features={product.features}
-          warranty={product.warranty}
-          shipping={product.shipping}
-        />
+            {/* Product Details Tabs */}
+            <ProductTabs 
+              description={product.description}
+              specifications={product.specifications}
+              features={product.features}
+              warranty={product.warranty}
+              shipping={product.shipping}
+            />
 
-        {/* Related Products */}
-        <RelatedProducts currentProductId={product.id} />
+            {/* Related Products */}
+            <RelatedProducts currentProductId={product.id} />
       </div>
     </div>
   );

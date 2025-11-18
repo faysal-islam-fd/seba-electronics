@@ -2,7 +2,6 @@
 
 import { useState, useRef, MouseEvent } from 'react';
 import Image from 'next/image';
-import { FiHeart } from 'react-icons/fi';
 
 interface ProductGalleryProps {
   images: string[];
@@ -34,10 +33,10 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   };
 
   return (
-    <div className="flex gap-4">
-      {/* Thumbnail Gallery - Left Side Vertical */}
+    <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+      {/* Thumbnail Gallery - Horizontal on mobile, Vertical on desktop */}
       {images.length > 1 && (
-        <div className="flex flex-col gap-3 w-20 md:w-24">
+        <div className="flex sm:flex-col gap-2 sm:gap-3 w-full sm:w-20 md:w-24 lg:w-28 flex-shrink-0 overflow-x-auto sm:overflow-x-visible sm:overflow-y-auto">
           {images.map((image, index) => (
             <button
               key={index}
@@ -47,12 +46,13 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   ? 'border-blue-600 ring-2 ring-blue-200'
                   : 'border-gray-200 hover:border-blue-400'
               }`}
+              style={{ minWidth: '60px' }}
             >
               <Image
                 src={image}
                 alt={`${productName} - Thumbnail ${index + 1}`}
                 fill
-                className="object-contain p-2"
+                className="object-contain p-1.5 sm:p-2"
                 unoptimized
               />
             </button>
@@ -61,17 +61,12 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
       )}
 
       {/* Main Image Container */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-w-0">
         <div className="relative bg-white rounded-xl border border-gray-200">
-          {/* Wishlist Button */}
-          <button className="absolute top-4 right-4 z-10 bg-white rounded-full p-2.5 shadow-md hover:bg-red-50 transition-colors group">
-            <FiHeart className="text-gray-600 group-hover:text-red-500" size={20} />
-          </button>
-
-          {/* Main Image with Zoom */}
+          {/* Main Image with Zoom - Only on desktop */}
           <div
             ref={imageRef}
-            className="relative aspect-square cursor-crosshair overflow-hidden rounded-xl bg-white"
+            className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] cursor-crosshair overflow-hidden rounded-xl bg-white"
             onMouseMove={handleMouseMove}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -80,15 +75,14 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               src={images[selectedImage]}
               alt={`${productName} - Image ${selectedImage + 1}`}
               fill
-              className="object-contain"
+              className="object-contain p-2 sm:p-4"
               priority
               unoptimized
             />
 
-
-            {/* Zoom Overlay - Blue magnifying box */}
+            {/* Zoom Overlay - Blue magnifying box - Only on desktop */}
             {showZoom && (
-              <div className="absolute inset-0 pointer-events-none">
+              <div className="hidden md:block absolute inset-0 pointer-events-none">
                 <div
                   className="absolute w-32 h-32 border-2 border-blue-500 bg-white/20 backdrop-blur-[2px]"
                   style={{
@@ -100,14 +94,9 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               </div>
             )}
           </div>
-
-          {/* Image Counter Badge */}
-          <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium z-10">
-            {selectedImage + 1} / {images.length}
-          </div>
         </div>
 
-        {/* Zoomed Image Preview - Appears on hover OUTSIDE the main container */}
+        {/* Zoomed Image Preview - Appears on hover OUTSIDE the main container - Only on XL screens */}
         {showZoom && (
           <div className="hidden xl:block absolute left-full top-0 ml-4 w-[400px] h-[400px] bg-white border-2 border-gray-300 rounded-lg shadow-xl overflow-hidden z-[100]">
             <div
@@ -122,23 +111,6 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           </div>
         )}
 
-        {/* Image Navigation Dots */}
-        {images.length > 1 && (
-          <div className="flex justify-center gap-2 mt-4">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedImage(index)}
-                className={`h-2 rounded-full transition-all ${
-                  index === selectedImage
-                    ? 'bg-blue-600 w-8'
-                    : 'bg-gray-300 w-2 hover:bg-gray-400'
-                }`}
-                aria-label={`Go to image ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

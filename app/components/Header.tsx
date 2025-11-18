@@ -119,98 +119,94 @@ export default function Header() {
                 {/* Categories Dropdown - Overlays existing sidebar */}
                 {categoriesOpen && (
                   <>
-                    {/* Extended hover zone - invisible area connecting button to dropdown */}
-                    <div 
-                      className="fixed bg-transparent z-[9998]"
-                      style={{
-                        left: '0',
-                        top: '56px',
-                        width: '280px',
-                        height: '800px'
-                      }}
+                    {/* Invisible bridge to fill the gap between button and menu */}
+                    <div
+                      className="absolute  left-0 top-full w-64 h-6 z-[10001] "
+                      onMouseEnter={() => setCategoriesOpen(true)}
                     />
-                    
-                    <div 
-                      className="fixed w-64 bg-white rounded-lg shadow-2xl border border-gray-200 z-[9999] overflow-hidden transition-all duration-200"
-                      style={{
-                        left: 'max(1rem, calc((100vw - 1280px) / 2 + 1rem))',
-                        top: '72px'
+                    <div
+                      className="absolute left-0 top-full mt-3"
+                      onMouseEnter={() => setCategoriesOpen(true)}
+                      onMouseLeave={() => {
+                        setCategoriesOpen(false);
+                        setHoveredCategory(null);
                       }}
                     >
-                    <div className="divide-y divide-gray-100">
-                      {categories.map((category) => (
-                        <div
-                          key={category.href}
-                          className="relative"
-                          onMouseEnter={() => setHoveredCategory(category.name)}
-                          onMouseLeave={() => setHoveredCategory(null)}
-                        >
-                          <Link
-                            href={category.href}
-                            className="flex items-center justify-between px-4 py-3.5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200 group"
+                    <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] overflow-visible">
+                      <div className="divide-y divide-gray-100">
+                        {categories.map((category) => (
+                          <div
+                            key={category.href}
+                            className="relative"
+                            onMouseEnter={() => setHoveredCategory(category.name)}
                           >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl transition-transform duration-200 group-hover:scale-110">{category.icon}</span>
-                              <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
-                                {category.name}
-                              </span>
-                            </div>
-                            <FiChevronRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200" size={16} />
-                          </Link>
-
-                          {/* Subcategories Mega Menu - Shows on hover */}
-                          {hoveredCategory === category.name && category.subcategories && (
-                            <>
-                              {/* Invisible bridge between category and subcategory */}
-                              <div 
-                                className="fixed h-full w-2 z-[10000]"
-                                style={{
-                                  left: 'max(16rem, calc((100vw - 1280px) / 2 + 16rem))',
-                                  top: '72px',
-                                  height: '100vh'
-                                }}
-                              />
-                              
-                              <div 
-                                className="fixed w-[600px] bg-white rounded-lg shadow-2xl border border-gray-100 z-[10000] p-6"
-                                style={{
-                                  left: 'max(17rem, calc((100vw - 1280px) / 2 + 17rem))',
-                                  top: '72px'
-                                }}
-                                onMouseEnter={() => setHoveredCategory(category.name)}
-                              >
-                                <div className="grid grid-cols-2 gap-6">
-                                  {category.subcategories.map((subcategory, idx) => (
-                                    <div key={idx} className="space-y-2">
-                                      <h3 className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200">
-                                        {subcategory.name}
-                                      </h3>
-                                      <ul className="space-y-1.5">
-                                        {subcategory.items.map((item, itemIdx) => (
-                                          <li key={itemIdx}>
-                                            <Link
-                                              href={`${category.href}/${item.toLowerCase().replace(/\s+/g, '-')}`}
-                                              className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
-                                            >
-                                              {item}
-                                            </Link>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  ))}
-                                </div>
+                            <Link
+                              href={category.href}
+                              className="flex items-center justify-between px-4 py-3.5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200 group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl transition-transform duration-200 group-hover:scale-110">{category.icon}</span>
+                                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                                  {category.name}
+                                </span>
                               </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
+                              <FiChevronRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200" size={16} />
+                            </Link>
+
+                            {/* Subcategories Mega Menu */}
+                            {hoveredCategory === category.name && category.subcategories && (
+                              <>
+                                {/* Invisible bridge to prevent gap - overlaps slightly */}
+                                <div 
+                                  className="absolute left-full top-0 w-4 h-full z-[10001] -ml-2"
+                                  onMouseEnter={() => setHoveredCategory(category.name)}
+                                />
+                                <div 
+                                  className="absolute left-full top-0 ml-2 w-[520px] bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-[10000]"
+                                  onMouseEnter={() => setHoveredCategory(category.name)}
+                                  onMouseLeave={() => setHoveredCategory(null)}
+                                >
+                                  <div className="grid grid-cols-2 gap-6">
+                                    {category.subcategories.map((subcategory, idx) => (
+                                      <div key={idx} className="space-y-2">
+                                        <h3 className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200">
+                                          {subcategory.name}
+                                        </h3>
+                                        <ul className="space-y-1.5">
+                                          {subcategory.items.map((item, itemIdx) => (
+                                            <li key={itemIdx}>
+                                              <Link
+                                                href={`${category.href}/${item.toLowerCase().replace(/\s+/g, '-')}`}
+                                                className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
+                                              >
+                                                {item}
+                                              </Link>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                    </div>
                   </>
                 )}
               </div>
             </div>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="text-white hover:text-gray-200 transition-colors lg:hidden"
+              aria-label="Toggle menu"
+            >
+              <FiMenu size={25} />
+            </button>
 
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
@@ -221,13 +217,7 @@ export default function Header() {
            </div>
 
             {/* Mobile Menu Icon */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-white hover:text-gray-200 transition-colors lg:hidden"
-              aria-label="Toggle menu"
-            >
-              <FiMenu size={28} />
-            </button>
+          
 
             {/* Search Bar */}
             <div className="flex-1 max-w-3xl">
@@ -314,7 +304,7 @@ export default function Header() {
 
               {/* Cart */}
               <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
-                <FiShoppingCart size={28} />
+                <FiShoppingCart size={25} />
                 {getCartCount() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                     {getCartCount() > 99 ? '99+' : getCartCount()}

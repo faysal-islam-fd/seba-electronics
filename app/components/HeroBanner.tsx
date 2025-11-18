@@ -2,174 +2,131 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 const heroSlides = [
   {
     id: 1,
-    bgColor: 'from-red-900 to-red-700',
-    badge: '11.11\nBIG SALE',
-    title: 'SMARTPHONES',
-    subtitle: 'SAVE UP TO',
-    price: 'Tk.16,000',
-    delivery: 'FREE\nDELIVERY',
-    images: [
-      'https://images.unsplash.com/photo-1592286927505-53369c45188e',
-      'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c',
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9',
-      'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb',
-      'https://images.unsplash.com/photo-1598327105666-5b89351aff97',
-    ],
-    sponsored: true,
+    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1400&h=600&fit=crop',
+    alt: 'Big Sale Banner',
   },
   {
     id: 2,
-    bgColor: 'from-blue-900 to-blue-700',
-    badge: 'MEGA\nSALE',
-    title: 'LAPTOPS',
-    subtitle: 'DISCOUNT UP TO',
-    price: 'Tk.25,000',
-    delivery: 'FREE\nDELIVERY',
-    images: [
-      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853',
-      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8',
-      'https://images.unsplash.com/photo-1603302576837-37561b2e2302',
-      'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2',
-      'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed',
-    ],
-    sponsored: true,
+    image: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=1400&h=600&fit=crop',
+    alt: 'New Arrivals',
+  },
+  {
+    id: 3,
+    image: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1400&h=600&fit=crop',
+    alt: 'Flash Sale',
+  },
+  {
+    id: 4,
+    image: 'https://images.unsplash.com/photo-1607082349566-187342175e2f?w=1400&h=600&fit=crop',
+    alt: 'Special Offers',
+  },
+  {
+    id: 5,
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1400&h=600&fit=crop',
+    alt: 'Best Deals',
   },
 ];
 
 export default function HeroBanner() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
+    if (isHovered) return;
+
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isHovered]);
 
-  const slide = heroSlides[currentSlide];
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
 
   return (
-    <div className="relative w-full h-[350px] md:h-[420px] lg:h-[480px] rounded-lg overflow-hidden">
-      {/* Background with gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-r ${slide.bgColor}`}>
-        {/* Decorative elements */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-10 left-10 w-32 h-32 border-4 border-white rounded-full"></div>
-          <div className="absolute bottom-20 right-20 w-40 h-40 border-4 border-white rounded-full"></div>
-          <div className="absolute top-1/2 left-1/4 w-24 h-24 border-2 border-white rotate-45"></div>
-        </div>
-      </div>
-
-      {/* Sponsored Badge */}
-      {slide.sponsored && (
-        <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 z-10">
-          <span className="text-yellow-300">⭐</span> Sponsored
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="relative h-full flex items-center">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            {/* Left Side - Text Content */}
-            <div className="flex-1 text-white space-y-3 md:space-y-5 text-center md:text-left">
-              {/* Badge */}
-              <div className="inline-block bg-blue-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg shadow-lg">
-                <div className="text-2xl md:text-4xl lg:text-5xl font-black leading-tight whitespace-pre-line">
-                  {slide.badge}
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <div className="text-xs md:text-base lg:text-lg font-medium mb-1 md:mb-2">on</div>
-                <h1 className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tight drop-shadow-lg">
-                  {slide.title}
-                </h1>
-              </div>
-
-              {/* Price Section */}
-              <div className="space-y-1 md:space-y-2">
-                <div className="text-sm md:text-lg lg:text-xl font-semibold">{slide.subtitle}</div>
-                <div className="bg-yellow-400 text-black inline-block px-4 py-2 md:px-6 md:py-3 rounded-lg shadow-lg">
-                  <div className="text-xl md:text-3xl lg:text-4xl font-black">{slide.price}</div>
-                </div>
-              </div>
-
-              {/* Free Delivery Badge */}
-              <div className="inline-block bg-green-500 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg shadow-lg">
-                <div className="text-base md:text-xl lg:text-2xl font-black whitespace-pre-line leading-tight">
-                  {slide.delivery}
-                </div>
-              </div>
-
-              {/* Payment & Warranty Icons */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 md:gap-3 mt-2 md:mt-4">
-                <div className="bg-blue-600 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded text-[10px] md:text-xs font-bold">
-                  10% OFF with VISA
-                </div>
-                <div className="bg-white text-green-600 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded text-[10px] md:text-xs font-bold flex items-center gap-1">
-                  <span>✓</span> OFFICIAL WARRANTY
-                </div>
-              </div>
-            </div>
-
-            {/* Right Side - Product Images */}
-            <div className="hidden md:flex flex-1 relative h-[300px] lg:h-[350px] w-full">
-              <div className="absolute inset-0 flex items-center justify-center">
-                {slide.images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className={`absolute transition-all duration-500 ${
-                      idx === 0 ? 'z-30 scale-110' : 
-                      idx === 1 ? 'z-20 -translate-x-20 lg:-translate-x-28 scale-95 opacity-80' : 
-                      idx === 2 ? 'z-20 translate-x-20 lg:translate-x-28 scale-95 opacity-80' : 
-                      idx === 3 ? 'z-10 -translate-x-40 lg:-translate-x-56 scale-85 opacity-60' : 
-                      'z-10 translate-x-40 lg:translate-x-56 scale-85 opacity-60'
-                    }`}
-                    style={{
-                      width: '140px',
-                      height: '200px',
-                    }}
-                  >
-                    <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl bg-white/10 backdrop-blur-sm border border-white/20">
-                      <Image
-                        src={`${img}?w=140&h=200&fit=crop`}
-                        alt={`Product ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+    <div
+      className="relative w-full h-[350px] md:h-[450px] lg:h-[550px] rounded-xl overflow-hidden group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Slides Container */}
+      <div className="relative w-full h-full">
+        {heroSlides.map((slide, index) => (
+          <div
+            key={slide.id}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          >
+            <Image
+              src={slide.image}
+              alt={slide.alt}
+              fill
+              priority={index === 0}
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1400px"
+              unoptimized
+            />
           </div>
-        </div>
+        ))}
       </div>
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={prevSlide}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+        aria-label="Previous slide"
+      >
+        <FiChevronLeft size={24} />
+      </button>
+      <button
+        onClick={nextSlide}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+        aria-label="Next slide"
+      >
+        <FiChevronRight size={24} />
+      </button>
 
       {/* Navigation Dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-40">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {heroSlides.map((_, index) => (
           <button
             key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`h-2 rounded-full transition-all ${
-              index === currentSlide 
-                ? 'bg-white w-8' 
-                : 'bg-white/50 w-2'
+            onClick={() => goToSlide(index)}
+            className={`transition-all duration-300 rounded-full ${
+              index === currentSlide
+                ? 'bg-white w-10 h-2.5 shadow-lg'
+                : 'bg-white/50 w-2.5 h-2.5 hover:bg-white/75 hover:w-6'
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}
       </div>
+
+      {/* Progress Bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/10 z-20">
+        <div
+          className="h-full bg-white transition-all duration-5000 ease-linear"
+          style={{
+            width: isHovered ? '0%' : `${((currentSlide + 1) / heroSlides.length) * 100}%`,
+          }}
+        />
+      </div>
     </div>
   );
 }
-

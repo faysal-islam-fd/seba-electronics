@@ -39,7 +39,7 @@ const promoDeals = [
     bgColor: 'from-orange-500 to-orange-700',
     badge: '10%',
     title: 'কার্ড পেমেন্টে\n১০% এক্সট্রা ছাড়',
-    subtitle: '৳২০০ পর্যন্ত\nবিশেষ ক্যাশব্যাক',
+    subtitle: '৮২০০ পর্যন্ত\nবিশেষ ক্যাশব্যাক',
   },
 ];
 
@@ -48,7 +48,7 @@ export default function PromoCarousel() {
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const scrollAmount = 280;
+      const scrollAmount = 200;
       scrollRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
@@ -67,25 +67,22 @@ export default function PromoCarousel() {
         <FiChevronLeft size={24} className="text-gray-700" />
       </button>
 
-      {/* Scrollable Container */}
-      <div
-        ref={scrollRef}
-        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2 px-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
+      {/* Scrollable Container - Centered */}
+      <div className="flex justify-center">
+        <div
+          ref={scrollRef}
+          className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2 px-1 max-w-full"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
         {promoDeals.map((deal) => (
           <div
             key={deal.id}
-            className="flex-shrink-0 w-[240px] md:w-[260px] h-[160px] md:h-[180px] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer transform hover:scale-105 active:scale-95"
+            className="flex-shrink-0 w-[180px] md:w-[200px] h-[120px] md:h-[140px] rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
-            <div className={`relative w-full h-full bg-gradient-to-br ${deal.bgColor} p-4 md:p-6 flex flex-col justify-between`}>
-              {/* Decorative circles */}
-              <div className="absolute top-2 right-2 w-16 md:w-20 h-16 md:h-20 bg-white/10 rounded-full"></div>
-              <div className="absolute bottom-2 left-2 w-12 md:w-16 h-12 md:h-16 bg-white/10 rounded-full"></div>
-              
-              {/* Badge */}
+            <div className={`relative w-full h-full bg-gradient-to-b ${deal.bgColor} p-3 md:p-4 flex flex-col justify-between`}>
+              {/* Badge - positioned in top left, not layered */}
               {deal.badge && (
-                <div className="inline-block w-fit bg-white text-[10px] md:text-xs font-black px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg">
+                <div className="absolute top-2 left-2 bg-white text-[9px] md:text-[10px] font-black px-2 py-0.5 rounded-md">
                   {deal.badge === '11.11' ? (
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                       {deal.badge}
@@ -97,21 +94,21 @@ export default function PromoCarousel() {
               )}
 
               {/* Content */}
-              <div className="relative z-10 text-white">
+              <div className="relative z-10 text-white flex flex-col justify-center items-center h-full">
                 {deal.discount && (
-                  <div className="text-4xl md:text-5xl font-black mb-1 md:mb-2">{deal.discount}</div>
+                  <div className="text-3xl md:text-4xl font-black mb-1">{deal.discount}</div>
                 )}
                 {deal.number && (
-                  <div className="text-5xl md:text-6xl font-black mb-1 md:mb-2">{deal.number}</div>
+                  <div className="text-4xl md:text-5xl font-black mb-1">{deal.number}</div>
                 )}
                 {deal.price && (
-                  <div className="text-3xl md:text-4xl font-black mb-1 md:mb-2">{deal.price}</div>
+                  <div className="text-2xl md:text-3xl font-black mb-1">{deal.price}</div>
                 )}
-                <div className="text-sm md:text-base font-bold whitespace-pre-line leading-tight">
+                <div className="text-xs md:text-sm font-bold whitespace-pre-line leading-tight text-center">
                   {deal.title}
                 </div>
                 {deal.subtitle && (
-                  <div className="text-xs md:text-sm font-medium mt-1 opacity-90 whitespace-pre-line">
+                  <div className="text-[10px] md:text-xs font-medium mt-1 opacity-90 whitespace-pre-line text-center">
                     {deal.subtitle}
                   </div>
                 )}
@@ -119,11 +116,11 @@ export default function PromoCarousel() {
 
               {/* Payment Icons (for some cards) */}
               {(deal.id === 4 || deal.id === 5) && (
-                <div className="relative z-10 flex gap-1.5 md:gap-2 mt-2">
-                  <div className="bg-white rounded px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-bold">
+                <div className="relative z-10 flex gap-1.5 justify-start mt-auto">
+                  <div className="bg-white rounded px-1.5 py-0.5 text-[9px] font-bold">
                     <span className="text-blue-600">VISA</span>
                   </div>
-                  <div className="bg-white rounded px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-bold">
+                  <div className="bg-white rounded px-1.5 py-0.5 text-[9px] font-bold">
                     <span className="text-orange-600">MC</span>
                   </div>
                 </div>
@@ -131,6 +128,7 @@ export default function PromoCarousel() {
             </div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* Right Arrow */}

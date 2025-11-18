@@ -39,11 +39,11 @@ export default function RootLayout({
       <body className={montserrat.className}>
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Footer />
+        <Header />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
           </CartProvider>
         </AuthProvider>
       </body>
