@@ -62,7 +62,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
 
       {/* Main Image Container */}
       <div className="flex-1 relative">
-        <div className="relative bg-gray-50 rounded-lg border border-gray-200">
+        <div className="relative bg-white rounded-xl border border-gray-200">
           {/* Wishlist Button */}
           <button className="absolute top-4 right-4 z-10 bg-white rounded-full p-2.5 shadow-md hover:bg-red-50 transition-colors group">
             <FiHeart className="text-gray-600 group-hover:text-red-500" size={20} />
@@ -71,7 +71,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           {/* Main Image with Zoom */}
           <div
             ref={imageRef}
-            className="relative aspect-square cursor-crosshair overflow-hidden rounded-lg"
+            className="relative aspect-square cursor-crosshair overflow-hidden rounded-xl bg-white"
             onMouseMove={handleMouseMove}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -80,10 +80,11 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               src={images[selectedImage]}
               alt={`${productName} - Image ${selectedImage + 1}`}
               fill
-              className="object-contain p-8"
+              className="object-contain"
               priority
               unoptimized
             />
+
 
             {/* Zoom Overlay - Blue magnifying box */}
             {showZoom && (

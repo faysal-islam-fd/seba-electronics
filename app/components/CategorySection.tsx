@@ -28,10 +28,10 @@ export default function CategorySection({
   icon
 }: CategorySectionProps) {
   return (
-    <section className="mb-12">
+    <section className="mb-10">
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-200">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-gray-200">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
           {icon && <span className="text-3xl">{icon}</span>}
           {title}
         </h2>
@@ -45,7 +45,7 @@ export default function CategorySection({
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {products.map((product) => (
           <ProductCard key={product.id} {...product} />
         ))}

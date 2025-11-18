@@ -88,6 +88,7 @@ export default function Header() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [mobileExpandedCategory, setMobileExpandedCategory] = useState<string | null>(null);
   const { getCartCount } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
 
@@ -97,16 +98,16 @@ export default function Header() {
       <div className="bg-blue-600">
         <div className="container  mx-auto px-4 py-4">
           <div className="flex  items-center justify-between gap-4">
-            {/* Categories Hamburger Menu - Desktop (with hover) */}
+            {/* Categories Hamburger Menu */}
            <div className="flex items-center gap-4 ">
-           <div className="relative hidden lg:block">
+           <div className="relative">
               <div
                 onMouseEnter={() => setCategoriesOpen(true)}
                 onMouseLeave={() => {
                   setCategoriesOpen(false);
                   setHoveredCategory(null);
                 }}
-                className="relative"
+                className="relative hidden lg:block"
               >
                 <button
                   className="flex items-center gap-2   text-white px-3 py-2.5 rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
@@ -338,17 +339,52 @@ export default function Header() {
             <div className="p-4">
               <h3 className="font-bold text-lg mb-4">Categories</h3>
               <nav className="space-y-2">
-                {categories.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-3 py-2 px-3 hover:bg-blue-50 rounded transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    <span>{item.name}</span>
-                  </Link>
-                ))}
+                {categories.map((item) => {
+                  const isExpanded = mobileExpandedCategory === item.name;
+                  return (
+                    <div key={item.href} className="border border-gray-100 rounded-lg">
+                      <button
+                        onClick={() =>
+                          setMobileExpandedCategory(isExpanded ? null : item.name)
+                        }
+                        className="w-full flex items-center justify-between gap-3 py-2 px-3 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{item.icon}</span>
+                          <span className="font-medium text-gray-800">{item.name}</span>
+                        </div>
+                        <FiChevronRight
+                          className={`text-gray-500 transition-transform ${
+                            isExpanded ? 'rotate-90' : ''
+                          }`}
+                        />
+                      </button>
+                      {isExpanded && item.subcategories && (
+                        <div className="bg-gray-50 px-5 py-3 space-y-2">
+                          {item.subcategories.map((sub) => (
+                            <div key={sub.name} className="space-y-1">
+                              <p className="text-xs font-semibold text-gray-500 uppercase">
+                                {sub.name}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {sub.items.map((subItem) => (
+                                  <Link
+                                    key={subItem}
+                                    href={`${item.href}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-3 py-1"
+                                  >
+                                    {subItem}
+                                  </Link>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </nav>
             </div>
           </div>

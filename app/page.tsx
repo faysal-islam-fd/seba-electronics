@@ -17,7 +17,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Sidebar */}
-      <div className="container mx-auto px-4 pt-6 pb-8">
+      <div className="container mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-6 sm:pb-8">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Sidebar - Categories */}
           <div className="hidden lg:block">
@@ -32,17 +32,12 @@ export default function Home() {
       </div>
 
       {/* Promo Carousel */}
-      <div className="container mx-auto px-4 pb-8">
+      <div className="container mx-auto px-3 sm:px-4 pb-8">
         <PromoCarousel />
       </div>
 
-      {/* Mobile Category Menu */}
-      <div className="lg:hidden container mx-auto px-4 pb-6">
-        <CategorySidebar />
-      </div>
-
       {/* Category Card Sections */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-8">
         {/* Destination for Authentic Products with Warranty */}
         <CategoryCardSection
           title="Destination for Authentic Products with Warranty"
@@ -121,7 +116,7 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-8 space-y-10">
         {/* Featured Products - Hot Deals */}
         <CategorySection
           title="🔥 Hot Deals with Best Prices"
