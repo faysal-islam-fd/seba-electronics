@@ -82,6 +82,13 @@ const categories = [
   },
 ];
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-');
+
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -91,226 +98,247 @@ export default function Header() {
   const [mobileExpandedCategory, setMobileExpandedCategory] = useState<string | null>(null);
   const { getCartCount } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
+  const cartItemCount = getCartCount();
+
+  const SearchBar = () => (
+    <form className="relative w-full" onSubmit={(e) => e.preventDefault()}>
+      <FiSearch
+        size={18}
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+      />
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search for products, brands and more"
+        className="w-full bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2.5 pl-11 rounded-full focus:outline-none focus:ring-2 focus:ring-white/70 shadow-sm"
+      />
+    </form>
+  );
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-[9998]">
-      {/* Main Header */}
       <div className="bg-blue-600">
-        <div className="container  mx-auto px-4 py-4">
-          <div className="flex  items-center justify-between gap-4">
-            {/* Categories Hamburger Menu */}
-           <div className="flex items-center gap-4 ">
-           <div className="relative">
-              <div
-                onMouseEnter={() => setCategoriesOpen(true)}
-                onMouseLeave={() => {
-                  setCategoriesOpen(false);
-                  setHoveredCategory(null);
-                }}
-                className="relative hidden lg:block"
-              >
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 lg:flex-none">
+                <div className="relative hidden lg:block">
+                  <div
+                    onMouseEnter={() => setCategoriesOpen(true)}
+                    onMouseLeave={() => {
+                      setCategoriesOpen(false);
+                      setHoveredCategory(null);
+                    }}
+                    className="relative"
+                  >
+                    <button
+                      className="flex items-center gap-2 text-white px-3 py-2.5 rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
+                      aria-label="Categories"
+                    >
+                      <FiMenu size={25} />
+                    </button>
+
+                    {categoriesOpen && (
+                      <>
+                        <div
+                          className="absolute left-0 top-full w-64 h-6 z-[10001]"
+                          onMouseEnter={() => setCategoriesOpen(true)}
+                        />
+                        <div
+                          className="absolute left-0 top-full mt-3"
+                          onMouseEnter={() => setCategoriesOpen(true)}
+                          onMouseLeave={() => {
+                            setCategoriesOpen(false);
+                            setHoveredCategory(null);
+                          }}
+                        >
+                          <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] overflow-visible">
+                            <div className="divide-y divide-gray-100">
+                              {categories.map((category) => (
+                                <div
+                                  key={category.href}
+                                  className="relative"
+                                  onMouseEnter={() => setHoveredCategory(category.name)}
+                                >
+                                  <Link
+                                    href={category.href}
+                                    className="flex items-center justify-between px-4 py-3.5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200 group"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xl transition-transform duration-200 group-hover:scale-110">
+                                        {category.icon}
+                                      </span>
+                                      <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                                        {category.name}
+                                      </span>
+                                    </div>
+                                    <FiChevronRight
+                                      className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200"
+                                      size={16}
+                                    />
+                                  </Link>
+
+                                  {hoveredCategory === category.name && category.subcategories && (
+                                    <>
+                                      <div
+                                        className="absolute left-full top-0 w-4 h-full z-[10001] -ml-2"
+                                        onMouseEnter={() => setHoveredCategory(category.name)}
+                                      />
+                                      <div
+                                        className="absolute left-full top-0 ml-2 w-[520px] bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-[10000]"
+                                        onMouseEnter={() => setHoveredCategory(category.name)}
+                                        onMouseLeave={() => setHoveredCategory(null)}
+                                      >
+                                        <div className="grid grid-cols-2 gap-6">
+                                          {category.subcategories.map((subcategory, idx) => (
+                                            <div key={idx} className="space-y-2">
+                                              <h3 className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200">
+                                                {subcategory.name}
+                                              </h3>
+                                              <ul className="space-y-1.5">
+                                                {subcategory.items.map((item, itemIdx) => (
+                                                  <li key={itemIdx}>
+                                                    <Link
+                                                      href={{
+                                                        pathname: category.href,
+                                                        query: { subcategory: slugify(item) },
+                                                      }}
+                                                      className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
+                                                    >
+                                                      {item}
+                                                    </Link>
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 <button
-                  className="flex items-center gap-2   text-white px-3 py-2.5 rounded-md transition-all duration-200 shadow-md hover:shadow-lg"
-                  aria-label="Categories"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="text-white hover:text-gray-200 transition-colors lg:hidden"
+                  aria-label="Toggle menu"
                 >
                   <FiMenu size={25} />
                 </button>
 
-                {/* Categories Dropdown - Overlays existing sidebar */}
-                {categoriesOpen && (
-                  <>
-                    {/* Invisible bridge to fill the gap between button and menu */}
-                    <div
-                      className="absolute  left-0 top-full w-64 h-6 z-[10001] "
-                      onMouseEnter={() => setCategoriesOpen(true)}
-                    />
-                    <div
-                      className="absolute left-0 top-full mt-3"
-                      onMouseEnter={() => setCategoriesOpen(true)}
-                      onMouseLeave={() => {
-                        setCategoriesOpen(false);
-                        setHoveredCategory(null);
-                      }}
-                    >
-                    <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] overflow-visible">
-                      <div className="divide-y divide-gray-100">
-                        {categories.map((category) => (
-                          <div
-                            key={category.href}
-                            className="relative"
-                            onMouseEnter={() => setHoveredCategory(category.name)}
-                          >
-                            <Link
-                              href={category.href}
-                              className="flex items-center justify-between px-4 py-3.5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200 group"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="text-xl transition-transform duration-200 group-hover:scale-110">{category.icon}</span>
-                                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
-                                  {category.name}
-                                </span>
-                              </div>
-                              <FiChevronRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200" size={16} />
-                            </Link>
-
-                            {/* Subcategories Mega Menu */}
-                            {hoveredCategory === category.name && category.subcategories && (
-                              <>
-                                {/* Invisible bridge to prevent gap - overlaps slightly */}
-                                <div 
-                                  className="absolute left-full top-0 w-4 h-full z-[10001] -ml-2"
-                                  onMouseEnter={() => setHoveredCategory(category.name)}
-                                />
-                                <div 
-                                  className="absolute left-full top-0 ml-2 w-[520px] bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-[10000]"
-                                  onMouseEnter={() => setHoveredCategory(category.name)}
-                                  onMouseLeave={() => setHoveredCategory(null)}
-                                >
-                                  <div className="grid grid-cols-2 gap-6">
-                                    {category.subcategories.map((subcategory, idx) => (
-                                      <div key={idx} className="space-y-2">
-                                        <h3 className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200">
-                                          {subcategory.name}
-                                        </h3>
-                                        <ul className="space-y-1.5">
-                                          {subcategory.items.map((item, itemIdx) => (
-                                            <li key={itemIdx}>
-                                              <Link
-                                                href={`${category.href}/${item.toLowerCase().replace(/\s+/g, '-')}`}
-                                                className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
-                                              >
-                                                {item}
-                                              </Link>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-white hover:text-gray-200 transition-colors lg:hidden"
-              aria-label="Toggle menu"
-            >
-              <FiMenu size={25} />
-            </button>
-
-            {/* Logo */}
-            <Link href="/" className="flex-shrink-0">
-              <div className="text-2xl md:text-3xl font-bold text-white lowercase">
-                Sheba
-              </div>
-            </Link>
-           </div>
-
-            {/* Mobile Menu Icon */}
-          
-
-            {/* Search Bar */}
-            <div className="flex-1 max-w-3xl">
-              <form className="relative" onSubmit={(e) => e.preventDefault()}>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for products, brands and more"
-                  className="w-full px-4 py-2.5 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-                />
-                <button 
-                  type="submit"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-800 transition-colors"
-                  aria-label="Search"
-                >
-                  <FiSearch size={20} />
-                </button>
-              </form>
-            </div>
-
-            {/* User Actions */}
-            <div className="flex items-center gap-4">
-              {/* My Account / Login */}
-              {isLoggedIn ? (
-                <div className="relative hidden md:block">
-                  <button
-                    onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-                    onBlur={() => setTimeout(() => setAccountDropdownOpen(false), 200)}
-                    className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
-                  >
-                    <div className="bg-white rounded-full p-1.5">
-                      <FiUser className="text-blue-600" size={20} />
-                    </div>
-                    <span className="font-medium">My Account</span>
-                    <FiChevronDown size={16} />
-                  </button>
-
-                  {/* Account Dropdown */}
-                  {accountDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[10001]">
-                      <Link
-                        href="/account"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setAccountDropdownOpen(false)}
-                      >
-                        My Account
-                      </Link>
-                      <Link
-                        href="/account/orders"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setAccountDropdownOpen(false)}
-                      >
-                        My Orders
-                      </Link>
-                      <Link
-                        href="/account/reviews"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setAccountDropdownOpen(false)}
-                      >
-                        My Reviews
-                      </Link>
-                      <div className="border-t border-gray-200 my-1"></div>
-                      <button
-                        onClick={() => {
-                          setAccountDropdownOpen(false);
-                          logout();
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link 
-                  href="/login" 
-                  className="hidden md:block border-2 border-white text-white hover:bg-white hover:text-blue-600 transition-all px-6 py-2 rounded-lg font-semibold"
-                >
-                  Login
+                <Link href="/" className="flex-shrink-0">
+                  <div className="text-2xl md:text-3xl font-bold text-white lowercase">
+                    Sheba
+                  </div>
                 </Link>
-              )}
+              </div>
 
-              {/* Cart */}
-              <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
-                <FiShoppingCart size={25} />
-                {getCartCount() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {getCartCount() > 99 ? '99+' : getCartCount()}
-                  </span>
+              <div className="hidden  lg:flex flex-1 max-w-3xl">
+                <SearchBar />
+              </div>
+
+              <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
+                {isLoggedIn ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                      onBlur={() => setTimeout(() => setAccountDropdownOpen(false), 200)}
+                      className="flex items-center gap-2 text-white hover:text-gray-100 transition-colors"
+                    >
+                      <div className="bg-white rounded-full p-1.5">
+                        <FiUser className="text-blue-600" size={20} />
+                      </div>
+                      <span className="font-medium">My Account</span>
+                      <FiChevronDown size={16} />
+                    </button>
+
+                    {accountDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[10001]">
+                        <Link
+                          href="/account"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setAccountDropdownOpen(false)}
+                        >
+                          My Account
+                        </Link>
+                        <Link
+                          href="/account/orders"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setAccountDropdownOpen(false)}
+                        >
+                          My Orders
+                        </Link>
+                        <Link
+                          href="/account/reviews"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setAccountDropdownOpen(false)}
+                        >
+                          My Reviews
+                        </Link>
+                        <div className="border-t border-gray-200 my-1" />
+                        <button
+                          onClick={() => {
+                            setAccountDropdownOpen(false);
+                            logout();
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors"
+                        >
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="border-2 border-white text-white hover:bg-white hover:text-blue-600 transition-all px-6 py-2 rounded-lg font-semibold"
+                  >
+                    Login
+                  </Link>
                 )}
-              </Link>
+
+                <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
+                  <FiShoppingCart size={25} />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-3 lg:hidden">
+                <Link
+                  href={isLoggedIn ? '/account' : '/login'}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  aria-label="Account"
+                >
+                  <div className="bg-white/20 border border-white/30 rounded-full p-2">
+                    <FiUser size={18} />
+                  </div>
+                </Link>
+                <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
+                  <FiShoppingCart size={24} />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
+            </div>
+
+            <div className="lg:hidden">
+              <SearchBar />
             </div>
           </div>
         </div>
@@ -360,7 +388,10 @@ export default function Header() {
                                 {sub.items.map((subItem) => (
                                   <Link
                                     key={subItem}
-                                    href={`${item.href}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
+                                    href={{
+                                      pathname: item.href,
+                                      query: { subcategory: slugify(subItem) },
+                                    }}
                                     onClick={() => setMobileMenuOpen(false)}
                                     className="text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-3 py-1"
                                   >
