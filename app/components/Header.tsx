@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown } from 'react-icons/fi';
+import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX } from 'react-icons/fi';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 
@@ -90,6 +91,7 @@ const slugify = (value: string) =>
     .replace(/\s+/g, '-');
 
 export default function Header() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -100,29 +102,20 @@ export default function Header() {
   const { user, isLoggedIn, logout } = useAuth();
   const cartItemCount = getCartCount();
 
-  const SearchBar = () => (
-    <form className="relative w-full" onSubmit={(e) => e.preventDefault()}>
-      <FiSearch
-        size={18}
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-      />
-      <input
-        type="text"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search for products, brands and more"
-        className="w-full bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2.5 pl-11 rounded-full focus:outline-none focus:ring-2 focus:ring-white/70 shadow-sm"
-      />
-    </form>
-  );
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-[9998]">
       <div className="bg-blue-600">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1 lg:flex-none">
+        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+          <div className="flex flex-col gap-2 sm:gap-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 lg:flex-none">
                 <div className="relative hidden lg:block">
                   <div
                     onMouseEnter={() => setCategoriesOpen(true)}
@@ -229,21 +222,40 @@ export default function Header() {
 
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="text-white hover:text-gray-200 transition-colors lg:hidden"
+                  className="text-white hover:text-gray-200 transition-colors lg:hidden p-1"
                   aria-label="Toggle menu"
                 >
-                  <FiMenu size={25} />
+                  <FiMenu size={20} className="sm:w-6 sm:h-6" />
                 </button>
 
                 <Link href="/" className="flex-shrink-0">
-                  <div className="text-2xl md:text-3xl font-bold text-white lowercase">
+                  <div className="text-lg sm:text-2xl md:text-3xl font-bold text-white lowercase">
                     Sheba
                   </div>
                 </Link>
               </div>
 
-              <div className="hidden  lg:flex flex-1 max-w-3xl">
-                <SearchBar />
+              <div className="hidden lg:flex flex-1 max-w-3xl mx-4">
+                <form className="relative w-full" onSubmit={handleSearch}>
+                  <FiSearch
+                    size={16}
+                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search for products, brands and more"
+                    className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 pl-9 sm:pl-11 pr-10 sm:pr-12 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Search"
+                  >
+                    <FiSearch size={16} className="text-gray-600" />
+                  </button>
+                </form>
               </div>
 
               <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
@@ -316,20 +328,20 @@ export default function Header() {
                 </Link>
               </div>
 
-              <div className="flex items-center gap-3 lg:hidden">
+              <div className="flex items-center gap-2 sm:gap-3 lg:hidden">
                 <Link
                   href={isLoggedIn ? '/account' : '/login'}
                   className="text-white hover:text-gray-200 transition-colors"
                   aria-label="Account"
                 >
-                  <div className="bg-white/20 border border-white/30 rounded-full p-2">
-                    <FiUser size={18} />
+                  <div className="bg-white/20 border border-white/30 rounded-full p-1.5 sm:p-2">
+                    <FiUser size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </div>
                 </Link>
                 <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
-                  <FiShoppingCart size={24} />
+                  <FiShoppingCart size={20} className="sm:w-6 sm:h-6" />
                   {cartItemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center font-bold">
                       {cartItemCount > 99 ? '99+' : cartItemCount}
                     </span>
                   )}
@@ -338,7 +350,26 @@ export default function Header() {
             </div>
 
             <div className="lg:hidden">
-              <SearchBar />
+              <form className="relative w-full" onSubmit={handleSearch}>
+                <FiSearch
+                  size={16}
+                  className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for products, brands and more"
+                  className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 pl-9 sm:pl-11 pr-10 sm:pr-12 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Search"
+                >
+                  <FiSearch size={16} className="text-gray-600" />
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -351,12 +382,21 @@ export default function Header() {
           onClick={() => setMobileMenuOpen(false)}
         >
           <div 
-            className="bg-white w-64 h-full shadow-xl overflow-y-auto"
+            className="bg-white w-full h-full shadow-xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4">
-              <h3 className="font-bold text-lg mb-4">Categories</h3>
-              <nav className="space-y-2">
+            <div className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="font-bold text-base sm:text-lg">Categories</h3>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Close menu"
+                >
+                  <FiX size={20} className="sm:w-6 sm:h-6 text-gray-600" />
+                </button>
+              </div>
+              <nav className="space-y-1.5 sm:space-y-2">
                 {categories.map((item) => {
                   const isExpanded = mobileExpandedCategory === item.name;
                   return (
@@ -365,26 +405,27 @@ export default function Header() {
                         onClick={() =>
                           setMobileExpandedCategory(isExpanded ? null : item.name)
                         }
-                        className="w-full flex items-center justify-between gap-3 py-2 px-3 text-left"
+                        className="w-full flex items-center justify-between gap-2 sm:gap-3 py-1.5 sm:py-2 px-2.5 sm:px-3 text-left"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">{item.icon}</span>
-                          <span className="font-medium text-gray-800">{item.name}</span>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <span className="text-lg sm:text-xl">{item.icon}</span>
+                          <span className="font-medium text-sm sm:text-base text-gray-800">{item.name}</span>
                         </div>
                         <FiChevronRight
+                          size={16}
                           className={`text-gray-500 transition-transform ${
                             isExpanded ? 'rotate-90' : ''
                           }`}
                         />
                       </button>
                       {isExpanded && item.subcategories && (
-                        <div className="bg-gray-50 px-5 py-3 space-y-2">
+                        <div className="bg-gray-50 px-3 sm:px-5 py-2 sm:py-3 space-y-1.5 sm:space-y-2">
                           {item.subcategories.map((sub) => (
                             <div key={sub.name} className="space-y-1">
-                              <p className="text-xs font-semibold text-gray-500 uppercase">
+                              <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">
                                 {sub.name}
                               </p>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                 {sub.items.map((subItem) => (
                                   <Link
                                     key={subItem}
@@ -393,7 +434,7 @@ export default function Header() {
                                       query: { subcategory: slugify(subItem) },
                                     }}
                                     onClick={() => setMobileMenuOpen(false)}
-                                    className="text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-3 py-1"
+                                    className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1"
                                   >
                                     {subItem}
                                   </Link>
