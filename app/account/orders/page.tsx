@@ -85,7 +85,12 @@ export default function OrdersPage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-3">
-                <button className="text-blue-600 text-sm font-semibold">Track order</button>
+                <Link
+                  href={`/order-track?orderId=${encodeURIComponent(order.id)}`}
+                  className="text-blue-600 text-sm font-semibold"
+                >
+                  Track order
+                </Link>
                 <button className="text-gray-600 text-sm font-semibold">Need help?</button>
               </div>
             </div>

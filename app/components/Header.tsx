@@ -2,10 +2,19 @@
 
 import Link from 'next/link';
 import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX } from 'react-icons/fi';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
+import {
+  featuredProducts,
+  desktopProducts,
+  monitorProducts,
+  accessoriesProducts,
+  smartphoneProducts,
+  cameraProducts,
+  gadgetProducts,
+} from '@/app/data/dummyData';
 
 const categories = [
   { 
@@ -90,9 +99,20 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-');
 
+const allProducts = [
+  ...featuredProducts,
+  ...desktopProducts,
+  ...monitorProducts,
+  ...accessoriesProducts,
+  ...smartphoneProducts,
+  ...cameraProducts,
+  ...gadgetProducts,
+];
+
 export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -102,10 +122,19 @@ export default function Header() {
   const { user, isLoggedIn, logout } = useAuth();
   const cartItemCount = getCartCount();
 
+  const suggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return allProducts
+      .filter((product) => product.name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [searchQuery]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setShowSuggestions(false);
     }
   };
 
@@ -235,27 +264,65 @@ export default function Header() {
                 </Link>
               </div>
 
+              {/* Desktop search bar */}
               <div className="hidden lg:flex flex-1 max-w-3xl mx-4">
-                <form className="relative w-full" onSubmit={handleSearch}>
-                  <FiSearch
-                    size={16}
-                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search for products, brands and more"
-                    className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 pl-9 sm:pl-11 pr-10 sm:pr-12 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-                    aria-label="Search"
-                  >
-                    <FiSearch size={16} className="text-gray-600" />
-                  </button>
-                </form>
+                <div className="relative w-full">
+                  <form className="relative w-full" onSubmit={handleSearch}>
+                    <FiSearch
+                      size={16}
+                      className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => suggestions.length && setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      placeholder="Search for products, brands and more"
+                      className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 pl-9 sm:pl-11 pr-10 sm:pr-12 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                      aria-label="Search"
+                    >
+                      <FiSearch size={16} className="text-gray-600" />
+                    </button>
+                  </form>
+
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-200 z-[10002] max-h-80 overflow-y-auto">
+                      <ul className="py-2">
+                        {suggestions.map((product) => (
+                          <li key={product.id}>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setShowSuggestions(false);
+                                setSearchQuery(product.name);
+                                router.push(`/product/${product.id}`);
+                              }}
+                              className="w-full flex items-start gap-3 px-3 sm:px-4 py-2.5 hover:bg-gray-50 text-left"
+                            >
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                                  {product.name}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  ৳{product.price?.toLocaleString('en-BD') ?? ''}
+                                </p>
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
@@ -349,27 +416,65 @@ export default function Header() {
               </div>
             </div>
 
+            {/* Mobile search bar */}
             <div className="lg:hidden">
-              <form className="relative w-full" onSubmit={handleSearch}>
-                <FiSearch
-                  size={16}
-                  className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for products, brands and more"
-                  className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 pl-9 sm:pl-11 pr-10 sm:pr-12 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-                  aria-label="Search"
-                >
-                  <FiSearch size={16} className="text-gray-600" />
-                </button>
-              </form>
+              <div className="relative w-full">
+                <form className="relative w-full" onSubmit={handleSearch}>
+                  <FiSearch
+                    size={16}
+                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => suggestions.length && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="Search for products, brands and more"
+                    className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 pl-9 sm:pl-11 pr-10 sm:pr-12 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Search"
+                  >
+                    <FiSearch size={16} className="text-gray-600" />
+                  </button>
+                </form>
+
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-200 z-[10002] max-h-80 overflow-y-auto">
+                    <ul className="py-2">
+                      {suggestions.map((product) => (
+                        <li key={product.id}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setShowSuggestions(false);
+                              setSearchQuery(product.name);
+                              router.push(`/product/${product.id}`);
+                            }}
+                            className="w-full flex items-start gap-3 px-3 sm:px-4 py-2.5 hover:bg-gray-50 text-left"
+                          >
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                                {product.name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                ৳{product.price?.toLocaleString('en-BD') ?? ''}
+                              </p>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
