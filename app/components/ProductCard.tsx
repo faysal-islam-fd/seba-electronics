@@ -141,7 +141,7 @@ export default function ProductCard({
       </div>
 
       {/* Image Container */}
-      <div className="relative w-full h-40 sm:h-48 md:h-56 lg:h-64 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="relative w-full h-36 sm:h-48 md:h-56 lg:h-64 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
         <Link href={`/product/${id}`} className="block w-full h-full">
           <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-4">
             <Image
@@ -167,7 +167,7 @@ export default function ProductCard({
       </div>
 
       {/* Product Info */}
-      <div className="flex-1 flex flex-col gap-1.5 sm:gap-2.5 p-2.5 sm:p-4">
+      <div className="flex-1 flex flex-col gap-1.5 sm:gap-2.5 p-2 sm:p-4">
         <Link href={`/product/${id}`}>
           <h3 className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 hover:text-blue-600 transition-colors min-h-[2rem] sm:min-h-[2.5rem]">
             {name}

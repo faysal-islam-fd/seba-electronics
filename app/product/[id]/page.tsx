@@ -89,15 +89,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Breadcrumb */}
-            <Breadcrumb 
-              items={[
-            { label: 'Home', href: '/' },
-                { label: 'Products', href: '/products' },
-                { label: product.brand, href: `/brand/${product.brand.toLowerCase()}` },
-                { label: product.name },
-              ]}
-            />
+        {/* Breadcrumb */}
+        <Breadcrumb 
+          items={[
+            { label: 'Products', href: '/products' },
+            { label: product.brand, href: `/brand/${product.brand.toLowerCase()}` },
+            { label: product.name },
+          ]}
+        />
 
         {/* Product detail presentation */}
         <ProductDetailContent product={product} />
