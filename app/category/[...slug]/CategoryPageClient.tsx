@@ -1,14 +1,26 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import Link from 'next/link';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
-import { useGetProductsQuery } from '@/app/store/api/productsApi';
-import { useGetBrandsQuery } from '@/app/store/api/brandsApi';
-import { FiSearch, FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
+import { ProductsResponse, BrandsResponse, Category } from '@/app/lib/api';
+import { FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 
 type SortOption = 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+
+interface CategoryPageClientProps {
+  currentCategory: Category;
+  initialProducts: ProductsResponse;
+  initialBrands: BrandsResponse;
+  initialPage: number;
+  initialSort: SortOption;
+  initialMinPrice?: number;
+  initialMaxPrice?: number;
+  initialBrandId?: number;
+  initialSubcategoryId?: number;
+}
 
 interface FilterSectionProps {
   title: string;
@@ -40,110 +52,117 @@ function FilterSection({ title, isOpen, onToggle, children }: FilterSectionProps
   );
 }
 
-function SearchPageContent() {
-  const searchParams = useSearchParams();
+export default function CategoryPageClient({
+  currentCategory,
+  initialProducts,
+  initialBrands,
+  initialPage,
+  initialSort,
+  initialMinPrice,
+  initialMaxPrice,
+  initialBrandId,
+  initialSubcategoryId,
+}: CategoryPageClientProps) {
   const router = useRouter();
-  const query = searchParams.get('q') || '';
-  const [searchInput, setSearchInput] = useState(query);
-  const [sortBy, setSortBy] = useState<SortOption>('latest');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 300000]);
-  const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>();
+  const searchParams = useSearchParams();
+  
+  const [sortBy, setSortBy] = useState<SortOption>(initialSort);
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    initialMinPrice || 0,
+    initialMaxPrice || 300000
+  ]);
+  const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | undefined>(initialSubcategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
-  // Filter section open/close states
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
+    subcategories: false,
   });
 
-  // Fetch products with filters
-  const { data: productsData, isLoading: isLoadingProducts, error: productsError } = useGetProductsQuery({
-    page: currentPage,
-    per_page: 20,
-    search: query,
-    min_price: priceRange[0] > 0 ? priceRange[0] : undefined,
-    max_price: priceRange[1] < 300000 ? priceRange[1] : undefined,
-    brand_id: selectedBrandId,
-    sort: sortBy,
-  });
+  const products = initialProducts.data || [];
+  const meta = initialProducts.meta;
+  const brands = initialBrands.data || [];
+  const subcategories = currentCategory.children || [];
 
-  // Fetch brands for filter
-  const { data: brandsData } = useGetBrandsQuery();
-
-  // Update search input when query changes
-  useEffect(() => {
-    setSearchInput(query);
-    setCurrentPage(1);
-  }, [query]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchInput.trim())}`);
-    }
+  const updateURL = (updates: Record<string, any>) => {
+    const params = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
+    });
+    
+    router.push(`/category/${currentCategory.slug}?${params.toString()}`);
   };
 
   const handleSortChange = (newSort: SortOption) => {
     setSortBy(newSort);
-    setCurrentPage(1);
+    updateURL({ sort: newSort, page: 1 });
   };
 
   const handleBrandChange = (brandId: number) => {
-    setSelectedBrandId(selectedBrandId === brandId ? undefined : brandId);
-    setCurrentPage(1);
+    const newBrandId = selectedBrandId === brandId ? undefined : brandId;
+    setSelectedBrandId(newBrandId);
+    updateURL({ brand_id: newBrandId, page: 1 });
   };
 
-  const handlePriceChange = (min: number, max: number) => {
-    setPriceRange([min, max]);
-    setCurrentPage(1);
+  const handleSubcategoryChange = (subcategoryId: number) => {
+    const newSubcategoryId = selectedSubcategoryId === subcategoryId ? undefined : subcategoryId;
+    setSelectedSubcategoryId(newSubcategoryId);
+    updateURL({ subcategory_id: newSubcategoryId, page: 1 });
+  };
+
+  const handlePriceChange = () => {
+    updateURL({
+      min_price: priceRange[0] > 0 ? priceRange[0] : undefined,
+      max_price: priceRange[1] < 300000 ? priceRange[1] : undefined,
+      page: 1,
+    });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    updateURL({ page: newPage });
   };
 
   const clearFilters = () => {
     setPriceRange([0, 300000]);
     setSelectedBrandId(undefined);
+    setSelectedSubcategoryId(undefined);
     setSortBy('latest');
-    setCurrentPage(1);
+    router.push(`/category/${currentCategory.slug}`);
   };
-
-  const products = productsData?.data || [];
-  const meta = productsData?.meta;
-  const brands = brandsData?.data || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
-        <div className="hidden md:block mb-4">
+        <div className="mb-4">
           <Breadcrumb 
             items={[
               { label: 'Home', href: '/' },
-              { label: 'Search', href: query ? `/search?q=${encodeURIComponent(query)}` : '/search' },
-              ...(query ? [{ label: query }] : []),
+              { label: currentCategory.name, href: `/category/${currentCategory.slug}` },
             ]}
           />
         </div>
 
-        {/* Search Bar */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="flex-1 relative">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search for products..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+        {/* Category Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-3xl text-white shadow-lg">
+              {currentCategory.name.charAt(0)}
             </div>
-            <button
-              type="submit"
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Search
-            </button>
-          </form>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{currentCategory.name}</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {meta ? `${meta.total} products available` : 'Loading products...'}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -152,7 +171,7 @@ function SearchPageContent() {
             <div className="bg-white rounded-lg shadow-sm sticky top-20">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Filters</h3>
-                {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000) && (
+                {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000 || selectedSubcategoryId) && (
                   <button
                     onClick={clearFilters}
                     className="text-sm text-blue-600 hover:text-blue-700"
@@ -161,6 +180,29 @@ function SearchPageContent() {
                   </button>
                 )}
               </div>
+
+              {/* Subcategories Filter */}
+              {subcategories.length > 0 && (
+                <FilterSection
+                  title="Subcategories"
+                  isOpen={filtersOpen.subcategories}
+                  onToggle={() => setFiltersOpen(prev => ({ ...prev, subcategories: !prev.subcategories }))}
+                >
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {subcategories.map((subcat) => (
+                      <label key={subcat.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedSubcategoryId === subcat.id}
+                          onChange={() => handleSubcategoryChange(subcat.id)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{subcat.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterSection>
+              )}
 
               {/* Price Filter */}
               <FilterSection
@@ -173,7 +215,7 @@ function SearchPageContent() {
                     <input
                       type="number"
                       value={priceRange[0]}
-                      onChange={(e) => handlePriceChange(Number(e.target.value), priceRange[1])}
+                      onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
                       placeholder="Min"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
@@ -181,11 +223,17 @@ function SearchPageContent() {
                     <input
                       type="number"
                       value={priceRange[1]}
-                      onChange={(e) => handlePriceChange(priceRange[0], Number(e.target.value))}
+                      onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
                       placeholder="Max"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
                   </div>
+                  <button
+                    onClick={handlePriceChange}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    Apply
+                  </button>
                 </div>
               </FilterSection>
 
@@ -217,11 +265,8 @@ function SearchPageContent() {
             {/* Results Header */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {query ? `Search Results for "${query}"` : 'All Products'}
-                </h2>
                 {meta && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600">
                     Showing {((meta.current_page - 1) * meta.per_page) + 1} - {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} products
                   </p>
                 )}
@@ -253,28 +298,17 @@ function SearchPageContent() {
             </div>
 
             {/* Products Grid */}
-            {isLoadingProducts ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden h-96 animate-pulse">
-                    <div className="w-full h-48 bg-gray-200"></div>
-                    <div className="p-4 space-y-3">
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : productsError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-                <p className="text-red-600 font-medium">Failed to load products. Please try again later.</p>
-              </div>
-            ) : products.length === 0 ? (
+            {products.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <FiSearch size={48} className="text-gray-400 mx-auto mb-4" />
+                <div className="text-gray-400 text-6xl mb-4">📦</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
-                <p className="text-gray-600">Try adjusting your search or filters</p>
+                <p className="text-gray-600 mb-4">Try adjusting your filters</p>
+                <button
+                  onClick={clearFilters}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Clear Filters
+                </button>
               </div>
             ) : (
               <>
@@ -299,8 +333,8 @@ function SearchPageContent() {
                 {meta && meta.last_page > 1 && (
                   <div className="flex items-center justify-center gap-2 bg-white rounded-lg shadow-sm p-4">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange(Math.max(1, initialPage - 1))}
+                      disabled={initialPage === 1}
                       className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
@@ -312,9 +346,9 @@ function SearchPageContent() {
                         return (
                           <button
                             key={page}
-                            onClick={() => setCurrentPage(page)}
+                            onClick={() => handlePageChange(page)}
                             className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                              currentPage === page
+                              initialPage === page
                                 ? 'bg-blue-600 text-white'
                                 : 'border border-gray-300 hover:bg-gray-50'
                             }`}
@@ -326,8 +360,8 @@ function SearchPageContent() {
                     </div>
 
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(meta.last_page, prev + 1))}
-                      disabled={currentPage === meta.last_page}
+                      onClick={() => handlePageChange(Math.min(meta.last_page, initialPage + 1))}
+                      disabled={initialPage === meta.last_page}
                       className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -355,25 +389,6 @@ function SearchPageContent() {
               </button>
             </div>
 
-            <div className="p-4">
-              {/* Mobile filters content - same as desktop */}
-              <div className="space-y-4">
-                {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000) && (
-                  <button
-                    onClick={() => {
-                      clearFilters();
-                      setShowMobileFilters(false);
-                    }}
-                    className="w-full px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
-                  >
-                    Clear All Filters
-                  </button>
-                )}
-
-                {/* Price & Brand filters same as desktop */}
-              </div>
-            </div>
-
             <div className="p-4 border-t border-gray-200 sticky bottom-0 bg-white">
               <button
                 onClick={() => setShowMobileFilters(false)}
@@ -386,21 +401,6 @@ function SearchPageContent() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function SearchPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading search results...</p>
-        </div>
-      </div>
-    }>
-      <SearchPageContent />
-    </Suspense>
   );
 }
 
