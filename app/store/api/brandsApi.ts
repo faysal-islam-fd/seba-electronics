@@ -19,9 +19,9 @@ export interface BrandsQueryParams {
 export const brandsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getBrands: builder.query<BrandsResponse, BrandsQueryParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/brands',
-        params,
+        params: params || {},
       }),
       providesTags: ['Brands'],
     }),

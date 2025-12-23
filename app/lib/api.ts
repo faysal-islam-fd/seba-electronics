@@ -59,6 +59,17 @@ export interface ProductDetail extends Product {
     name: string;
     slug: string;
   }[];
+  attributes?: any[];
+  vendor?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+  unit?: {
+    id: number;
+    name: string;
+    code: string;
+  };
 }
 
 export interface Category {
@@ -154,27 +165,36 @@ export async function getProducts(params: {
 // Note: Using /products endpoint with filtering since /products/featured returns 500
 export async function getFeaturedProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
   try {
+    console.log('🔄 Fetching featured products from /products endpoint...');
+    
     // Fetch more products and filter for featured ones
     const res = await fetch(`${BASE_URL}/products?per_page=50`, {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
     
     if (!res.ok) {
-      console.warn(`API returned ${res.status} for products. Using fallback.`);
+      console.warn(`⚠️ API returned ${res.status} for products. Using fallback.`);
       return { success: false, data: [] };
     }
     
     const result = await res.json();
     
+    if (!result.success || !result.data) {
+      console.warn('⚠️ Invalid API response structure');
+      return { success: false, data: [] };
+    }
+    
     // Filter for featured products
     const featuredProducts = result.data.filter((p: Product) => p.is_featured).slice(0, limit);
+    
+    console.log(`✅ Found ${featuredProducts.length} featured products`);
     
     return {
       success: true,
       data: featuredProducts,
     };
   } catch (error) {
-    console.error('Error fetching featured products:', error);
+    console.error('❌ Error fetching featured products:', error);
     return { success: false, data: [] };
   }
 }
@@ -183,32 +203,42 @@ export async function getFeaturedProducts(limit: number = 10): Promise<{ success
 // Note: Using /products endpoint with filtering since /products/top-selling returns 500
 export async function getTopSellingProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
   try {
+    console.log('🔄 Fetching top-selling products from /products endpoint...');
+    
     // Fetch more products and filter for top-selling ones
     const res = await fetch(`${BASE_URL}/products?per_page=50`, {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
     
     if (!res.ok) {
-      console.warn(`API returned ${res.status} for products. Using fallback.`);
+      console.warn(`⚠️ API returned ${res.status} for products. Using fallback.`);
       return { success: false, data: [] };
     }
     
     const result = await res.json();
+    
+    if (!result.success || !result.data) {
+      console.warn('⚠️ Invalid API response structure');
+      return { success: false, data: [] };
+    }
     
     // Filter for top-selling products, or just return latest if none marked
     let topSellingProducts = result.data.filter((p: Product) => p.is_top_selling);
     
     // If no products are marked as top-selling, use the latest products
     if (topSellingProducts.length === 0) {
+      console.log('ℹ️ No top-selling products marked, using latest products');
       topSellingProducts = result.data;
     }
+    
+    console.log(`✅ Found ${topSellingProducts.slice(0, limit).length} top-selling products`);
     
     return {
       success: true,
       data: topSellingProducts.slice(0, limit),
     };
   } catch (error) {
-    console.error('Error fetching top selling products:', error);
+    console.error('❌ Error fetching top selling products:', error);
     return { success: false, data: [] };
   }
 }

@@ -22,9 +22,9 @@ export interface CategoriesQueryParams {
 export const categoriesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getCategories: builder.query<CategoriesResponse, CategoriesQueryParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/categories',
-        params,
+        params: params || {},
       }),
       providesTags: ['Categories'],
     }),
