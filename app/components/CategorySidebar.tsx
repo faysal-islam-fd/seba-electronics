@@ -3,147 +3,147 @@
 import Link from 'next/link';
 import { FiChevronRight } from 'react-icons/fi';
 import { useState } from 'react';
+import { useGetCategoriesQuery } from '@/app/store/api/categoriesApi';
 
-const categories = [
-  { 
-    name: 'Smartphones', 
-    href: '/category/smartphones', 
-    icon: '📱',
-    subcategories: [
-      { name: 'iPhone', items: ['iPhone 15 Pro', 'iPhone 15', 'iPhone 14', 'iPhone SE'] },
-      { name: 'Samsung', items: ['Galaxy S24', 'Galaxy Z Fold', 'Galaxy A Series', 'Galaxy M Series'] },
-      { name: 'OnePlus', items: ['OnePlus 12', 'OnePlus 11', 'OnePlus Nord'] },
-      { name: 'Xiaomi', items: ['Xiaomi 14', 'Redmi Note', 'POCO Series'] },
-      { name: 'Google Pixel', items: ['Pixel 8 Pro', 'Pixel 8', 'Pixel 7a'] },
-    ]
-  },
-  { 
-    name: 'Electronics & Appliances', 
-    href: '/category/electronics', 
-    icon: '🔌',
-    subcategories: [
-      { name: 'Air Conditioners', items: ['Split AC', 'Window AC', 'Portable AC', 'Inverter AC'] },
-      { name: 'Refrigerators', items: ['Double Door', 'Single Door', 'Side by Side', 'Mini Fridge'] },
-      { name: 'Microwaves', items: ['Solo', 'Grill', 'Convection'] },
-      { name: 'Kitchen Appliances', items: ['Blender', 'Rice Cooker', 'Air Fryer', 'Toaster'] },
-    ]
-  },
-  { 
-    name: 'Television', 
-    href: '/category/television', 
-    icon: '📺',
-    subcategories: [
-      { name: 'Smart TV', items: ['4K Smart TV', 'Full HD Smart TV', 'Android TV'] },
-      { name: 'LED TV', items: ['32 inch', '43 inch', '55 inch', '65 inch'] },
-      { name: 'Brands', items: ['Samsung', 'Sony', 'LG', 'TCL', 'Xiaomi'] },
-    ]
-  },
-  { 
-    name: 'Washing Machine', 
-    href: '/category/washing-machine', 
-    icon: '🧺',
-    subcategories: [
-      { name: 'Front Load', items: ['7kg', '8kg', '9kg', '10kg'] },
-      { name: 'Top Load', items: ['Semi-Automatic', 'Fully Automatic'] },
-      { name: 'Brands', items: ['LG', 'Samsung', 'Whirlpool', 'Haier'] },
-    ]
-  },
-  { 
-    name: 'Mobile Accessories', 
-    href: '/category/mobile-accessories', 
-    icon: '🎧',
-    subcategories: [
-      { name: 'Audio', items: ['Earbuds', 'Headphones', 'Speakers', 'Airpods'] },
-      { name: 'Power', items: ['Power Bank', 'Chargers', 'Cables', 'Wireless Charger'] },
-      { name: 'Protection', items: ['Cases', 'Screen Protectors', 'Covers'] },
-      { name: 'Storage', items: ['Memory Cards', 'OTG Drives', 'Card Readers'] },
-    ]
-  },
-  { 
-    name: 'Computers', 
-    href: '/category/computers', 
-    icon: '💻',
-    subcategories: [
-      { name: 'Laptops', items: ['Gaming Laptops', 'Business Laptops', 'Ultrabooks', 'Budget Laptops'] },
-      { name: 'Desktops', items: ['Gaming PC', 'All-in-One', 'Workstation', 'Mini PC'] },
-      { name: 'Brands', items: ['Apple', 'Dell', 'HP', 'Lenovo', 'ASUS'] },
-    ]
-  },
-  { 
-    name: 'Computer Accessories', 
-    href: '/category/computer-accessories', 
-    icon: '⌨️',
-    subcategories: [
-      { name: 'Input Devices', items: ['Keyboards', 'Mouse', 'Webcams', 'Graphics Tablet'] },
-      { name: 'Storage', items: ['SSD', 'HDD', 'External HDD', 'Pen Drives'] },
-      { name: 'Networking', items: ['Routers', 'WiFi Adapters', 'Switches'] },
-      { name: 'Monitors', items: ['Gaming Monitors', 'Professional', '4K Monitors'] },
-    ]
-  },
-  { 
-    name: 'Lifestyle', 
-    href: '/category/lifestyle', 
-    icon: '⌚',
-    subcategories: [
-      { name: 'Wearables', items: ['Smart Watch', 'Fitness Bands', 'Smart Glasses'] },
-      { name: 'Gaming', items: ['Consoles', 'Controllers', 'Gaming Chairs', 'VR Headsets'] },
-      { name: 'Cameras', items: ['DSLR', 'Mirrorless', 'Action Cameras', 'Instant Cameras'] },
-      { name: 'Smart Home', items: ['Smart Lights', 'Smart Plugs', 'Security Cameras'] },
-    ]
-  },
-];
+// Icon mapping for categories
+const getCategoryIcon = (name: string) => {
+  const iconMap: Record<string, string> = {
+    'smartphones': '📱',
+    'electronics': '🔌',
+    'television': '📺',
+    'washing': '🧺',
+    'mobile': '🎧',
+    'computers': '💻',
+    'computer': '⌨️',
+    'accessories': '🎧',
+    'lifestyle': '⌚',
+    'gaming': '🎮',
+    'audio': '🔊',
+    'camera': '📷',
+    'appliances': '🏠',
+  };
+  
+  const nameLower = name.toLowerCase();
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (nameLower.includes(key)) return icon;
+  }
+  return '📦'; // Default icon
+};
 
 export default function CategorySidebar() {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  
+  // Fetch categories from API
+  const { data: categoriesData, isLoading } = useGetCategoriesQuery({ with_children: true });
+  const categories = categoriesData?.data || [];
+
+  if (isLoading) {
+    return (
+      <aside className="w-full lg:w-64 bg-white rounded-lg shadow-sm h-fit">
+        <div className="p-4 border-b border-gray-200 animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded flex-1"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="w-full lg:w-64 bg-white rounded-lg shadow-sm h-fit relative">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="text-lg font-bold text-gray-900">Browse Categories</h2>
+      </div>
       <div className="divide-y divide-gray-100">
         {categories.map((category) => (
-          <div
-            key={category.href}
+          <div 
+            key={category.id}
             className="relative"
             onMouseEnter={() => setHoveredCategory(category.name)}
             onMouseLeave={() => setHoveredCategory(null)}
           >
             <Link
-              href={category.href}
-              className="flex items-center justify-between px-4 py-3.5 hover:bg-blue-50 transition-colors group"
+              href={`/category/${category.slug}`}
+              className="flex items-center justify-between px-4 py-3.5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200 group"
             >
               <div className="flex items-center gap-3">
-                <span className="text-xl">{category.icon}</span>
-                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
+                <span className="text-xl transition-transform duration-200 group-hover:scale-110">
+                  {getCategoryIcon(category.name)}
+                </span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
                   {category.name}
                 </span>
               </div>
-              <FiChevronRight className="text-gray-400 group-hover:text-blue-600" size={16} />
+              {category.children && category.children.length > 0 && (
+                <FiChevronRight 
+                  className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200"
+                  size={16}
+                />
+              )}
             </Link>
 
-            {/* Mega Menu Flyout - Only on Desktop */}
-            {hoveredCategory === category.name && category.subcategories && (
-              <div className="hidden lg:block absolute left-full top-0 ml-1 w-[600px] bg-white rounded-lg shadow-2xl border border-gray-100 z-50 p-6">
-                <div className="grid grid-cols-2 gap-6">
-                  {category.subcategories.map((subcategory, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <h3 className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200">
-                        {subcategory.name}
-                      </h3>
-                      <ul className="space-y-1.5">
-                        {subcategory.items.map((item, itemIdx) => (
-                          <li key={itemIdx}>
-                            <Link
-                              href={`${category.href}/${item.toLowerCase().replace(/\s+/g, '-')}`}
-                              className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
-                            >
-                              {item}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+            {/* Mega Menu on Hover */}
+            {hoveredCategory === category.name && category.children && category.children.length > 0 && (
+              <>
+                {/* Bridge to prevent hover gap */}
+                <div 
+                  className="absolute left-full top-0 w-4 h-full z-[10001] -ml-2"
+                  onMouseEnter={() => setHoveredCategory(category.name)}
+                />
+                <div 
+                  className="absolute left-full top-0 ml-2 w-[600px] bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-[10000]"
+                  onMouseEnter={() => setHoveredCategory(category.name)}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                >
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                    {category.name}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    {category.children.map((subcategory) => (
+                      <div key={subcategory.id} className="space-y-2">
+                        <Link
+                          href={`/category/${subcategory.slug}`}
+                          className="font-semibold text-sm text-gray-900 hover:text-blue-600 transition-colors block mb-3"
+                        >
+                          {subcategory.name}
+                        </Link>
+                        {subcategory.children && subcategory.children.length > 0 && (
+                          <ul className="space-y-1.5">
+                            {subcategory.children.slice(0, 5).map((item) => (
+                              <li key={item.id}>
+                                <Link
+                                  href={`/category/${item.slug}`}
+                                  className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
+                                >
+                                  {item.name}
+                                </Link>
+                              </li>
+                            ))}
+                            {subcategory.children.length > 5 && (
+                              <li>
+                                <Link
+                                  href={`/category/${subcategory.slug}`}
+                                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                >
+                                  View all →
+                                </Link>
+                              </li>
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         ))}
@@ -151,4 +151,3 @@ export default function CategorySidebar() {
     </aside>
   );
 }
-

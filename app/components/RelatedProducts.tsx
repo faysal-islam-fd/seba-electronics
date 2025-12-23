@@ -1,72 +1,64 @@
-import ProductCard from './ProductCard';
+'use client';
 
-const relatedProducts = [
-  {
-    id: '2',
-    name: 'iPhone 15 Pro 128GB - Blue Titanium',
-    price: 125000,
-    originalPrice: 135000,
-    image: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=400&h=400&fit=crop',
-    discount: 7,
-    rating: 4.8,
-    inStock: true,
-  },
-  {
-    id: '3',
-    name: 'Samsung Galaxy S24 Ultra 256GB',
-    price: 135000,
-    originalPrice: 145000,
-    image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop',
-    discount: 7,
-    rating: 4.8,
-    inStock: true,
-  },
-  {
-    id: '4',
-    name: 'Google Pixel 8 Pro 128GB',
-    price: 95000,
-    image: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400&h=400&fit=crop',
-    rating: 4.7,
-    inStock: true,
-  },
-  {
-    id: '5',
-    name: 'OnePlus 12 5G 256GB',
-    price: 75000,
-    originalPrice: 82000,
-    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop',
-    discount: 9,
-    rating: 4.6,
-    inStock: true,
-  },
-];
+import ProductCard from './ProductCard';
+import { useGetProductsQuery } from '@/app/store/api/productsApi';
 
 interface RelatedProductsProps {
   currentProductId: string;
+  categoryId?: number;
 }
 
-export default function RelatedProducts({ currentProductId }: RelatedProductsProps) {
+export default function RelatedProducts({ currentProductId, categoryId }: RelatedProductsProps) {
+  // Fetch related products - same category, excluding current product
+  const { data, isLoading } = useGetProductsQuery({
+    per_page: 8,
+    category_id: categoryId,
+  });
+
+  const relatedProducts = data?.data?.filter(p => p.id.toString() !== currentProductId).slice(0, 4) || [];
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden h-80 animate-pulse">
+              <div className="w-full h-40 bg-gray-200"></div>
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (relatedProducts.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
-        {relatedProducts
-          .filter((product) => product.id !== currentProductId)
-          .map((product) => (
-            <ProductCard 
-              key={product.id} 
-              id={product.id}
-              name={product.name}
-              price={product.price}
-              originalPrice={product.originalPrice}
-              image={product.image}
-              discount={product.discount}
-              rating={product.rating}
-              inStock={product.inStock}
-            />
-          ))}
+        {relatedProducts.map((product) => (
+          <ProductCard 
+            key={product.id} 
+            id={product.id.toString()}
+            name={product.title}
+            price={product.final_price}
+            originalPrice={product.price !== product.final_price ? product.price : undefined}
+            image={product.thumbnail}
+            discount={product.discount_percentage ? Math.round(product.discount_percentage) : undefined}
+            rating={4.5}
+            inStock={!product.is_out_of_stock}
+          />
+        ))}
       </div>
     </div>
   );
 }
-

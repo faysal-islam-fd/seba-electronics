@@ -3,17 +3,49 @@ import CategorySidebar from './components/CategorySidebar';
 import PromoCarousel from './components/PromoCarousel';
 import CategorySection from './components/CategorySection';
 import CategoryCardSection from './components/CategoryCardSection';
-import {
-  featuredProducts,
-  desktopProducts,
-  monitorProducts,
-  accessoriesProducts,
-  smartphoneProducts,
-  cameraProducts,
-  gadgetProducts,
+import { getFeaturedProducts, getTopSellingProducts } from './lib/api';
+import { 
+  featuredProducts as fallbackFeatured,
+  smartphoneProducts as fallbackTopSelling,
 } from './data/dummyData';
 
-export default function Home() {
+// Server Component with SSR
+export default async function Home() {
+  // Fetch data on the server
+  const [featuredData, topSellingData] = await Promise.all([
+    getFeaturedProducts(8),
+    getTopSellingProducts(8),
+  ]);
+
+  // Transform API data to component format, with fallback to dummy data
+  const featuredProducts = featuredData.success && featuredData.data.length > 0 
+    ? featuredData.data.map(product => ({
+        id: product.id.toString(),
+        name: product.title,
+        price: product.final_price,
+        originalPrice: product.price !== product.final_price ? product.price : undefined,
+        image: product.thumbnail,
+        discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
+        badge: product.is_featured ? 'Featured' : undefined,
+        rating: 4.5,
+        inStock: !product.is_out_of_stock,
+      }))
+    : fallbackFeatured; // Fallback to dummy data if API fails
+
+  const topSellingProducts = topSellingData.success && topSellingData.data.length > 0
+    ? topSellingData.data.map(product => ({
+        id: product.id.toString(),
+        name: product.title,
+        price: product.final_price,
+        originalPrice: product.price !== product.final_price ? product.price : undefined,
+        image: product.thumbnail,
+        discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
+        badge: product.is_top_selling ? 'Top Selling' : undefined,
+        rating: 4.5,
+        inStock: !product.is_out_of_stock,
+      }))
+    : fallbackTopSelling; // Fallback to dummy data if API fails
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Sidebar */}
@@ -118,25 +150,22 @@ export default function Home() {
       {/* Main Content */}
       <div className="container mx-auto px-3 sm:px-4 py-8 space-y-10">
         {/* Featured Products - Hot Deals */}
-        <CategorySection
-          title="🔥 Hot Deals with Best Prices"
-          products={featuredProducts}
-          viewAllLink="/category/hot-deals"
-        />
+        {featuredProducts.length > 0 && (
+          <CategorySection
+            title="🔥 Hot Deals with Best Prices"
+            products={featuredProducts}
+            viewAllLink="/category/hot-deals"
+          />
+        )}
 
-        {/* Desktop Section */}
-        <CategorySection
-          title="💻 Best Deals on Desktops"
-          products={desktopProducts}
-          viewAllLink="/category/desktops"
-        />
-
-        {/* Monitor Section */}
-        <CategorySection
-          title="🖥️ Premium Monitors"
-          products={monitorProducts}
-          viewAllLink="/category/monitors"
-        />
+        {/* Top Selling Products */}
+        {topSellingProducts.length > 0 && (
+          <CategorySection
+            title="⭐ Best Sellers"
+            products={topSellingProducts}
+            viewAllLink="/category/top-selling"
+          />
+        )}
 
         {/* Info Banner Section */}
         <section className="my-12">
@@ -158,35 +187,10 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* Accessories Section */}
-        <CategorySection
-          title="🎧 Tech Accessories"
-          products={accessoriesProducts}
-          viewAllLink="/category/accessories"
-        />
-
-        {/* Smartphone Section */}
-        <CategorySection
-          title="📱 Latest Smartphones"
-          products={smartphoneProducts}
-          viewAllLink="/category/smartphones"
-        />
-
-        {/* Camera Section */}
-        <CategorySection
-          title="📷 Camera & Photography"
-          products={cameraProducts}
-          viewAllLink="/category/cameras"
-        />
-
-        {/* Gadgets Section */}
-        <CategorySection
-          title="⌚ Smart Gadgets & Wearables"
-          products={gadgetProducts}
-          viewAllLink="/category/gadgets"
-        />
       </div>
     </div>
   );
 }
+
+// Enable ISR (Incremental Static Regeneration)
+export const revalidate = 3600; // Revalidate every hour

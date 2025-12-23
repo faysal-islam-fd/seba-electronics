@@ -6,91 +6,8 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
-import {
-  featuredProducts,
-  desktopProducts,
-  monitorProducts,
-  accessoriesProducts,
-  smartphoneProducts,
-  cameraProducts,
-  gadgetProducts,
-} from '@/app/data/dummyData';
-
-const categories = [
-  { 
-    name: 'Smartphones', 
-    href: '/category/smartphones', 
-    icon: '📱',
-    subcategories: [
-      { name: 'iPhone', items: ['iPhone 15 Pro', 'iPhone 15', 'iPhone 14', 'iPhone SE'] },
-      { name: 'Samsung', items: ['Galaxy S24', 'Galaxy Z Fold', 'Galaxy A Series', 'Galaxy M Series'] },
-      { name: 'OnePlus', items: ['OnePlus 12', 'OnePlus 11', 'OnePlus Nord'] },
-    ]
-  },
-  { 
-    name: 'Electronics & Appliances', 
-    href: '/category/electronics', 
-    icon: '🔌',
-    subcategories: [
-      { name: 'Air Conditioners', items: ['Split AC', 'Window AC', 'Portable AC'] },
-      { name: 'Refrigerators', items: ['Double Door', 'Single Door', 'Side by Side'] },
-    ]
-  },
-  { 
-    name: 'Television', 
-    href: '/category/television', 
-    icon: '📺',
-    subcategories: [
-      { name: 'Smart TV', items: ['4K Smart TV', 'Full HD Smart TV', 'Android TV'] },
-      { name: 'LED TV', items: ['32 inch', '43 inch', '55 inch', '65 inch'] },
-    ]
-  },
-  { 
-    name: 'Washing Machine', 
-    href: '/category/washing-machine', 
-    icon: '🧺',
-    subcategories: [
-      { name: 'Front Load', items: ['7kg', '8kg', '9kg', '10kg'] },
-      { name: 'Top Load', items: ['Semi-Automatic', 'Fully Automatic'] },
-    ]
-  },
-  { 
-    name: 'Mobile Accessories', 
-    href: '/category/mobile-accessories', 
-    icon: '🎧',
-    subcategories: [
-      { name: 'Audio', items: ['Earbuds', 'Headphones', 'Speakers', 'Airpods'] },
-      { name: 'Power', items: ['Power Bank', 'Chargers', 'Cables'] },
-    ]
-  },
-  { 
-    name: 'Computers', 
-    href: '/category/computers', 
-    icon: '💻',
-    subcategories: [
-      { name: 'Laptops', items: ['Gaming Laptops', 'Business Laptops', 'Ultrabooks'] },
-      { name: 'Desktops', items: ['Gaming PC', 'All-in-One', 'Workstation'] },
-    ]
-  },
-  { 
-    name: 'Computer Accessories', 
-    href: '/category/computer-accessories', 
-    icon: '⌨️',
-    subcategories: [
-      { name: 'Input Devices', items: ['Keyboards', 'Mouse', 'Webcams'] },
-      { name: 'Storage', items: ['SSD', 'HDD', 'External HDD'] },
-    ]
-  },
-  { 
-    name: 'Lifestyle', 
-    href: '/category/lifestyle', 
-    icon: '⌚',
-    subcategories: [
-      { name: 'Wearables', items: ['Smart Watch', 'Fitness Bands', 'Smart Glasses'] },
-      { name: 'Gaming', items: ['Consoles', 'Controllers', 'Gaming Chairs'] },
-    ]
-  },
-];
+import { useGetCategoriesQuery } from '@/app/store/api/categoriesApi';
+import { useGetProductsQuery } from '@/app/store/api/productsApi';
 
 const slugify = (value: string) =>
   value
@@ -99,15 +16,30 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-');
 
-const allProducts = [
-  ...featuredProducts,
-  ...desktopProducts,
-  ...monitorProducts,
-  ...accessoriesProducts,
-  ...smartphoneProducts,
-  ...cameraProducts,
-  ...gadgetProducts,
-];
+// Icon mapping for categories
+const getCategoryIcon = (name: string) => {
+  const iconMap: Record<string, string> = {
+    'smartphones': '📱',
+    'electronics': '🔌',
+    'television': '📺',
+    'washing': '🧺',
+    'mobile': '🎧',
+    'computers': '💻',
+    'computer': '⌨️',
+    'accessories': '🎧',
+    'lifestyle': '⌚',
+    'gaming': '🎮',
+    'audio': '🔊',
+    'camera': '📷',
+    'appliances': '🏠',
+  };
+  
+  const nameLower = name.toLowerCase();
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (nameLower.includes(key)) return icon;
+  }
+  return '📦'; // Default icon
+};
 
 export default function Header() {
   const router = useRouter();
@@ -122,13 +54,26 @@ export default function Header() {
   const { user, isLoggedIn, logout } = useAuth();
   const cartItemCount = getCartCount();
 
+  // Fetch categories from API
+  const { data: categoriesData } = useGetCategoriesQuery({ with_children: true });
+  const categories = categoriesData?.data || [];
+
+  // Fetch products for search suggestions
+  const { data: productsData } = useGetProductsQuery({ per_page: 50 });
+  const allProducts = productsData?.data || [];
+
   const suggestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
+    if (!q || !allProducts.length) return [];
     return allProducts
-      .filter((product) => product.name.toLowerCase().includes(q))
-      .slice(0, 8);
-  }, [searchQuery]);
+      .filter((product) => product.title.toLowerCase().includes(q))
+      .slice(0, 8)
+      .map(product => ({
+        id: product.id.toString(),
+        name: product.title,
+        price: product.final_price,
+      }));
+  }, [searchQuery, allProducts]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,17 +124,17 @@ export default function Header() {
                             <div className="divide-y divide-gray-100">
                               {categories.map((category) => (
                                 <div
-                                  key={category.href}
+                                  key={category.id}
                                   className="relative"
                                   onMouseEnter={() => setHoveredCategory(category.name)}
                                 >
                                   <Link
-                                    href={category.href}
+                                    href={`/category/${category.slug}`}
                                     className="flex items-center justify-between px-4 py-3.5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200 group"
                                   >
                                     <div className="flex items-center gap-3">
                                       <span className="text-xl transition-transform duration-200 group-hover:scale-110">
-                                        {category.icon}
+                                        {getCategoryIcon(category.name)}
                                       </span>
                                       <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
                                         {category.name}
@@ -201,7 +146,7 @@ export default function Header() {
                                     />
                                   </Link>
 
-                                  {hoveredCategory === category.name && category.subcategories && (
+                                  {hoveredCategory === category.name && category.children && category.children.length > 0 && (
                                     <>
                                       <div
                                         className="absolute left-full top-0 w-4 h-full z-[10001] -ml-2"
@@ -213,26 +158,28 @@ export default function Header() {
                                         onMouseLeave={() => setHoveredCategory(null)}
                                       >
                                         <div className="grid grid-cols-2 gap-6">
-                                          {category.subcategories.map((subcategory, idx) => (
-                                            <div key={idx} className="space-y-2">
-                                              <h3 className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200">
+                                          {category.children.map((subcategory) => (
+                                            <div key={subcategory.id} className="space-y-2">
+                                              <Link
+                                                href={`/category/${subcategory.slug}`}
+                                                className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200 block hover:text-blue-600 transition-colors"
+                                              >
                                                 {subcategory.name}
-                                              </h3>
-                                              <ul className="space-y-1.5">
-                                                {subcategory.items.map((item, itemIdx) => (
-                                                  <li key={itemIdx}>
-                                                    <Link
-                                                      href={{
-                                                        pathname: category.href,
-                                                        query: { subcategory: slugify(item) },
-                                                      }}
-                                                      className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
-                                                    >
-                                                      {item}
-                                                    </Link>
-                                                  </li>
-                                                ))}
-                                              </ul>
+                                              </Link>
+                                              {subcategory.children && subcategory.children.length > 0 && (
+                                                <ul className="space-y-1.5">
+                                                  {subcategory.children.map((item) => (
+                                                    <li key={item.id}>
+                                                      <Link
+                                                        href={`/category/${item.slug}`}
+                                                        className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
+                                                      >
+                                                        {item.name}
+                                                      </Link>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              )}
                                             </div>
                                           ))}
                                         </div>
@@ -505,7 +452,7 @@ export default function Header() {
                 {categories.map((item) => {
                   const isExpanded = mobileExpandedCategory === item.name;
                   return (
-                    <div key={item.href} className="border border-gray-100 rounded-lg">
+                    <div key={item.id} className="border border-gray-100 rounded-lg">
                       <button
                         onClick={() =>
                           setMobileExpandedCategory(isExpanded ? null : item.name)
@@ -513,7 +460,7 @@ export default function Header() {
                         className="w-full flex items-center justify-between gap-2 sm:gap-3 py-1.5 sm:py-2 px-2.5 sm:px-3 text-left"
                       >
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="text-lg sm:text-xl">{item.icon}</span>
+                          <span className="text-lg sm:text-xl">{getCategoryIcon(item.name)}</span>
                           <span className="font-medium text-sm sm:text-base text-gray-800">{item.name}</span>
                         </div>
                         <FiChevronRight
@@ -523,28 +470,31 @@ export default function Header() {
                           }`}
                         />
                       </button>
-                      {isExpanded && item.subcategories && (
+                      {isExpanded && item.children && item.children.length > 0 && (
                         <div className="bg-gray-50 px-3 sm:px-5 py-2 sm:py-3 space-y-1.5 sm:space-y-2">
-                          {item.subcategories.map((sub) => (
-                            <div key={sub.name} className="space-y-1">
-                              <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">
+                          {item.children.map((sub) => (
+                            <div key={sub.id} className="space-y-1">
+                              <Link
+                                href={`/category/${sub.slug}`}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase block hover:text-blue-600"
+                              >
                                 {sub.name}
-                              </p>
-                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                                {sub.items.map((subItem) => (
-                                  <Link
-                                    key={subItem}
-                                    href={{
-                                      pathname: item.href,
-                                      query: { subcategory: slugify(subItem) },
-                                    }}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1"
-                                  >
-                                    {subItem}
-                                  </Link>
-                                ))}
-                              </div>
+                              </Link>
+                              {sub.children && sub.children.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                  {sub.children.map((subItem) => (
+                                    <Link
+                                      key={subItem.id}
+                                      href={`/category/${subItem.slug}`}
+                                      onClick={() => setMobileMenuOpen(false)}
+                                      className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
+                                    >
+                                      {subItem.name}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
