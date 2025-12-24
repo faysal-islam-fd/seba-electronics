@@ -18,39 +18,50 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   const apiProduct = data.data;
 
+  // Check if this is a variable product (has variations)
+  const isVariableProduct = apiProduct.attributes && apiProduct.attributes.length > 0;
+
   // Transform API data to match the component's expected format
   const product = {
     id: apiProduct.id.toString(),
     name: apiProduct.title,
     brand: apiProduct.brand?.name || 'Unknown Brand',
-    price: apiProduct.final_price,
-    originalPrice: apiProduct.price !== apiProduct.final_price ? apiProduct.price : undefined,
-    discount: apiProduct.discount_percentage ? Math.round(apiProduct.discount_percentage) : undefined,
+    thumbnail: apiProduct.thumbnail,
+    // For normal products: use root level values
+    // For variable products: these will be overridden by selected attribute
+    price: isVariableProduct ? 0 : apiProduct.final_price,
+    originalPrice: isVariableProduct ? undefined : (apiProduct.price !== apiProduct.final_price ? apiProduct.price : undefined),
+    discount: isVariableProduct ? 0 : (apiProduct.discount_percentage ? Math.round(apiProduct.discount_percentage) : 0),
     rating: 4.5, // Default since API doesn't provide ratings
     reviewCount: 0,
-    inStock: !apiProduct.is_out_of_stock,
-    stockCount: apiProduct.stock,
+    inStock: isVariableProduct ? true : !apiProduct.is_out_of_stock, // For variable products, check stock at attribute level
+    stockCount: isVariableProduct ? 0 : apiProduct.stock, // For variable products, use attribute stock
     sku: apiProduct.sku,
     images: apiProduct.galleries?.filter(g => g.type === 'image').map(g => g.file_path || '') || [apiProduct.thumbnail],
-    colors: [], // API doesn't provide color variants in this format
     description: apiProduct.description,
     specifications: apiProduct.specifications?.reduce((acc: any, spec) => {
       spec.items.forEach(item => {
-        acc[item.key] = item.value;
+        acc[item.key || 'Specification'] = item.value;
       });
       return acc;
     }, {}) || {},
     features: apiProduct.specifications?.flatMap(spec => 
-      spec.items.map(item => `${item.key}: ${item.value}`)
+      spec.items.map(item => `${item.key || 'Feature'}: ${item.value}`)
     ) || [],
-    warranty: apiProduct.warranties?.[0]?.title || 'Standard Warranty',
+    warranty: apiProduct.warranties?.[0]?.group_name 
+      ? `${apiProduct.warranties[0].group_name} - ${apiProduct.warranties[0].items?.[0]?.duration} ${apiProduct.warranties[0].items?.[0]?.type}`
+      : 'Standard Warranty',
     shipping: 'Free Delivery in Dhaka (3-5 Days)',
     soldBy: apiProduct.vendor?.name || 'Official Store',
-    emi: apiProduct.is_support_emi ? 'EMI Available' : undefined,
+    emi: apiProduct.is_support_emi ? 'EMI Available' : 'Not Available',
     specialPrice: `৳${apiProduct.final_price.toLocaleString()}`,
     badgeText: apiProduct.is_featured ? 'Featured' : undefined,
     clubPoints: 0,
     frequentlyBought: [],
+    // Pass raw attributes for variation handling
+    attributes: apiProduct.attributes || [],
+    type: apiProduct.type,
+    isVariableProduct,
   };
 
   return (

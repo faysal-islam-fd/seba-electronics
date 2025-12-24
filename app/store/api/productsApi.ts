@@ -45,20 +45,18 @@ export interface ProductDetail extends Product {
     position: number;
   }[];
   specifications?: {
-    group_id: number;
     group_name: string;
     items: {
-      key: string;
+      key?: string;
       value: string;
     }[];
   }[];
   warranties?: {
-    id: number;
     group_name: string;
-    title: string;
-    description: string;
-    duration_months: number;
-    duration_type: string;
+    items?: {
+      type: string;
+      duration: number;
+    }[];
   }[];
   attributes?: any[];
   vendor?: any;
