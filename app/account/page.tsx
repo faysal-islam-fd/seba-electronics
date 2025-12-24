@@ -98,18 +98,18 @@ export default function AccountPage() {
       case 'account':
         return (
           <>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Account Information</h2>
-                  <p className="text-sm text-gray-500">Basic details associated with your Pickaboo profile.</p>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Account Information</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Basic details associated with your Pickaboo profile.</p>
                 </div>
-                <button className="px-5 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-100 transition-colors">
+                <button className="px-4 sm:px-5 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors">
                   Edit
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-3 sm:gap-y-4">
                 {infoRows.map((row) => (
                   <div key={row.label}>
                     <p className="text-xs uppercase tracking-wide text-gray-400">{row.label}</p>
@@ -119,22 +119,22 @@ export default function AccountPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-6">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                   <FiShield />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Account Security</h3>
-                  <p className="text-sm text-gray-500">Manage your login credentials and keep your account safe.</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Account Security</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">Manage your login credentials and keep your account safe.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {securityItems.map((item) => (
                   <div key={item.label} className="border border-gray-200 rounded-xl px-4 py-3">
                     <p className="text-xs uppercase tracking-wide text-gray-400">{item.label}</p>
                     <p className="text-sm font-medium text-gray-900 mt-1">{item.value}</p>
-                    <Link href={item.link} className="text-blue-600 text-sm font-semibold mt-2 inline-block">
+                    <Link href={item.link} className="text-blue-600 text-xs sm:text-sm font-semibold mt-2 inline-block">
                       {item.action}
                     </Link>
                   </div>
@@ -271,11 +271,30 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] py-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-6">
-          {/* Sidebar */}
-          <aside className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 h-fit">
+    <div className="min-h-screen bg-[#f5f7fb] py-4 sm:py-8">
+      <div className="container mx-auto px-3 sm:px-4">
+        {/* Mobile Dropdown Navigation */}
+        <div className="lg:hidden mb-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+            <p className="text-xs text-gray-500 mb-1">Logged in as</p>
+            <p className="text-sm font-semibold text-gray-900 truncate mb-3">{user?.email}</p>
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {navigationItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4 sm:gap-6">
+          {/* Sidebar - Desktop Only */}
+          <aside className="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-200 p-6 h-fit sticky top-20">
             <div className="mb-6">
               <p className="text-sm text-gray-500">Logged in as</p>
               <p className="text-lg font-semibold text-gray-900 break-all">{user?.email}</p>
@@ -303,7 +322,7 @@ export default function AccountPage() {
           </aside>
 
           {/* Main content */}
-          <section className="space-y-6">
+          <section className="space-y-4 sm:space-y-6">
             {renderContent()}
           </section>
         </div>

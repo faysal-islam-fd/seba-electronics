@@ -49,14 +49,14 @@ export default function CheckoutPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="text-6xl mb-4">🛒</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add items to your cart to proceed to checkout.</p>
+          <div className="text-4xl sm:text-6xl mb-4">🛒</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-6">Add items to your cart to proceed to checkout.</p>
           <Link
             href="/"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm sm:text-base"
           >
             Continue Shopping
           </Link>
@@ -67,17 +67,19 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: 'Home', href: '/' },
-            { label: 'Cart', href: '/cart' },
-            { label: 'Checkout' },
-          ]}
-        />
+        <div className="mb-4">
+          <Breadcrumb
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Cart', href: '/cart' },
+              { label: 'Checkout' },
+            ]}
+          />
+        </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 mt-6">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Main Checkout Form */}
           <div className="flex-1">
             {/* Progress Steps */}

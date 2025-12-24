@@ -33,26 +33,28 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: 'Home', href: '/' },
-            { label: 'Cart' },
-          ]}
-        />
+        <div className="mb-4">
+          <Breadcrumb
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Cart' },
+            ]}
+          />
+        </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 mt-6">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Cart Items Section */}
           <div className="flex-1">
             {cartItems.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                <div className="text-6xl mb-4">🛒</div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-                <p className="text-gray-600 mb-6">Looks like you haven't added anything to your cart yet.</p>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 sm:p-12 text-center">
+                <div className="text-4xl sm:text-6xl mb-4">🛒</div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+                <p className="text-sm sm:text-base text-gray-600 mb-6">Looks like you haven't added anything to your cart yet.</p>
                 <Link
                   href="/"
-                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm sm:text-base"
                 >
                   Continue Shopping
                 </Link>
@@ -86,10 +88,10 @@ export default function CartPage() {
     
         {/* Proceed To Checkout Button - Bottom */}
         {cartItems.length > 0 && (
-          <div className="mt-8 flex justify-center">
+          <div className="mt-6 sm:mt-8">
             <Link
               href="/checkout"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-lg transition-colors text-lg"
+              className="block sm:inline-block w-full sm:w-auto text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-lg transition-colors text-base sm:text-lg"
             >
               Proceed To Checkout
             </Link>

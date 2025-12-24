@@ -26,6 +26,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     id: apiProduct.id.toString(),
     name: apiProduct.title,
     brand: apiProduct.brand?.name || 'Unknown Brand',
+    brandSlug: apiProduct.brand?.slug || apiProduct.brand?.name.toLowerCase() || 'unknown',
     thumbnail: apiProduct.thumbnail,
     // For normal products: use root level values
     // For variable products: these will be overridden by selected attribute
@@ -70,8 +71,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         {/* Breadcrumb */}
         <Breadcrumb 
           items={[
-            { label: 'Products', href: '/products' },
-            { label: product.brand, href: `/brand/${product.brand.toLowerCase()}` },
+            { label: 'Products', href: '/search' },
+            { label: product.brand, href: `/brand/${product.brandSlug}` },
             { label: product.name },
           ]}
         />

@@ -165,7 +165,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(500px,600px)_1fr] xl:grid-cols-[minmax(500px,600px)_1fr_280px] gap-4 md:gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(400px,1fr)_1fr] xl:grid-cols-[minmax(500px,600px)_1fr_280px] gap-4 md:gap-6">
       {/* Left Column - Product Images */}
       <div className="bg-white rounded-lg shadow-sm p-3 md:p-4 lg:p-6">
         <ProductGallery
@@ -217,7 +217,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
           <div>
             Brand:{' '}
-            <Link href={`/brand/${product.brand.toLowerCase()}`} className="font-semibold text-blue-600 hover:underline">
+            <Link href={`/brand/${product.brandSlug || product.brand.toLowerCase()}`} className="font-semibold text-blue-600 hover:underline">
               {product.brand}
             </Link>
           </div>

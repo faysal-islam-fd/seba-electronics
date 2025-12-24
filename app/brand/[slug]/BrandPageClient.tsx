@@ -1,23 +1,24 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
-import { ProductsResponse, BrandsResponse } from '@/app/lib/api';
-import { FiSearch, FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
+import { ProductsResponse, CategoriesResponse, Brand } from '@/app/lib/api';
+import { FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
+import Image from 'next/image';
 
 type SortOption = 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 
-interface SearchPageClientProps {
+interface BrandPageClientProps {
+  currentBrand: Brand;
   initialProducts: ProductsResponse;
-  initialBrands: BrandsResponse;
-  initialQuery: string;
+  initialCategories: CategoriesResponse;
   initialPage: number;
   initialSort: SortOption;
   initialMinPrice?: number;
   initialMaxPrice?: number;
-  initialBrandId?: number;
+  initialCategoryId?: number;
 }
 
 interface FilterSectionProps {
@@ -50,36 +51,35 @@ function FilterSection({ title, isOpen, onToggle, children }: FilterSectionProps
   );
 }
 
-export default function SearchPageClient({
+export default function BrandPageClient({
+  currentBrand,
   initialProducts,
-  initialBrands,
-  initialQuery,
+  initialCategories,
   initialPage,
   initialSort,
   initialMinPrice,
   initialMaxPrice,
-  initialBrandId,
-}: SearchPageClientProps) {
+  initialCategoryId,
+}: BrandPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const [searchInput, setSearchInput] = useState(initialQuery);
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
     initialMinPrice || 0,
     initialMaxPrice || 300000
   ]);
-  const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(initialCategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
-    brand: false,
+    categories: false,
   });
 
   const products = initialProducts.data || [];
   const meta = initialProducts.meta;
-  const brands = initialBrands.data || [];
+  const categories = initialCategories.data || [];
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
@@ -92,14 +92,7 @@ export default function SearchPageClient({
       }
     });
     
-    router.push(`/search?${params.toString()}`);
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      updateURL({ q: searchInput.trim(), page: 1 });
-    }
+    router.push(`/brand/${currentBrand.slug}?${params.toString()}`);
   };
 
   const handleSortChange = (newSort: SortOption) => {
@@ -107,10 +100,10 @@ export default function SearchPageClient({
     updateURL({ sort: newSort, page: 1 });
   };
 
-  const handleBrandChange = (brandId: number) => {
-    const newBrandId = selectedBrandId === brandId ? undefined : brandId;
-    setSelectedBrandId(newBrandId);
-    updateURL({ brand_id: newBrandId, page: 1 });
+  const handleCategoryChange = (categoryId: number) => {
+    const newCategoryId = selectedCategoryId === categoryId ? undefined : categoryId;
+    setSelectedCategoryId(newCategoryId);
+    updateURL({ category_id: newCategoryId, page: 1 });
   };
 
   const handlePriceChange = () => {
@@ -127,46 +120,50 @@ export default function SearchPageClient({
 
   const clearFilters = () => {
     setPriceRange([0, 300000]);
-    setSelectedBrandId(undefined);
+    setSelectedCategoryId(undefined);
     setSortBy('latest');
-    router.push(`/search?q=${searchInput}`);
+    router.push(`/brand/${currentBrand.slug}`);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
-        <div className="hidden md:block mb-4">
+        <div className="mb-4">
           <Breadcrumb 
             items={[
               { label: 'Home', href: '/' },
-              { label: 'Search', href: initialQuery ? `/search?q=${encodeURIComponent(initialQuery)}` : '/search' },
-              ...(initialQuery ? [{ label: initialQuery }] : []),
+              { label: 'Brands', href: '/brands' },
+              { label: currentBrand.name },
             ]}
           />
         </div>
 
-        {/* Search Bar */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="flex-1 relative">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search for products..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+        {/* Brand Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center gap-4">
+            {currentBrand.logo ? (
+              <div className="w-20 h-20 relative bg-white rounded-xl border border-gray-200 p-2 flex-shrink-0">
+                <Image
+                  src={currentBrand.logo}
+                  alt={currentBrand.name}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-3xl text-white shadow-lg flex-shrink-0">
+                {currentBrand.name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{currentBrand.name}</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {meta ? `${meta.total} products available` : 'Loading products...'}
+              </p>
             </div>
-            <button
-              type="submit"
-              className="px-4 sm:px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base"
-            >
-              <span className="hidden sm:inline">Search</span>
-              <FiSearch className="sm:hidden" size={18} />
-            </button>
-          </form>
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -175,7 +172,7 @@ export default function SearchPageClient({
             <div className="bg-white rounded-lg shadow-sm sticky top-20">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Filters</h3>
-                {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000) && (
+                {(selectedCategoryId || priceRange[0] > 0 || priceRange[1] < 300000) && (
                   <button
                     onClick={clearFilters}
                     className="text-sm text-blue-600 hover:text-blue-700"
@@ -184,6 +181,29 @@ export default function SearchPageClient({
                   </button>
                 )}
               </div>
+
+              {/* Categories Filter */}
+              {categories.length > 0 && (
+                <FilterSection
+                  title="Categories"
+                  isOpen={filtersOpen.categories}
+                  onToggle={() => setFiltersOpen(prev => ({ ...prev, categories: !prev.categories }))}
+                >
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {categories.map((cat) => (
+                      <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedCategoryId === cat.id}
+                          onChange={() => handleCategoryChange(cat.id)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{cat.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterSection>
+              )}
 
               {/* Price Filter */}
               <FilterSection
@@ -217,27 +237,6 @@ export default function SearchPageClient({
                   </button>
                 </div>
               </FilterSection>
-
-              {/* Brand Filter */}
-              <FilterSection
-                title="Brand"
-                isOpen={filtersOpen.brand}
-                onToggle={() => setFiltersOpen(prev => ({ ...prev, brand: !prev.brand }))}
-              >
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {brands.map((brand) => (
-                    <label key={brand.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedBrandId === brand.id}
-                        onChange={() => handleBrandChange(brand.id)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
-                      />
-                      <span className="text-sm text-gray-700">{brand.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
             </div>
           </aside>
 
@@ -246,11 +245,8 @@ export default function SearchPageClient({
             {/* Results Header */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {initialQuery ? `Search Results for "${initialQuery}"` : 'All Products'}
-                </h2>
                 {meta && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600">
                     Showing {((meta.current_page - 1) * meta.per_page) + 1} - {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} products
                   </p>
                 )}
@@ -284,9 +280,9 @@ export default function SearchPageClient({
             {/* Products Grid */}
             {products.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <FiSearch size={48} className="text-gray-400 mx-auto mb-4" />
+                <div className="text-gray-400 text-6xl mb-4">📦</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
-                <p className="text-gray-600">Try adjusting your search or filters</p>
+                <p className="text-gray-600 mb-4">No products available for this brand yet.</p>
               </div>
             ) : (
               <>
@@ -381,5 +377,4 @@ export default function SearchPageClient({
     </div>
   );
 }
-
 

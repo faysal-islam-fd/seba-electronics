@@ -19,10 +19,12 @@ export interface Product {
   brand?: {
     id: number;
     name: string;
+    slug?: string;
   };
   category?: {
     id: number;
     name: string;
+    slug?: string;
   };
 }
 
