@@ -22,3 +22,4 @@ export function normalizeImageUrl(imageUrl: string | null | undefined): string {
   return `https://seba.rangpurit.com/${imageUrl}`;
 }
 
+

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX, FiHeart } from 'react-icons/fi';
+import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX, FiHeart, FiShield, FiRefreshCw } from 'react-icons/fi';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/app/context/CartContext';
@@ -34,7 +34,7 @@ const getCategoryIcon = (name: string) => {
     'camera': '📷',
     'appliances': '🏠',
   };
-  
+
   const nameLower = name.toLowerCase();
   for (const [key, icon] of Object.entries(iconMap)) {
     if (nameLower.includes(key)) return icon;
@@ -55,7 +55,7 @@ export default function Header() {
   const { getCartCount } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
   const cartItemCount = getCartCount();
-  
+
   // Get wishlist count
   const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isLoggedIn });
   const wishlistCount = wishlistData?.data?.length || 0;
@@ -173,18 +173,18 @@ export default function Header() {
                                                 {subcategory.name}
                                               </Link>
                                               {subcategory.children && subcategory.children.length > 0 && (
-                                              <ul className="space-y-1.5">
+                                                <ul className="space-y-1.5">
                                                   {subcategory.children.map((item) => (
                                                     <li key={item.id}>
-                                                    <Link
+                                                      <Link
                                                         href={`/category/${item.slug}`}
-                                                      className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
-                                                    >
+                                                        className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
+                                                      >
                                                         {item.name}
-                                                    </Link>
-                                                  </li>
-                                                ))}
-                                              </ul>
+                                                      </Link>
+                                                    </li>
+                                                  ))}
+                                                </ul>
                                               )}
                                             </div>
                                           ))}
@@ -318,11 +318,20 @@ export default function Header() {
                           My Wishlist
                         </Link>
                         <Link
-                          href="/account/reviews"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          href="/account/service-requests"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                           onClick={() => setAccountDropdownOpen(false)}
                         >
-                          My Reviews
+                          <FiShield size={14} />
+                          Service Requests
+                        </Link>
+                        <Link
+                          href="/account/return-requests"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setAccountDropdownOpen(false)}
+                        >
+                          <FiRefreshCw size={14} />
+                          Return Requests
                         </Link>
                         <div className="border-t border-gray-200 my-1" />
                         <button
@@ -422,12 +431,20 @@ export default function Header() {
                             )}
                           </Link>
                           <Link
-                            href="/account/reviews"
+                            href="/account/service-requests"
                             onClick={() => setMobileProfileDropdownOpen(false)}
                             className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                           >
-                            <FiUser size={18} className="text-gray-500" />
-                            My Reviews
+                            <FiShield size={18} className="text-gray-500" />
+                            Service Requests
+                          </Link>
+                          <Link
+                            href="/account/return-requests"
+                            onClick={() => setMobileProfileDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <FiRefreshCw size={18} className="text-gray-500" />
+                            Return Requests
                           </Link>
                           <div className="border-t border-gray-200 my-1" />
                           <button
@@ -543,11 +560,11 @@ export default function Header() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         >
-          <div 
+          <div
             className="bg-white w-full h-full shadow-xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -584,9 +601,8 @@ export default function Header() {
                         </div>
                         <FiChevronRight
                           size={16}
-                          className={`text-gray-500 transition-transform ${
-                            isExpanded ? 'rotate-90' : ''
-                          }`}
+                          className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''
+                            }`}
                         />
                       </button>
                       {isExpanded && item.children && item.children.length > 0 && (
@@ -601,18 +617,18 @@ export default function Header() {
                                 {sub.name}
                               </Link>
                               {sub.children && sub.children.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                   {sub.children.map((subItem) => (
-                                  <Link
+                                    <Link
                                       key={subItem.id}
                                       href={`/category/${subItem.slug}`}
-                                    onClick={() => setMobileMenuOpen(false)}
+                                      onClick={() => setMobileMenuOpen(false)}
                                       className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
-                                  >
+                                    >
                                       {subItem.name}
-                                  </Link>
-                                ))}
-                              </div>
+                                    </Link>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           ))}

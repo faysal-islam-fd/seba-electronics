@@ -32,7 +32,7 @@ export default function Footer() {
                   <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-300"></span>
                   Careers
                 </Link>
-              </li>
+              </li> 
               <li>
                 <Link href="/blog" className="hover:text-blue-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
                   <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-300"></span>

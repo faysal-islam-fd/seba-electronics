@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTrackOrderMutation } from '@/app/store/api/ordersApi';
 import {
@@ -61,11 +61,64 @@ function OrderTrackContent() {
   const [orderNumber, setOrderNumber] = useState(initialOrderId.replace('#', ''));
   const [phoneOrEmail, setPhoneOrEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   const [trackOrder, { isLoading, data: trackData, error }] = useTrackOrderMutation();
 
-  const orderData = trackData?.success && trackData.data ? trackData.data : null;
+  // CRITICAL: Process orderData with useMemo to ensure shipping object is extracted BEFORE any rendering
+  // This prevents React from trying to render the shipping object directly
+  const orderData = useMemo(() => {
+    const rawOrderData = trackData?.success && trackData.data ? trackData.data : null;
+
+    if (!rawOrderData) return null;
+
+    const orderDataAny = rawOrderData as any;
+    if (orderDataAny.shipping && typeof orderDataAny.shipping === 'object' && !Array.isArray(orderDataAny.shipping)) {
+      const shipping = orderDataAny.shipping;
+      // Extract shipping object to individual fields
+      const shippingName = shipping.name || shipping.shipping_name || orderDataAny.shipping_name || 'N/A';
+      const shippingPhone = shipping.phone || shipping.shipping_phone || orderDataAny.shipping_phone || 'N/A';
+      const shippingEmail = shipping.email || shipping.shipping_email || orderDataAny.shipping_email || '';
+      const shippingAddress = shipping.address || shipping.shipping_address || orderDataAny.shipping_address || 'N/A';
+      const shippingCity = shipping.city || shipping.shipping_city || orderDataAny.shipping_city || 'N/A';
+      const shippingState = shipping.state || shipping.shipping_state || orderDataAny.shipping_state || '';
+      const shippingZip = shipping.zip || shipping.shipping_zip || orderDataAny.shipping_zip || '';
+
+      // CRITICAL: Create a completely new orderData object WITHOUT the shipping property
+      // Use object destructuring to exclude shipping, then add the extracted fields
+      const { shipping: _, ...orderDataWithoutShipping } = orderDataAny;
+      return {
+        ...orderDataWithoutShipping,
+        shipping_name: shippingName,
+        shipping_phone: shippingPhone,
+        shipping_email: shippingEmail,
+        shipping_address: shippingAddress,
+        shipping_city: shippingCity,
+        shipping_state: shippingState,
+        shipping_zip: shippingZip,
+      } as any;
+    }
+
+    return rawOrderData;
+  }, [trackData?.success, trackData?.data]);
+
   const hasResult = !!orderData;
+
+  // Helper function to get shipping information
+  // Shipping object has already been extracted to individual fields above
+  const getShippingInfo = (order: any) => {
+    if (!order) return null;
+    // Use individual fields (shipping object has already been extracted and deleted)
+    return {
+      name: order.shipping_name || 'N/A',
+      phone: order.shipping_phone || 'N/A',
+      email: order.shipping_email || '',
+      address: order.shipping_address || 'N/A',
+      city: order.shipping_city || 'N/A',
+      state: order.shipping_state || '',
+      zip: order.shipping_zip || '',
+      country: order.shipping_country || '',
+    };
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -101,7 +154,7 @@ function OrderTrackContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    
+
     if (!orderNumber.trim() || !phoneOrEmail.trim()) {
       setErrorMessage('Please enter both order number and phone/email');
       return;
@@ -115,8 +168,8 @@ function OrderTrackContent() {
     } catch (err: any) {
       console.error('Track order error:', err);
       setErrorMessage(
-        err.data?.message || 
-        err.message || 
+        err.data?.message ||
+        err.message ||
         'Failed to track order. Please check your order number and contact information.'
       );
     }
@@ -203,7 +256,7 @@ function OrderTrackContent() {
                     <p className="text-sm text-red-700">{errorMessage}</p>
                   </div>
                 )}
-                
+
                 <div className="sm:col-span-2 flex flex-wrap gap-3">
                   <button
                     type="submit"
@@ -257,11 +310,10 @@ function OrderTrackContent() {
                         </div>
                       </div>
                       <span className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold border-2 shadow-md ${getStatusColor(orderData.status)}`}>
-                        <span className={`w-3 h-3 rounded-full animate-pulse ${
-                          orderData.status.toLowerCase() === 'delivered' ? 'bg-green-500' :
-                          orderData.status.toLowerCase() === 'cancelled' ? 'bg-red-500' :
-                          'bg-blue-500'
-                        }`} />
+                        <span className={`w-3 h-3 rounded-full animate-pulse ${orderData.status.toLowerCase() === 'delivered' ? 'bg-green-500' :
+                            orderData.status.toLowerCase() === 'cancelled' ? 'bg-red-500' :
+                              'bg-blue-500'
+                          }`} />
                         {getStatusDisplay(orderData.status)}
                       </span>
                     </div>
@@ -308,16 +360,15 @@ function OrderTrackContent() {
                         const isActive = index < statusSteps.length - 1;
                         const isLast = index === statusSteps.length - 1;
                         const isCancelled = step === 'cancelled';
-                        
+
                         return (
                           <li key={step} className="relative">
-                            <div className={`absolute -left-[34px] top-0 flex h-10 w-10 items-center justify-center rounded-full border-4 shadow-lg transition-all duration-300 ${
-                              isCancelled 
-                                ? 'border-red-500 bg-red-50 shadow-red-500/30' 
-                                : isActive 
-                                  ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-blue-500/30 animate-pulse' 
+                            <div className={`absolute -left-[34px] top-0 flex h-10 w-10 items-center justify-center rounded-full border-4 shadow-lg transition-all duration-300 ${isCancelled
+                                ? 'border-red-500 bg-red-50 shadow-red-500/30'
+                                : isActive
+                                  ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-blue-500/30 animate-pulse'
                                   : 'border-slate-300 bg-white shadow-slate-500/20'
-                            }`}>
+                              }`}>
                               {isCancelled ? (
                                 <FiXCircle className="text-red-600" size={18} />
                               ) : isActive ? (
@@ -328,16 +379,14 @@ function OrderTrackContent() {
                                 <FiPackage className="text-slate-400" size={18} />
                               )}
                             </div>
-                            <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                              isCancelled
+                            <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${isCancelled
                                 ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
                                 : isActive
                                   ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-md'
                                   : 'bg-white border-slate-200'
-                            }`}>
-                              <p className={`text-base font-bold mb-1 ${
-                                isActive ? 'text-slate-900' : 'text-slate-500'
                               }`}>
+                              <p className={`text-base font-bold mb-1 ${isActive ? 'text-slate-900' : 'text-slate-500'
+                                }`}>
                                 {stepInfo.label}
                               </p>
                               <p className={`text-sm ${isActive ? 'text-slate-700' : 'text-slate-500'}`}>
@@ -370,23 +419,30 @@ function OrderTrackContent() {
           <aside className="space-y-4 lg:space-y-5">
             <div className="rounded-2xl border border-slate-200/70 bg-white shadow-xl shadow-slate-900/5 p-5 sm:p-6">
               <h3 className="text-base font-semibold text-slate-900 mb-3">Shipping Address</h3>
-              {orderData ? (
-                <div className="space-y-3 text-sm text-slate-700">
-                  <div className="flex items-start gap-2">
-                    <FiMapPin className="text-blue-600 flex-shrink-0 mt-0.5" size={16} />
-                    <div>
-                      <p className="font-semibold text-slate-900">{orderData.shipping_name}</p>
-                      <p>{orderData.shipping_address}</p>
-                      <p>{orderData.shipping_city}{orderData.shipping_state ? `, ${orderData.shipping_state}` : ''}</p>
-                      {orderData.shipping_zip && <p>Postal Code: {orderData.shipping_zip}</p>}
+              {orderData ? (() => {
+                const shippingInfo = getShippingInfo(orderData);
+                return shippingInfo ? (
+                  <div className="space-y-3 text-sm text-slate-700">
+                    <div className="flex items-start gap-2">
+                      <FiMapPin className="text-blue-600 flex-shrink-0 mt-0.5" size={16} />
+                      <div>
+                        <p className="font-semibold text-slate-900">{shippingInfo.name}</p>
+                        <p>{shippingInfo.address}</p>
+                        <p>{shippingInfo.city}{shippingInfo.state ? `, ${shippingInfo.state}` : ''}</p>
+                        {shippingInfo.zip && <p>Postal Code: {shippingInfo.zip}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FiPhone className="text-blue-600" size={16} />
+                      <span>{shippingInfo.phone}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FiPhone className="text-blue-600" size={16} />
-                    <span>{orderData.shipping_phone}</span>
-                  </div>
-                </div>
-              ) : (
+                ) : (
+                  <p className="text-sm text-slate-600">
+                    Shipping address information not available.
+                  </p>
+                );
+              })() : (
                 <p className="text-sm text-slate-600">
                   Search for an order to see shipping address details.
                 </p>
@@ -398,7 +454,7 @@ function OrderTrackContent() {
               <div className="rounded-2xl border border-slate-200/70 bg-white shadow-xl shadow-slate-900/5 p-5 sm:p-6">
                 <h3 className="text-base font-semibold text-slate-900 mb-3">Order Items</h3>
                 <div className="space-y-3">
-                  {orderData.items.slice(0, 3).map((item) => (
+                  {orderData.items.slice(0, 3).map((item: any) => (
                     <div key={item.id} className="flex gap-3">
                       <div className="w-12 h-12 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative">
                         <Image

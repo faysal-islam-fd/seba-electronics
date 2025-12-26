@@ -142,6 +142,14 @@ export default function CheckoutPage() {
         return;
       }
 
+      // Validate EMI fields if EMI is selected
+      if (paymentMethod === 'ssl_commerz' && isEmi) {
+        if (!emiMonths || emiMonths < 3 || emiMonths > 24) {
+          setErrorMessage('Please select a valid EMI tenure (3-24 months)');
+          return;
+        }
+      }
+
       // Build order request
       const orderData: any = {
         shipping_name: shippingInfo.fullName,
@@ -176,7 +184,7 @@ export default function CheckoutPage() {
         orderData.cus_phone = phoneNumber;
         
         // Add EMI information if EMI is selected
-        if (isEmi) {
+        if (isEmi && emiMonths) {
           orderData.is_emi = true;
           orderData.emi_months = emiMonths;
         }
@@ -185,10 +193,13 @@ export default function CheckoutPage() {
       // Debug: Log order data before sending
       console.log('📦 Order Data:', {
         payment_method: orderData.payment_method,
+        is_emi: orderData.is_emi,
+        emi_months: orderData.emi_months,
         cus_phone: orderData.cus_phone,
         shipping_phone: orderData.shipping_phone,
         hasCusPhone: !!orderData.cus_phone,
         phoneValue: shippingInfo.phone,
+        items_count: orderData.items.length,
         fullOrderData: JSON.stringify(orderData, null, 2),
       });
 
@@ -201,14 +212,33 @@ export default function CheckoutPage() {
         order_number: result.data.order.order_number,
         payment_url: result.data.payment_url,
         payment_method: paymentMethod,
+        is_emi: result.data.order.is_emi,
+        emi_months: result.data.order.emi_months,
+        emi_amount: result.data.order.emi_amount,
+        order_total: result.data.order.total,
       });
 
       if (result.success) {
+        // Verify EMI data if EMI was requested
+        if (paymentMethod === 'ssl_commerz' && isEmi) {
+          if (!result.data.order.is_emi) {
+            console.warn('⚠️ EMI was requested but order response does not include is_emi flag');
+          }
+          if (!result.data.order.emi_months) {
+            console.warn('⚠️ EMI months were requested but not returned in order response');
+          }
+          if (!result.data.order.emi_amount) {
+            console.warn('⚠️ EMI amount not returned in order response');
+          }
+        }
+
         // If payment URL is provided (SSL Commerz), redirect to payment gateway
         if (result.data.payment_url) {
           console.log('🔗 Redirecting to SSL Commerz payment gateway...', {
             payment_url: result.data.payment_url,
             order_number: result.data.order.order_number,
+            is_emi: result.data.order.is_emi,
+            emi_months: result.data.order.emi_months,
           });
           
           // Store order details before redirecting for callback handling
@@ -224,6 +254,8 @@ export default function CheckoutPage() {
           console.log('💾 Order details stored in sessionStorage:', {
             order_number: result.data.order.order_number,
             status: result.data.order.status,
+            is_emi: result.data.order.is_emi,
+            emi_months: result.data.order.emi_months,
           });
           
           // Redirect to payment gateway
@@ -249,10 +281,29 @@ export default function CheckoutPage() {
         setErrorMessage(result.message || 'Failed to place order. Please try again.');
       }
     } catch (error: any) {
-      console.error('Order placement error:', error);
+      console.error('❌ Order placement error:', {
+        error,
+        errorData: error.data,
+        errorMessage: error.message,
+        paymentMethod,
+        isEmi,
+        emiMonths,
+      });
       
       // Handle error response
       if (error.data) {
+        // Check for specific EMI-related errors
+        if (error.data.errors) {
+          const errorMessages = Object.values(error.data.errors).flat() as string[];
+          const emiError = errorMessages.find(msg => 
+            msg.toLowerCase().includes('emi') || 
+            msg.toLowerCase().includes('installment')
+          );
+          if (emiError) {
+            setErrorMessage(emiError);
+            return;
+          }
+        }
         setErrorMessage(error.data.message || 'Failed to place order. Please try again.');
       } else if (error.message) {
         setErrorMessage(error.message);

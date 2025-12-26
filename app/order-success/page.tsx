@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { FiCheckCircle, FiPackage, FiHome, FiDollarSign, FiCalendar } from 'react-icons/fi';
+import { useCart } from '@/app/context/CartContext';
 
 interface OrderDetails {
   order_number: string;
@@ -16,19 +17,28 @@ interface OrderDetails {
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
+  const { clearCart } = useCart();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const cartClearedRef = useRef(false);
 
   useEffect(() => {
+    // Clear cart only once when the component mounts
+    if (!cartClearedRef.current) {
+      cartClearedRef.current = true;
+      clearCart();
+      console.log('🛒 Cart cleared on order success page');
+    }
+
     // Try to get order details from URL params first (for payment callback)
     const orderNumber = searchParams.get('order_number');
     const status = searchParams.get('status');
     const total = searchParams.get('total');
-    
+
     if (orderNumber) {
       // Try to get full order details from sessionStorage first
       const pendingOrder = sessionStorage.getItem('pendingOrder');
       const lastOrder = sessionStorage.getItem('lastOrder');
-      
+
       let orderData = null;
       if (pendingOrder) {
         try {
@@ -45,7 +55,7 @@ function OrderSuccessContent() {
           console.error('Failed to parse last order:', e);
         }
       }
-      
+
       if (orderData) {
         setOrderDetails(orderData);
       } else {
