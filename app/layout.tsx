@@ -39,15 +39,15 @@ export default function RootLayout({
     <html lang="en">
       <body className={montserrat.className}>
         <ReduxProvider>
-          <AuthProvider>
-            <CartProvider>
-              <Header />
-              <main className="min-h-screen">
-                {children}
-              </main>
-              <Footer />
-            </CartProvider>
-          </AuthProvider>
+        <AuthProvider>
+          <CartProvider>
+        <Header />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
+          </CartProvider>
+        </AuthProvider>
         </ReduxProvider>
       </body>
     </html>

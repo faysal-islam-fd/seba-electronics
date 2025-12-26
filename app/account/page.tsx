@@ -104,9 +104,12 @@ export default function AccountPage() {
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Account Information</h2>
                   <p className="text-xs sm:text-sm text-gray-500">Basic details associated with your Pickaboo profile.</p>
                 </div>
-                <button className="px-4 sm:px-5 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors">
+                <Link
+                  href="/account/profile"
+                  className="px-4 sm:px-5 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+                >
                   Edit
-                </button>
+                </Link>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-3 sm:gap-y-4">

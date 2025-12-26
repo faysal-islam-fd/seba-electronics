@@ -46,6 +46,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const handleAddToCart = () => {
     setIsAdding(true);
+    // Extract product_id - convert string id to number if needed
+    const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+    
     addToCart({
       id: product.id,
       name: product.name,
@@ -55,6 +58,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       originalPrice: product.originalPrice,
       discount: product.discount,
       quantity: quantity,
+      product_id: productId,
     });
     
     // Show feedback
@@ -239,21 +243,15 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         <p className="font-semibold text-gray-900 mb-3">Payment Options:</p>
         <div className="flex flex-wrap gap-2">
           <div className="bg-white border border-gray-200 rounded px-3 py-2 text-sm font-medium">
-            Visa
-          </div>
-          <div className="bg-white border border-gray-200 rounded px-3 py-2 text-sm font-medium">
-            Mastercard
-          </div>
-          <div className="bg-white border border-gray-200 rounded px-3 py-2 text-sm font-medium">
-            bKash
-          </div>
-          <div className="bg-white border border-gray-200 rounded px-3 py-2 text-sm font-medium">
-            Nagad
+            SSL Commerz
           </div>
           <div className="bg-white border border-gray-200 rounded px-3 py-2 text-sm font-medium">
             Cash on Delivery
           </div>
         </div>
+        <p className="text-xs text-gray-600 mt-2">
+          SSL Commerz supports: Visa, Mastercard, Amex, bKash, Nagad & EMI
+        </p>
       </div>
     </div>
   );

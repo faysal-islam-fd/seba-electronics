@@ -11,6 +11,9 @@ export interface CartItem {
   originalPrice?: number;
   discount?: number;
   quantity: number;
+  // API fields for order placement
+  product_id?: number;
+  product_attribute_id?: number;
 }
 
 interface CartContextType {

@@ -8,7 +8,7 @@ import { getProductDetails } from '@/app/lib/api';
 // Server Component with SSR
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
+
   // Fetch product data on the server
   const data = await getProductDetails(id);
 
@@ -38,7 +38,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     inStock: isVariableProduct ? true : !apiProduct.is_out_of_stock, // For variable products, check stock at attribute level
     stockCount: isVariableProduct ? 0 : apiProduct.stock, // For variable products, use attribute stock
     sku: apiProduct.sku,
-    images: apiProduct.galleries?.filter(g => g.type === 'image').map(g => g.file_path || '') || [apiProduct.thumbnail],
+    images: (() => {
+      const galleryImages = apiProduct.galleries
+        ?.filter(g => g.type === 'image')
+        .map(g => g.file_path)
+        .filter(path => path && path.trim() !== '') || [];
+      return galleryImages.length > 0 ? galleryImages : [apiProduct.thumbnail];
+    })(),
     description: apiProduct.description,
     specifications: apiProduct.specifications?.reduce((acc: any, spec) => {
       spec.items.forEach(item => {
@@ -68,28 +74,28 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb 
-          items={[
+            {/* Breadcrumb */}
+            <Breadcrumb 
+              items={[
             { label: 'Products', href: '/search' },
             { label: product.brand, href: `/brand/${product.brandSlug}` },
-            { label: product.name },
-          ]}
-        />
+                { label: product.name },
+              ]}
+            />
 
         {/* Product detail presentation */}
         <ProductDetailContent product={product} />
 
-        {/* Product Details Tabs */}
-        <ProductTabs 
-          description={product.description}
-          specifications={product.specifications}
-          features={product.features}
-          warranty={product.warranty}
-          shipping={product.shipping}
-        />
+            {/* Product Details Tabs */}
+            <ProductTabs 
+              description={product.description}
+              specifications={product.specifications}
+              features={product.features}
+              warranty={product.warranty}
+              shipping={product.shipping}
+            />
 
-        {/* Related Products */}
+            {/* Related Products */}
         <RelatedProducts currentProductId={product.id} categoryId={apiProduct.category?.id} />
       </div>
     </div>

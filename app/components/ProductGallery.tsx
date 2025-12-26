@@ -9,10 +9,20 @@ interface ProductGalleryProps {
 }
 
 export default function ProductGallery({ images, productName }: ProductGalleryProps) {
+  // Filter out empty images - ensure we only use valid image URLs
+  const displayImages = images.filter(img => img && img.trim() !== '');
+  
+  // If no valid images after filtering, this shouldn't happen (product page should provide thumbnail)
+  // But as a safety measure, we'll use the first image from the original array
+  const safeImages = displayImages.length > 0 ? displayImages : (images.length > 0 ? [images[0]] : []);
+  
   const [selectedImage, setSelectedImage] = useState(0);
   const [showZoom, setShowZoom] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLDivElement>(null);
+  
+  // Ensure selectedImage is within bounds
+  const safeSelectedImage = Math.min(selectedImage, safeImages.length > 0 ? safeImages.length - 1 : 0);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!imageRef.current) return;
@@ -35,14 +45,14 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   return (
     <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
       {/* Thumbnail Gallery - Horizontal on mobile, Vertical on desktop */}
-      {images.length > 1 && (
+      {safeImages.length > 1 && (
         <div className="flex sm:flex-col gap-2 sm:gap-3 w-full sm:w-20 md:w-24 lg:w-28 flex-shrink-0 overflow-x-auto sm:overflow-x-visible sm:overflow-y-auto">
-          {images.map((image, index) => (
+          {safeImages.map((image, index) => (
             <button
               key={index}
               onClick={() => setSelectedImage(index)}
               className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
-                index === selectedImage
+                index === safeSelectedImage
                   ? 'border-blue-600 ring-2 ring-blue-200'
                   : 'border-gray-200 hover:border-blue-400'
               }`}
@@ -71,14 +81,16 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            <Image
-              src={images[selectedImage]}
-              alt={`${productName} - Image ${selectedImage + 1}`}
-              fill
-              className="object-contain p-2 sm:p-4"
-              priority
-              unoptimized
-            />
+            {safeImages.length > 0 && (
+              <Image
+                src={safeImages[safeSelectedImage]}
+                alt={`${productName} - Image ${safeSelectedImage + 1}`}
+                fill
+                className="object-contain p-2 sm:p-4"
+                priority
+                unoptimized
+              />
+            )}
 
             {/* Zoom Overlay - Blue magnifying box - Only on desktop */}
             {showZoom && (
@@ -102,7 +114,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             <div
               className="w-full h-full"
               style={{
-                backgroundImage: `url(${images[selectedImage]})`,
+                backgroundImage: `url(${safeImages[safeSelectedImage]})`,
                 backgroundSize: '200%',
                 backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
                 backgroundRepeat: 'no-repeat',

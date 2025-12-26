@@ -48,6 +48,9 @@ export default function ProductCard({
     if (!inStock) return;
     
     setIsAdding(true);
+    // Extract product_id - convert string id to number if needed
+    const productId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
     addToCart({
       id,
       name,
@@ -57,6 +60,7 @@ export default function ProductCard({
       originalPrice,
       discount,
       quantity: 1,
+      product_id: productId,
     });
     
     setTimeout(() => {

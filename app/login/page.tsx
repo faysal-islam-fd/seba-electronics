@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiMail, FiArrowLeft } from 'react-icons/fi';
-import { FaGoogle, FaFacebook } from 'react-icons/fa';
+import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '@/app/context/AuthContext';
+import { getGoogleOAuthUrl } from '@/app/lib/authApi';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,47 +16,46 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setError(null);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Login with mobile number
-    login(mobileNumber, '');
-    
-    // Redirect to home
-    router.push('/');
-    setIsLoading(false);
+    // Redirect to registration with mobile number
+    router.push(`/register?phone=${encodeURIComponent(mobileNumber)}`);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Login with email and password
-    login(email, password);
-    
-    // Redirect to home
-    router.push('/');
-    setIsLoading(false);
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        router.push('/');
+      } else {
+        setError(result.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (err: any) {
+      // Handle validation errors
+      if (err.errors) {
+        const errorMessages = Object.values(err.errors).flat().join(', ');
+        setError(errorMessages || err.message || 'Login failed. Please check your credentials.');
+      } else {
+        setError(err.message || 'An error occurred. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
-    // Handle Google login
-    login('google.user@gmail.com', '');
-    router.push('/');
-  };
-
-  const handleFacebookLogin = () => {
-    // Handle Facebook login
-    login('facebook.user@facebook.com', '');
-    router.push('/');
+    // Redirect to Google OAuth
+    const googleUrl = getGoogleOAuthUrl();
+    window.location.href = googleUrl;
   };
 
   const handleEmailLogin = () => {
@@ -109,16 +109,13 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3.5 px-4 rounded-lg transition-colors"
               >
-                {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Processing...
-                  </div>
-                ) : (
-                  'Sign Up/Login'
-                )}
+                Sign Up/Login
               </button>
             </form>
+            
+            <div className="text-center text-sm text-gray-600">
+              <p>Don't have an account? <Link href="/register" className="text-blue-600 hover:underline">Sign up</Link></p>
+            </div>
 
             {/* Forgot Password Link */}
             <div className="text-center">
@@ -131,23 +128,14 @@ export default function LoginPage() {
             </div>
 
             {/* Social Login Buttons */}
-            <div className="grid grid-cols-2 gap-4 pt-4">
+            <div className="pt-4">
               {/* Google Login */}
               <button
                 onClick={handleGoogleLogin}
-                className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
               >
                 <FaGoogle className="text-red-500" size={18} />
-                <span>Google</span>
-              </button>
-
-              {/* Facebook Login */}
-              <button
-                onClick={handleFacebookLogin}
-                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                <FaFacebook size={18} />
-                <span>Facebook</span>
+                <span>Continue with Google</span>
               </button>
             </div>
           </div>
@@ -164,17 +152,23 @@ export default function LoginPage() {
             </button>
 
             <form onSubmit={handleEmailSubmit} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+              
               {/* Email Input */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  Email Address or Phone Number
                 </label>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or phone number"
                   required
                   className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                 />
@@ -212,6 +206,10 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            
+            <div className="text-center text-sm text-gray-600">
+              <p>Don't have an account? <Link href="/register" className="text-blue-600 hover:underline">Sign up</Link></p>
+            </div>
 
             {/* Forgot Password Link */}
             <div className="text-center">

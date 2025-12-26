@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import CategoryPageClient from './CategoryPageClient';
-import { getProducts, getCategories, getBrands } from '@/app/lib/api';
+import { getProducts, getCategories, getBrands, ProductsResponse, Category } from '@/app/lib/api';
 
 // Server Component with SSR
 export default async function CategoryPage({
@@ -28,23 +28,58 @@ export default async function CategoryPage({
     getBrands(),
   ]);
 
-  // Find current category by slug
-  const currentCategory = categoriesData.data?.find(cat => cat.slug === slug);
+  // Find current category by slug (recursively search in all categories)
+  const findCategoryBySlug = (categories: Category[], targetSlug: string): Category | null => {
+    for (const category of categories) {
+      if (category.slug === targetSlug) {
+        return category;
+      }
+      if (category.children && category.children.length > 0) {
+        const found = findCategoryBySlug(category.children, targetSlug);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const currentCategory = findCategoryBySlug(categoriesData.data || [], slug);
   
   if (!currentCategory) {
     notFound();
   }
 
-  // Fetch products for this category
+  // Use subcategory ID if selected, otherwise use current category ID
+  const categoryIdToFetch = subcategoryId || currentCategory.id;
+
+  console.log(`📦 Fetching products for category "${currentCategory.name}" (slug: ${slug})`);
+  console.log(`📋 Category ID: ${categoryIdToFetch}`);
+  console.log(`📋 API Call: GET /products?category_id=${categoryIdToFetch}&page=${page}&per_page=20&sort=${sort}`);
+
+  // Fetch products directly from API with category_id
   const productsData = await getProducts({
     page,
     per_page: 20,
-    category_id: subcategoryId || currentCategory.id,
+    category_id: categoryIdToFetch,
     min_price: minPrice,
     max_price: maxPrice,
     brand_id: brandId,
     sort,
   });
+
+  console.log(`✅ API Response - success: ${productsData.success}`);
+  console.log(`✅ API Response - products count: ${productsData.data?.length || 0}`);
+  console.log(`✅ API Response - meta:`, JSON.stringify(productsData.meta, null, 2));
+  
+  if (!productsData.success) {
+    console.error('❌ API returned success: false');
+  }
+  
+  if (!productsData.data || productsData.data.length === 0) {
+    console.warn(`⚠️ No products found for category ID ${categoryIdToFetch}`);
+  } else {
+    console.log(`✅ Successfully loaded ${productsData.data.length} products`);
+    console.log(`✅ First product:`, productsData.data[0]?.title || 'N/A');
+  }
 
   return (
     <Suspense fallback={

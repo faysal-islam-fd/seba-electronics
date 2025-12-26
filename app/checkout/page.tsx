@@ -4,14 +4,19 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/app/context/CartContext';
+import { useAuth } from '@/app/context/AuthContext';
+import { usePlaceOrderMutation } from '@/app/store/api/ordersApi';
+import { useGetProductDetailsQuery } from '@/app/store/api/productsApi';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { FiMapPin, FiCreditCard, FiTruck, FiLock } from 'react-icons/fi';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, getCartTotal, clearCart } = useCart();
+  const { user, isLoggedIn } = useAuth();
+  const [placeOrder, { isLoading: isPlacingOrder }] = usePlaceOrderMutation();
   const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Form states
   const [shippingInfo, setShippingInfo] = useState({
@@ -22,29 +27,239 @@ export default function CheckoutPage() {
     city: '',
     area: '',
     postalCode: '',
+    state: '',
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'bkash' | 'nagad'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'ssl_commerz'>('cod');
+  const [isEmi, setIsEmi] = useState(false);
+  const [emiMonths, setEmiMonths] = useState<number>(3);
+  const [customerNote, setCustomerNote] = useState('');
 
   const subtotal = getCartTotal();
-  const shipping: number = 0; // Free shipping
-  const discount: number = 1000; // Mock discount
+  const shipping: number = 100; // Default shipping charge (can be adjusted)
+  const discount: number = 0; // Will be calculated by backend
   const total = subtotal - discount + shipping;
+  
+  // Calculate EMI amount if EMI is selected
+  const calculateEMIAmount = () => {
+    if (paymentMethod === 'ssl_commerz' && isEmi && emiMonths) {
+      // This is a rough estimate - actual calculation will be done by backend
+      // Typically EMI includes a convenience fee
+      const convenienceFeePercent = emiMonths <= 6 ? 0 : emiMonths <= 9 ? 5 : emiMonths <= 12 ? 6 : 8;
+      const convenienceFee = (total * convenienceFeePercent) / 100;
+      const totalWithFee = total + convenienceFee;
+      return Math.ceil(totalWithFee / emiMonths);
+    }
+    return 0;
+  };
+  
+  const emiAmount = calculateEMIAmount();
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStep('payment');
   };
 
+  // Helper function to extract product_id from cart item ID
+  const extractProductId = (itemId: string): number => {
+    // If cart item has product_id stored, use it
+    const item = cartItems.find(i => i.id === itemId);
+    if (item?.product_id) {
+      return item.product_id;
+    }
+    
+    // Otherwise, try to extract from ID string (format: "productId" or "productId-sku")
+    const parts = itemId.split('-');
+    const productId = parseInt(parts[0], 10);
+    if (!isNaN(productId)) {
+      return productId;
+    }
+    
+    throw new Error(`Invalid product ID in cart item: ${itemId}`);
+  };
+
   const handlePlaceOrder = async () => {
-    setIsProcessing(true);
+    setErrorMessage(null);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Clear cart and redirect
-    clearCart();
-    router.push('/order-success');
+    try {
+      // Validate that all cart items have required fields
+      // Check for variable products that might be missing product_attribute_id
+      const itemsWithMissingAttributes = cartItems.filter(item => {
+        // If item ID contains a hyphen (suggests variable product with SKU) but no product_attribute_id
+        return item.id.includes('-') && !item.product_attribute_id;
+      });
+      
+      if (itemsWithMissingAttributes.length > 0) {
+        const productNames = itemsWithMissingAttributes.map(item => item.name).join(', ');
+        setErrorMessage(
+          `The following products require a variation selection: ${productNames}. Please remove these items from your cart and add them again with a selected variation.`
+        );
+        return;
+      }
+      
+      // Map cart items to order items
+      const items = cartItems.map((item) => {
+        const productId = item.product_id || extractProductId(item.id);
+        const orderItem: any = {
+          product_id: productId,
+          quantity: item.quantity,
+        };
+        
+        // For variable products, product_attribute_id is REQUIRED
+        // If product_attribute_id exists in cart item, include it
+        if (item.product_attribute_id) {
+          orderItem.product_attribute_id = item.product_attribute_id;
+        }
+        // If product_attribute_id is missing but item ID suggests it's a variable product,
+        // we'll let the backend validate and return an error
+        
+        return orderItem;
+      });
+      
+      // Additional validation: Check if any items are missing product_attribute_id
+      // This will catch cases where the item was added before attribute ID support
+      const missingAttributeItems = items.filter(item => {
+        // If the cart item ID contains a hyphen (variable product pattern) but no product_attribute_id in order item
+        const cartItem = cartItems.find(ci => (ci.product_id || extractProductId(ci.id)) === item.product_id);
+        return cartItem && cartItem.id.includes('-') && !item.product_attribute_id;
+      });
+      
+      if (missingAttributeItems.length > 0) {
+        const productNames = missingAttributeItems.map(item => {
+          const cartItem = cartItems.find(ci => (ci.product_id || extractProductId(ci.id)) === item.product_id);
+          return cartItem?.name || `Product ID ${item.product_id}`;
+        }).join(', ');
+        setErrorMessage(
+          `The following products require a variation selection: ${productNames}. Please remove these items from your cart and add them again with a selected variation.`
+        );
+        return;
+      }
+
+      // Validate phone number
+      const phoneNumber = shippingInfo.phone?.trim() || '';
+      if (!phoneNumber) {
+        setErrorMessage('Phone number is required');
+        return;
+      }
+
+      // Build order request
+      const orderData: any = {
+        shipping_name: shippingInfo.fullName,
+        shipping_phone: phoneNumber,
+        shipping_email: shippingInfo.email || (isLoggedIn ? user?.email : undefined),
+        shipping_address: shippingInfo.address,
+        shipping_city: shippingInfo.city,
+        shipping_state: shippingInfo.state || shippingInfo.area || undefined,
+        shipping_zip: shippingInfo.postalCode || undefined,
+        items,
+        payment_method: paymentMethod,
+        shipping_charge: shipping,
+      };
+
+      // Add customer note if provided
+      if (customerNote.trim()) {
+        orderData.customer_note = customerNote.trim();
+      }
+
+      // Add guest information if not logged in
+      if (!isLoggedIn) {
+        orderData.guest_name = shippingInfo.fullName;
+        orderData.guest_email = shippingInfo.email;
+        orderData.guest_phone = shippingInfo.phone.trim();
+      }
+
+      // Add SSL Commerz specific fields
+      // SSL Commerz requires cus_phone (customer phone) - MUST be included
+      if (paymentMethod === 'ssl_commerz') {
+        // Set cus_phone for SSL Commerz - this is required by the payment gateway
+        // Use the already validated phoneNumber
+        orderData.cus_phone = phoneNumber;
+        
+        // Add EMI information if EMI is selected
+        if (isEmi) {
+          orderData.is_emi = true;
+          orderData.emi_months = emiMonths;
+        }
+      }
+
+      // Debug: Log order data before sending
+      console.log('📦 Order Data:', {
+        payment_method: orderData.payment_method,
+        cus_phone: orderData.cus_phone,
+        shipping_phone: orderData.shipping_phone,
+        hasCusPhone: !!orderData.cus_phone,
+        phoneValue: shippingInfo.phone,
+        fullOrderData: JSON.stringify(orderData, null, 2),
+      });
+
+      // Place order
+      const result = await placeOrder(orderData).unwrap();
+
+      console.log('✅ Order placed successfully:', {
+        success: result.success,
+        message: result.message,
+        order_number: result.data.order.order_number,
+        payment_url: result.data.payment_url,
+        payment_method: paymentMethod,
+      });
+
+      if (result.success) {
+        // If payment URL is provided (SSL Commerz), redirect to payment gateway
+        if (result.data.payment_url) {
+          console.log('🔗 Redirecting to SSL Commerz payment gateway...', {
+            payment_url: result.data.payment_url,
+            order_number: result.data.order.order_number,
+          });
+          
+          // Store order details before redirecting for callback handling
+          sessionStorage.setItem('pendingOrder', JSON.stringify({
+            order_number: result.data.order.order_number,
+            status: result.data.order.status,
+            total: result.data.order.total,
+            is_emi: result.data.order.is_emi,
+            emi_months: result.data.order.emi_months,
+            emi_amount: result.data.order.emi_amount,
+          }));
+          
+          console.log('💾 Order details stored in sessionStorage:', {
+            order_number: result.data.order.order_number,
+            status: result.data.order.status,
+          });
+          
+          // Redirect to payment gateway
+          // IMPORTANT: This redirect is what takes the user to SSL Commerz
+          // After payment, SSL Commerz will redirect back to your callback URL
+          window.location.href = result.data.payment_url;
+          return;
+        }
+
+        // For COD or other direct payments, clear cart and redirect to success page
+        clearCart();
+        // Store order details in sessionStorage to display on success page
+        sessionStorage.setItem('lastOrder', JSON.stringify({
+          order_number: result.data.order.order_number,
+          status: result.data.order.status,
+          total: result.data.order.total,
+          is_emi: result.data.order.is_emi,
+          emi_months: result.data.order.emi_months,
+          emi_amount: result.data.order.emi_amount,
+        }));
+        router.push('/order-success');
+      } else {
+        setErrorMessage(result.message || 'Failed to place order. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Order placement error:', error);
+      
+      // Handle error response
+      if (error.data) {
+        setErrorMessage(error.data.message || 'Failed to place order. Please try again.');
+      } else if (error.message) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('An unexpected error occurred. Please try again.');
+      }
+    }
   };
 
   if (cartItems.length === 0) {
@@ -198,15 +413,15 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Area *
+                        Area / State *
                       </label>
                       <input
                         type="text"
                         required
                         value={shippingInfo.area}
-                        onChange={(e) => setShippingInfo({ ...shippingInfo, area: e.target.value })}
+                        onChange={(e) => setShippingInfo({ ...shippingInfo, area: e.target.value, state: e.target.value })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Gulshan, Dhanmondi, etc."
+                        placeholder="Gulshan, Dhanmondi, Dhaka Division, etc."
                       />
                     </div>
                     <div>
@@ -243,154 +458,211 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-bold text-gray-900">Payment Method</h2>
                 </div>
 
-                <div className="space-y-4 mb-6">
+                <div className="space-y-3 mb-6">
                   {/* Cash on Delivery */}
-                  <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                    style={{ borderColor: paymentMethod === 'cod' ? '#2563eb' : '#e5e7eb' }}>
+                  <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    paymentMethod === 'cod' 
+                      ? 'border-blue-600 bg-blue-50 shadow-md' 
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}>
                     <input
                       type="radio"
                       name="payment"
                       value="cod"
                       checked={paymentMethod === 'cod'}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'cod')}
+                      onChange={(e) => {
+                        setPaymentMethod(e.target.value as 'cod');
+                        setIsEmi(false);
+                      }}
                       className="w-5 h-5 text-blue-600 focus:ring-blue-500"
                     />
                     <div className="ml-4 flex-1">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-900">Cash on Delivery</p>
-                          <p className="text-sm text-gray-500">Pay when you receive</p>
+                          <p className="font-bold text-gray-900 text-base">Cash on Delivery</p>
+                          <p className="text-sm text-gray-600 mt-0.5">Pay when you receive your order</p>
                         </div>
-                        <div className="text-2xl">💵</div>
+                        <div className="text-3xl ml-4">💵</div>
                       </div>
                     </div>
+                    {paymentMethod === 'cod' && (
+                      <div className="ml-2">
+                        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
                   </label>
 
-                  {/* bKash */}
-                  <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                    style={{ borderColor: paymentMethod === 'bkash' ? '#2563eb' : '#e5e7eb' }}>
+                  {/* SSL Commerz (Mobile Banking, Cards, Bank Online) */}
+                  <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    paymentMethod === 'ssl_commerz' 
+                      ? 'border-blue-600 bg-blue-50 shadow-md' 
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}>
                     <input
                       type="radio"
                       name="payment"
-                      value="bkash"
-                      checked={paymentMethod === 'bkash'}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'bkash')}
+                      value="ssl_commerz"
+                      checked={paymentMethod === 'ssl_commerz'}
+                      onChange={(e) => setPaymentMethod(e.target.value as 'ssl_commerz')}
                       className="w-5 h-5 text-blue-600 focus:ring-blue-500"
                     />
                     <div className="ml-4 flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">bKash</p>
-                          <p className="text-sm text-gray-500">Pay via bKash mobile wallet</p>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-bold text-gray-900 text-base">Pay Via Mobile Banking (bKash, Rocket etc), Any Cards or Your Bank Online</p>
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded whitespace-nowrap">Secure</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-0.5">Pay via SSL Commerz gateway</p>
+                          <p className="text-xs text-blue-600 mt-1 font-medium">✓ EMI Available</p>
                         </div>
-                        <div className="text-2xl">📱</div>
-                      </div>
-                    </div>
-                  </label>
-
-                  {/* Nagad */}
-                  <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                    style={{ borderColor: paymentMethod === 'nagad' ? '#2563eb' : '#e5e7eb' }}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="nagad"
-                      checked={paymentMethod === 'nagad'}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'nagad')}
-                      className="w-5 h-5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="ml-4 flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">Nagad</p>
-                          <p className="text-sm text-gray-500">Pay via Nagad mobile wallet</p>
-                        </div>
-                        <div className="text-2xl">💳</div>
-                      </div>
-                    </div>
-                  </label>
-
-                  {/* Credit/Debit Card */}
-                  <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                    style={{ borderColor: paymentMethod === 'card' ? '#2563eb' : '#e5e7eb' }}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="card"
-                      checked={paymentMethod === 'card'}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'card')}
-                      className="w-5 h-5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="ml-4 flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">Credit/Debit Card</p>
-                          <p className="text-sm text-gray-500">Visa, Mastercard, Amex</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="text-xs">💳</span>
-                          <span className="text-xs">💳</span>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <div className="w-10 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">VISA</div>
+                          <div className="w-10 h-6 bg-red-600 rounded flex items-center justify-center text-white text-xs font-bold">MC</div>
                         </div>
                       </div>
                     </div>
+                    {paymentMethod === 'ssl_commerz' && (
+                      <div className="ml-2">
+                        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
                   </label>
                 </div>
 
-                {paymentMethod === 'card' && (
-                  <div className="border-t pt-6 space-y-4">
+                {paymentMethod === 'ssl_commerz' && (
+                  <div className="border-t border-gray-200 pt-6 mt-6 space-y-4 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Card Number
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={isEmi}
+                          onChange={(e) => setIsEmi(e.target.checked)}
+                          className="w-5 h-5 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
+                        />
+                        <div className="flex-1">
+                          <span className="text-base font-bold text-gray-900">Pay with EMI (Easy Installment)</span>
+                          <p className="text-xs text-gray-600 mt-0.5">Split your payment into easy monthly installments</p>
+                        </div>
+                        <div className="text-2xl">💳</div>
                       </label>
-                      <input
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Expiry Date
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+
+                    {isEmi && (
+                      <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">
+                            EMI Tenure (Months) *
+                          </label>
+                          <select
+                            value={emiMonths}
+                            onChange={(e) => setEmiMonths(parseInt(e.target.value, 10))}
+                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                          >
+                            <option value={3}>3 Months</option>
+                            <option value={6}>6 Months</option>
+                            <option value={9}>9 Months</option>
+                            <option value={12}>12 Months</option>
+                            <option value={18}>18 Months</option>
+                            <option value={24}>24 Months</option>
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1.5">Select your preferred EMI tenure</p>
+                        </div>
+                        
+                        {emiAmount > 0 && (
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-sm font-semibold text-gray-900">EMI Preview</span>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Total Amount:</span>
+                                <span className="font-semibold text-gray-900">৳ {total.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">EMI Tenure:</span>
+                                <span className="font-semibold text-gray-900">{emiMonths} months</span>
+                              </div>
+                              <div className="pt-2 border-t border-blue-200 flex justify-between items-center">
+                                <span className="font-semibold text-gray-900">Monthly Payment (Est.):</span>
+                                <span className="text-lg font-bold text-blue-600">৳ {emiAmount.toLocaleString()}/month</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-3 italic">* Final EMI amount will be calculated by the payment gateway</p>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          CVV
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="123"
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Customer Note */}
+                <div className="border-t pt-6 mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Instructions (Optional)
+                  </label>
+                  <textarea
+                    value={customerNote}
+                    onChange={(e) => setCustomerNote(e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Please call before delivery, Leave at door, etc."
+                  />
+                </div>
+
+                {/* Error Message */}
+                {errorMessage && (
+                  <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
                     </div>
                   </div>
                 )}
 
-                <div className="pt-6 border-t mt-6">
+                <div className="pt-6 border-t mt-6 space-y-3">
+                  <button
+                    onClick={() => setStep('shipping')}
+                    className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Shipping
+                  </button>
                   <button
                     onClick={handlePlaceOrder}
-                    disabled={isProcessing}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    disabled={isPlacingOrder}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:shadow-none"
                   >
-                    {isProcessing ? (
+                    {isPlacingOrder ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Processing...
+                        Processing Order...
                       </>
                     ) : (
                       <>
                         <FiLock size={20} />
-                        Place Order
+                        Place Order Securely
                       </>
                     )}
                   </button>
+                  <p className="text-xs text-center text-gray-500">
+                    By placing your order, you agree to our Terms & Conditions
+                  </p>
                 </div>
               </div>
             )}
@@ -398,17 +670,19 @@ export default function CheckoutPage() {
 
           {/* Order Summary Sidebar */}
           <div className="lg:w-96">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-24">
-              <div className="flex items-center gap-3 mb-6">
-                <FiTruck className="text-blue-600" size={24} />
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sticky top-24">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FiTruck className="text-blue-600" size={20} />
+                </div>
                 <h2 className="text-xl font-bold text-gray-900">Order Summary</h2>
               </div>
 
               {/* Cart Items */}
-              <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
+              <div className="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-3 pb-4 border-b border-gray-100 last:border-b-0">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                  <div key={item.id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-b-0">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200">
                       <img
                         src={item.image}
                         alt={item.name}
@@ -416,9 +690,9 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity}</p>
-                      <p className="text-sm font-semibold text-gray-900 mt-1">
+                      <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">{item.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">Quantity: {item.quantity}</p>
+                      <p className="text-sm font-bold text-gray-900 mt-1.5">
                         ৳ {(item.price * item.quantity).toLocaleString()}
                       </p>
                     </div>
@@ -429,34 +703,68 @@ export default function CheckoutPage() {
               {/* Price Breakdown */}
               <div className="space-y-3 border-t border-gray-200 pt-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                  <span className="font-medium text-gray-900">৳ {subtotal.toLocaleString()}</span>
+                  <span className="text-gray-600">Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} {cartItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'})</span>
+                  <span className="font-semibold text-gray-900">৳ {subtotal.toLocaleString()}</span>
                 </div>
                 
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount</span>
-                    <span className="font-medium text-green-600">-৳ {discount.toLocaleString()}</span>
+                    <span className="font-semibold text-green-600">-৳ {discount.toLocaleString()}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium text-gray-900">
-                    {shipping === 0 ? 'Free' : `৳ ${shipping.toLocaleString()}`}
+                  <span className="text-gray-600">Shipping Charge</span>
+                  <span className="font-semibold text-gray-900">
+                    {shipping === 0 ? (
+                      <span className="text-green-600">Free</span>
+                    ) : (
+                      `৳ ${shipping.toLocaleString()}`
+                    )}
                   </span>
                 </div>
 
-                <div className="flex justify-between text-lg font-bold pt-3 border-t border-gray-200">
-                  <span className="text-gray-900">Total</span>
-                  <span className="text-gray-900">৳ {total.toLocaleString()}</span>
+                {paymentMethod === 'ssl_commerz' && isEmi && emiAmount > 0 && (
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200 mt-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-bold text-blue-900">EMI Payment Plan</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Total Amount:</span>
+                        <span className="font-semibold text-gray-900">৳ {total.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">EMI Tenure:</span>
+                        <span className="font-semibold text-gray-900">{emiMonths} months</span>
+                      </div>
+                      <div className="pt-2 border-t border-blue-200 flex justify-between items-center">
+                        <span className="font-semibold text-gray-900">Monthly Payment:</span>
+                        <span className="text-base font-bold text-blue-600">৳ {emiAmount.toLocaleString()}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 italic">* Final amount calculated by payment gateway</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-lg font-bold pt-4 border-t-2 border-gray-300 mt-3">
+                  <span className="text-gray-900">Total Amount</span>
+                  <span className="text-blue-600">৳ {total.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Security Badge */}
-              <div className="mt-6 pt-6 border-t border-gray-200 flex items-center gap-2 text-sm text-gray-600">
-                <FiLock size={16} />
-                <span>Secure checkout with SSL encryption</span>
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-3">
+                  <FiLock size={14} className="text-green-600" />
+                  <span className="flex-1">
+                    <span className="font-semibold text-gray-900">Secure checkout</span> with SSL encryption
+                  </span>
+                </div>
               </div>
             </div>
           </div>

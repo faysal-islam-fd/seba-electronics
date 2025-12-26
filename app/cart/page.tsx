@@ -60,17 +60,40 @@ export default function CartPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <CartItem
-                    key={item.id}
-                    {...item}
-                    onQuantityChange={handleQuantityChange}
-                    onRemove={handleRemove}
-                    onSaveForLater={handleSaveForLater}
-                  />
-                ))}
-              </div>
+              <>
+                {/* Warning for items missing product_attribute_id */}
+                {cartItems.some(item => item.id.includes('-') && !item.product_attribute_id) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-yellow-600 text-xl">⚠️</div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-yellow-900 mb-1">Action Required</h3>
+                        <p className="text-sm text-yellow-800 mb-2">
+                          Some products in your cart are missing variation information. Please remove and re-add them with a selected variation.
+                        </p>
+                        <div className="text-sm text-yellow-700">
+                          {cartItems
+                            .filter(item => item.id.includes('-') && !item.product_attribute_id)
+                            .map(item => item.name)
+                            .join(', ')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="space-y-4">
+                  {cartItems.map((item) => (
+                    <CartItem
+                      key={item.id}
+                      {...item}
+                      onQuantityChange={handleQuantityChange}
+                      onRemove={handleRemove}
+                      onSaveForLater={handleSaveForLater}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
 

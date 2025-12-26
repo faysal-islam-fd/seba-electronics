@@ -56,13 +56,21 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
     const selectedKeys = Object.keys(selectedVariations);
     if (selectedKeys.length === 0) return product.attributes[0];
     
-    return product.attributes.find((attr: any) => {
+    const found = product.attributes.find((attr: any) => {
       return attr.values?.every((val: any) => {
         const varName = val.variation?.name;
         const varValue = val.variation_value?.value;
         return selectedVariations[varName] === varValue;
       });
-    }) || product.attributes[0];
+    });
+    
+    // Log for debugging
+    if (found) {
+      console.log('Found attribute:', found);
+      console.log('Attribute ID field:', found.id, found.attribute_id, found.product_attribute_id);
+    }
+    
+    return found || product.attributes[0];
   }, [selectedVariations, product.attributes, isVariableProduct]);
 
   // Get current product details based on type
@@ -138,6 +146,12 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   };
 
   const handleAddToCart = () => {
+    // For variable products, ensure a variation is selected
+    if (isVariableProduct && !selectedAttribute) {
+      alert('Please select a product variation before adding to cart');
+      return;
+    }
+    
     // For variable products, add variation info to name
     let productName = product.name;
     if (isVariableProduct && Object.keys(selectedVariations).length > 0) {
@@ -145,6 +159,41 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         .map(([key, value]) => `${key}: ${value}`)
         .join(', ');
       productName = `${product.name} (${variationText})`;
+    }
+    
+    // Extract product_id - convert string id to number if needed
+    const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+    
+    // Extract product_attribute_id for variable products
+    // Try multiple possible field names for the attribute ID
+    let attributeId: number | undefined;
+    if (isVariableProduct && selectedAttribute) {
+      // Log the full attribute structure for debugging
+      console.log('Selected Attribute Object:', selectedAttribute);
+      console.log('Attribute Keys:', Object.keys(selectedAttribute || {}));
+      
+      // Try different possible field names for the attribute ID
+      attributeId = (selectedAttribute as any).id || 
+                    (selectedAttribute as any).attribute_id || 
+                    (selectedAttribute as any).product_attribute_id ||
+                    (selectedAttribute as any).product_attribute?.id ||
+                    (selectedAttribute as any).product_attribute_id ||
+                    undefined;
+      
+      // Debug logging to help identify the correct field name
+      if (!attributeId) {
+        console.warn('⚠️ Attribute ID not found in expected fields. Full attribute structure:', JSON.stringify(selectedAttribute, null, 2));
+        console.warn('Available keys:', Object.keys(selectedAttribute || {}));
+      } else {
+        console.log('✅ Found attribute ID:', attributeId);
+      }
+    }
+    
+    // For variable products, product_attribute_id is required
+    if (isVariableProduct && !attributeId) {
+      console.error('❌ Variable product attribute ID not found. Selected attribute:', selectedAttribute);
+      alert('Unable to add product to cart. Please try selecting the variation again or contact support.');
+      return;
     }
     
     addToCart({
@@ -156,6 +205,8 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       originalPrice: currentDiscount > 0 ? currentPrice : undefined,
       discount: currentDiscount,
       quantity,
+      product_id: productId,
+      product_attribute_id: attributeId,
     });
   };
 

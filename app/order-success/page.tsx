@@ -1,9 +1,76 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FiCheckCircle, FiPackage, FiHome } from 'react-icons/fi';
+import { useSearchParams } from 'next/navigation';
+import { FiCheckCircle, FiPackage, FiHome, FiDollarSign, FiCalendar } from 'react-icons/fi';
+
+interface OrderDetails {
+  order_number: string;
+  status: string;
+  total: number;
+  is_emi?: boolean;
+  emi_months?: number;
+  emi_amount?: number;
+}
 
 export default function OrderSuccessPage() {
+  const searchParams = useSearchParams();
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+
+  useEffect(() => {
+    // Try to get order details from URL params first (for payment callback)
+    const orderNumber = searchParams.get('order_number');
+    const status = searchParams.get('status');
+    const total = searchParams.get('total');
+    
+    if (orderNumber) {
+      // Try to get full order details from sessionStorage first
+      const pendingOrder = sessionStorage.getItem('pendingOrder');
+      const lastOrder = sessionStorage.getItem('lastOrder');
+      
+      let orderData = null;
+      if (pendingOrder) {
+        try {
+          orderData = JSON.parse(pendingOrder);
+          sessionStorage.removeItem('pendingOrder');
+          sessionStorage.setItem('lastOrder', pendingOrder);
+        } catch (e) {
+          console.error('Failed to parse pending order:', e);
+        }
+      } else if (lastOrder) {
+        try {
+          orderData = JSON.parse(lastOrder);
+        } catch (e) {
+          console.error('Failed to parse last order:', e);
+        }
+      }
+      
+      if (orderData) {
+        setOrderDetails(orderData);
+      } else {
+        setOrderDetails({
+          order_number: orderNumber,
+          status: status || 'pending',
+          total: total ? parseFloat(total) : 0,
+        });
+      }
+      // Clear URL params after reading
+      window.history.replaceState({}, '', '/order-success');
+    } else {
+      // Try to get from sessionStorage (for COD orders)
+      const lastOrder = sessionStorage.getItem('lastOrder');
+      if (lastOrder) {
+        try {
+          setOrderDetails(JSON.parse(lastOrder));
+          sessionStorage.removeItem('lastOrder');
+        } catch (e) {
+          console.error('Failed to parse order details:', e);
+        }
+      }
+    }
+  }, [searchParams]);
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
       <div className="max-w-2xl w-full mx-4">
@@ -25,9 +92,59 @@ export default function OrderSuccessPage() {
           </p>
 
           {/* Order Details */}
+          {orderDetails && (
+            <div className="bg-blue-50 rounded-lg p-6 mb-6 text-left border border-blue-200">
+              <div className="flex items-center gap-2 mb-4">
+                <FiPackage className="text-blue-600" size={20} />
+                <h2 className="font-semibold text-gray-900">Order Details</h2>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Order Number:</span>
+                  <span className="font-semibold text-gray-900">{orderDetails.order_number}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Status:</span>
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full uppercase">
+                    {orderDetails.status}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Amount:</span>
+                  <span className="font-bold text-gray-900 text-lg">৳ {orderDetails.total.toLocaleString()}</span>
+                </div>
+                {orderDetails.is_emi && orderDetails.emi_months && orderDetails.emi_amount && (
+                  <div className="pt-4 mt-4 border-t-2 border-blue-200">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FiDollarSign size={18} className="text-blue-600" />
+                        <span className="text-sm font-bold text-blue-900">EMI Payment Plan</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Total Amount:</span>
+                          <span className="font-semibold text-gray-900">৳ {orderDetails.total.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">EMI Tenure:</span>
+                          <span className="font-semibold text-gray-900">{orderDetails.emi_months} months</span>
+                        </div>
+                        <div className="pt-2 border-t border-blue-200 flex justify-between items-center">
+                          <span className="font-semibold text-gray-900">Monthly Payment:</span>
+                          <span className="text-base font-bold text-blue-600">৳ {orderDetails.emi_amount.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* What's Next Section */}
           <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
-            <div className="flex items-center gap-3 mb-4">
-              <FiPackage className="text-blue-600" size={20} />
+            <div className="flex items-center gap-2 mb-4">
+              <FiCalendar className="text-blue-600" size={20} />
               <h2 className="font-semibold text-gray-900">What's Next?</h2>
             </div>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -56,7 +173,7 @@ export default function OrderSuccessPage() {
               Continue Shopping
             </Link>
             <Link
-              href="/orders"
+              href="/account/orders"
               className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-semibold px-6 py-3 rounded-lg transition-colors"
             >
               <FiPackage size={20} />
@@ -68,4 +185,3 @@ export default function OrderSuccessPage() {
     </div>
   );
 }
-

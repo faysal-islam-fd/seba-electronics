@@ -86,6 +86,11 @@ export default function CategoryPageClient({
   const brands = initialBrands.data || [];
   const subcategories = currentCategory.children || [];
 
+  // Debug logging
+  console.log('🔍 CategoryPageClient - Products received:', products.length);
+  console.log('🔍 CategoryPageClient - Meta:', meta);
+  console.log('🔍 CategoryPageClient - InitialProducts success:', initialProducts.success);
+
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
     
@@ -381,12 +386,99 @@ export default function CategoryPageClient({
           <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="font-bold text-gray-900">Filters</h3>
+              {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000 || selectedSubcategoryId) && (
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Clear All
+                </button>
+              )}
               <button
                 onClick={() => setShowMobileFilters(false)}
                 className="text-gray-600 hover:text-gray-900"
               >
                 <FiChevronDown size={24} className="rotate-180" />
               </button>
+            </div>
+
+            <div className="overflow-y-auto">
+              {/* Subcategories Filter */}
+              {subcategories.length > 0 && (
+                <FilterSection
+                  title="Subcategories"
+                  isOpen={filtersOpen.subcategories}
+                  onToggle={() => setFiltersOpen(prev => ({ ...prev, subcategories: !prev.subcategories }))}
+                >
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {subcategories.map((subcat) => (
+                      <label key={subcat.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedSubcategoryId === subcat.id}
+                          onChange={() => handleSubcategoryChange(subcat.id)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{subcat.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterSection>
+              )}
+
+              {/* Price Filter */}
+              <FilterSection
+                title="Price Range"
+                isOpen={filtersOpen.price}
+                onToggle={() => setFiltersOpen(prev => ({ ...prev, price: !prev.price }))}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={priceRange[0]}
+                      onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                      placeholder="Min"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <span className="text-gray-500">-</span>
+                    <input
+                      type="number"
+                      value={priceRange[1]}
+                      onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                      placeholder="Max"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={handlePriceChange}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </FilterSection>
+
+              {/* Brand Filter */}
+              <FilterSection
+                title="Brand"
+                isOpen={filtersOpen.brand}
+                onToggle={() => setFiltersOpen(prev => ({ ...prev, brand: !prev.brand }))}
+              >
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {brands.map((brand) => (
+                    <label key={brand.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedBrandId === brand.id}
+                        onChange={() => handleBrandChange(brand.id)}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">{brand.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </FilterSection>
             </div>
 
             <div className="p-4 border-t border-gray-200 sticky bottom-0 bg-white">

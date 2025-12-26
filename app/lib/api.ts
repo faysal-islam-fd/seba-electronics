@@ -136,18 +136,31 @@ export async function getProducts(params: {
 
   const url = `${BASE_URL}/products?${queryParams.toString()}`;
   
+  console.log(`🌐 API Request: ${url}`);
+  
   try {
     const res = await fetch(url, {
       next: { revalidate: 1800 }, // Cache for 30 minutes
     });
     
+    console.log(`📡 API Response Status: ${res.status} ${res.statusText}`);
+    
     if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ API Error Response:`, errorText);
       throw new Error(`Failed to fetch products: ${res.status}`);
     }
     
-    return await res.json();
+    const jsonData = await res.json();
+    console.log(`✅ API Response Data:`, {
+      success: jsonData.success,
+      dataLength: jsonData.data?.length || 0,
+      meta: jsonData.meta,
+    });
+    
+    return jsonData;
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('❌ Error fetching products:', error);
     return {
       success: false,
       data: [],

@@ -167,18 +167,18 @@ export default function Header() {
                                                 {subcategory.name}
                                               </Link>
                                               {subcategory.children && subcategory.children.length > 0 && (
-                                                <ul className="space-y-1.5">
+                                              <ul className="space-y-1.5">
                                                   {subcategory.children.map((item) => (
                                                     <li key={item.id}>
-                                                      <Link
+                                                    <Link
                                                         href={`/category/${item.slug}`}
-                                                        className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
-                                                      >
+                                                      className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
+                                                    >
                                                         {item.name}
-                                                      </Link>
-                                                    </li>
-                                                  ))}
-                                                </ul>
+                                                    </Link>
+                                                  </li>
+                                                ))}
+                                              </ul>
                                               )}
                                             </div>
                                           ))}
@@ -283,7 +283,7 @@ export default function Header() {
                       <div className="bg-white rounded-full p-1.5">
                         <FiUser className="text-blue-600" size={20} />
                       </div>
-                      <span className="font-medium">My Account</span>
+                      <span className="font-medium">{user?.name || 'My Account'}</span>
                       <FiChevronDown size={16} />
                     </button>
 
@@ -312,9 +312,10 @@ export default function Header() {
                         </Link>
                         <div className="border-t border-gray-200 my-1" />
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             setAccountDropdownOpen(false);
-                            logout();
+                            await logout();
+                            router.push('/');
                           }}
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors"
                         >
@@ -482,18 +483,18 @@ export default function Header() {
                                 {sub.name}
                               </Link>
                               {sub.children && sub.children.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                   {sub.children.map((subItem) => (
-                                    <Link
+                                  <Link
                                       key={subItem.id}
                                       href={`/category/${subItem.slug}`}
-                                      onClick={() => setMobileMenuOpen(false)}
+                                    onClick={() => setMobileMenuOpen(false)}
                                       className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
-                                    >
+                                  >
                                       {subItem.name}
-                                    </Link>
-                                  ))}
-                                </div>
+                                  </Link>
+                                ))}
+                              </div>
                               )}
                             </div>
                           ))}
