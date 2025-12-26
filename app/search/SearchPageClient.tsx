@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { ProductsResponse, BrandsResponse } from '@/app/lib/api';
+import { isProductInStock } from '@/app/utils/stockUtils';
 import { FiSearch, FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 
 type SortOption = 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
@@ -302,7 +303,7 @@ export default function SearchPageClient({
                       discount={product.discount_percentage ? Math.round(product.discount_percentage) : undefined}
                       badge={product.is_featured ? 'Featured' : undefined}
                       rating={4.5}
-                      inStock={!product.is_out_of_stock}
+                      inStock={isProductInStock(product.stock, product.is_out_of_stock)}
                     />
                   ))}
                 </div>

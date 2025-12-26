@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX } from 'react-icons/fi';
+import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX, FiHeart } from 'react-icons/fi';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { useGetCategoriesQuery } from '@/app/store/api/categoriesApi';
 import { useGetProductsQuery } from '@/app/store/api/productsApi';
+import { useGetWishlistQuery } from '@/app/store/api/wishlistApi';
 
 const slugify = (value: string) =>
   value
@@ -49,10 +50,15 @@ export default function Header() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [mobileProfileDropdownOpen, setMobileProfileDropdownOpen] = useState(false);
   const [mobileExpandedCategory, setMobileExpandedCategory] = useState<string | null>(null);
   const { getCartCount } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
   const cartItemCount = getCartCount();
+  
+  // Get wishlist count
+  const { data: wishlistData } = useGetWishlistQuery(undefined, { skip: !isLoggedIn });
+  const wishlistCount = wishlistData?.data?.length || 0;
 
   // Fetch categories from API
   const { data: categoriesData } = useGetCategoriesQuery({ with_children: true });
@@ -304,6 +310,14 @@ export default function Header() {
                           My Orders
                         </Link>
                         <Link
+                          href="/account/wishlist"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setAccountDropdownOpen(false)}
+                        >
+                          <FiHeart size={14} />
+                          My Wishlist
+                        </Link>
+                        <Link
                           href="/account/reviews"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                           onClick={() => setAccountDropdownOpen(false)}
@@ -333,6 +347,16 @@ export default function Header() {
                   </Link>
                 )}
 
+                {isLoggedIn && (
+                  <Link href="/account/wishlist" className="text-white hover:text-gray-200 transition-colors relative">
+                    <FiHeart size={25} />
+                    {wishlistCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                        {wishlistCount > 99 ? '99+' : wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
                 <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
                   <FiShoppingCart size={25} />
                   {cartItemCount > 0 && (
@@ -344,15 +368,104 @@ export default function Header() {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3 lg:hidden">
-                <Link
-                  href={isLoggedIn ? '/account' : '/login'}
-                  className="text-white hover:text-gray-200 transition-colors"
-                  aria-label="Account"
-                >
-                  <div className="bg-white/20 border border-white/30 rounded-full p-1.5 sm:p-2">
-                    <FiUser size={16} className="sm:w-[18px] sm:h-[18px]" />
+                {isLoggedIn ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setMobileProfileDropdownOpen(!mobileProfileDropdownOpen)}
+                      className="text-white hover:text-gray-200 transition-colors relative"
+                      aria-label="Account"
+                    >
+                      <div className="bg-white/20 border border-white/30 rounded-full p-1.5 sm:p-2">
+                        <FiUser size={16} className="sm:w-[18px] sm:h-[18px]" />
+                      </div>
+                    </button>
+                    {mobileProfileDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[10001] lg:hidden"
+                          onClick={() => setMobileProfileDropdownOpen(false)}
+                        />
+                        <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[10002]">
+                          <div className="px-4 py-3 border-b border-gray-200">
+                            <p className="text-xs text-gray-500 mb-0.5">Logged in as</p>
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {user?.name || user?.email || 'My Account'}
+                            </p>
+                          </div>
+                          <Link
+                            href="/account"
+                            onClick={() => setMobileProfileDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <FiUser size={18} className="text-gray-500" />
+                            My Account
+                          </Link>
+                          <Link
+                            href="/account/orders"
+                            onClick={() => setMobileProfileDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <FiShoppingCart size={18} className="text-gray-500" />
+                            My Orders
+                          </Link>
+                          <Link
+                            href="/account/wishlist"
+                            onClick={() => setMobileProfileDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <FiHeart size={18} className="text-gray-500" />
+                            My Wishlist
+                            {wishlistCount > 0 && (
+                              <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-bold">
+                                {wishlistCount > 99 ? '99+' : wishlistCount}
+                              </span>
+                            )}
+                          </Link>
+                          <Link
+                            href="/account/reviews"
+                            onClick={() => setMobileProfileDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <FiUser size={18} className="text-gray-500" />
+                            My Reviews
+                          </Link>
+                          <div className="border-t border-gray-200 my-1" />
+                          <button
+                            onClick={async () => {
+                              setMobileProfileDropdownOpen(false);
+                              await logout();
+                              router.push('/');
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
+                          >
+                            <FiX size={18} />
+                            Logout
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </Link>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="text-white hover:text-gray-200 transition-colors"
+                    aria-label="Login"
+                  >
+                    <div className="bg-white/20 border border-white/30 rounded-full p-1.5 sm:p-2">
+                      <FiUser size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    </div>
+                  </Link>
+                )}
+                {isLoggedIn && (
+                  <Link href="/account/wishlist" className="text-white hover:text-gray-200 transition-colors relative">
+                    <FiHeart size={20} className="sm:w-6 sm:h-6" />
+                    {wishlistCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center font-bold">
+                        {wishlistCount > 99 ? '99+' : wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
                 <Link href="/cart" className="text-white hover:text-gray-200 transition-colors relative">
                   <FiShoppingCart size={20} className="sm:w-6 sm:h-6" />
                   {cartItemCount > 0 && (
@@ -440,7 +553,7 @@ export default function Header() {
           >
             <div className="p-3 sm:p-4">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="font-bold text-base sm:text-lg">Categories</h3>
+                <h3 className="font-bold text-base sm:text-lg">Menu</h3>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -448,6 +561,11 @@ export default function Header() {
                 >
                   <FiX size={20} className="sm:w-6 sm:h-6 text-gray-600" />
                 </button>
+              </div>
+
+
+              <div className="mb-3 sm:mb-4">
+                <h4 className="font-bold text-sm sm:text-base text-gray-700 mb-2 sm:mb-3">Categories</h4>
               </div>
               <nav className="space-y-1.5 sm:space-y-2">
                 {categories.map((item) => {

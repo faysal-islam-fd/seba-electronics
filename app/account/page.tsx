@@ -14,11 +14,16 @@ import {
   FiCreditCard,
   FiHelpCircle,
   FiShield,
+  FiRefreshCw,
+  FiHeart,
 } from 'react-icons/fi';
 
 const navigationItems = [
   { id: 'account', label: 'Account Information', icon: FiUser, href: '/account' },
   { id: 'orders', label: 'My Orders', icon: FiShoppingBag, href: '/account/orders' },
+  { id: 'wishlist', label: 'My Wishlist', icon: FiHeart, href: '/account/wishlist' },
+  { id: 'service-requests', label: 'Service Requests', icon: FiShield, href: '/account/service-requests' },
+  { id: 'return-requests', label: 'Return Requests', icon: FiRefreshCw, href: '/account/return-requests' },
   { id: 'reviews', label: 'My Product Reviews', icon: FiStar, href: '/account/reviews' },
   { id: 'tickets', label: 'Support Tickets', icon: FiMessageSquare, href: '/account/tickets' },
   { id: 'club', label: 'Pickaboo Club', icon: FiAward, href: '/account/club' },
@@ -306,6 +311,19 @@ export default function AccountPage() {
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.id === activeTab;
+                // Use Link for service-requests, return-requests, and wishlist, button for others
+                if (item.id === 'service-requests' || item.id === 'return-requests' || item.id === 'wishlist') {
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors text-gray-700 hover:bg-gray-100"
+                    >
+                      <Icon size={18} className="text-blue-500" />
+                      {item.label}
+                    </Link>
+                  );
+                }
                 return (
                   <button
                     key={item.id}

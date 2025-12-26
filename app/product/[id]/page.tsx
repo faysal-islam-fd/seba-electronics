@@ -35,7 +35,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     discount: isVariableProduct ? 0 : (apiProduct.discount_percentage ? Math.round(apiProduct.discount_percentage) : 0),
     rating: 4.5, // Default since API doesn't provide ratings
     reviewCount: 0,
-    inStock: isVariableProduct ? true : !apiProduct.is_out_of_stock, // For variable products, check stock at attribute level
+    inStock: isVariableProduct ? true : (apiProduct.stock > 0 && !apiProduct.is_out_of_stock), // For variable products, check stock at attribute level
     stockCount: isVariableProduct ? 0 : apiProduct.stock, // For variable products, use attribute stock
     sku: apiProduct.sku,
     images: (() => {

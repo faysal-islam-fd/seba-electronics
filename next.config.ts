@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'seba.rangpurit.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

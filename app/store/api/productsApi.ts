@@ -16,20 +16,35 @@ export interface Product {
   id: number;
   title: string;
   slug: string;
-  thumbnail: string;
-  price: number;
-  final_price: number;
-  discount?: number;
-  discount_type?: string;
-  discount_percentage?: number;
+  thumbnail?: string; // Legacy field
+  thumbnail_image?: string; // Actual API field - full URL from Cloudinary
+  price: number | string; // API returns as string "100.00"
+  final_price?: number; // Calculated field (not in API response)
+  discount?: number | string; // API returns as string "0.00"
+  discount_type?: string; // "flat" or "percent"
+  discount_percentage?: number; // Calculated from discount
   stock: number;
   is_featured: boolean;
   is_top_selling: boolean;
-  is_low_stock: boolean;
-  is_out_of_stock: boolean;
+  is_low_stock?: boolean;
+  is_out_of_stock?: boolean;
   brand?: Brand;
   category?: Category;
   categories?: Category[];
+  // Additional fields from API
+  type?: string;
+  description?: string;
+  sku?: string | null;
+  purchase_price?: string;
+  low_stock_alert?: number;
+  is_support_emi?: boolean;
+  has_warranty?: boolean;
+  warranty_months?: number | null;
+  warranty_details?: string | null;
+  status?: string;
+  is_active?: boolean;
+  vendor_id?: number | null;
+  vendor?: any;
 }
 
 export interface ProductDetail extends Product {

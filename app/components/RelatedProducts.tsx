@@ -2,6 +2,7 @@
 
 import ProductCard from './ProductCard';
 import { useGetProductsQuery } from '@/app/store/api/productsApi';
+import { isProductInStock } from '@/app/utils/stockUtils';
 
 interface RelatedProductsProps {
   currentProductId: string;
@@ -50,12 +51,14 @@ export default function RelatedProducts({ currentProductId, categoryId }: Relate
               key={product.id} 
             id={product.id.toString()}
             name={product.title}
-            price={product.final_price}
-            originalPrice={product.price !== product.final_price ? product.price : undefined}
-            image={product.thumbnail}
+            price={product.final_price ? (typeof product.final_price === 'string' ? parseFloat(product.final_price) : product.final_price) : 0}
+            originalPrice={product.price && product.price !== product.final_price 
+              ? (typeof product.price === 'string' ? parseFloat(product.price) : product.price)
+              : undefined}
+            image={product.thumbnail || '/products/placeholder.jpg'}
             discount={product.discount_percentage ? Math.round(product.discount_percentage) : undefined}
             rating={4.5}
-            inStock={!product.is_out_of_stock}
+            inStock={isProductInStock(product.stock, product.is_out_of_stock)}
             />
           ))}
       </div>

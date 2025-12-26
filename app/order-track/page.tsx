@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTrackOrderMutation } from '@/app/store/api/ordersApi';
 import {
@@ -16,6 +16,7 @@ import {
   FiMail,
   FiLoader,
   FiAlertCircle,
+  FiXCircle,
 } from 'react-icons/fi';
 import Image from 'next/image';
 
@@ -53,7 +54,7 @@ const timelineSteps: Record<StatusStep, { label: string; description: string }> 
   },
 };
 
-export default function OrderTrackPage() {
+function OrderTrackContent() {
   const searchParams = useSearchParams();
   const initialOrderId = searchParams.get('orderId') || '';
 
@@ -447,6 +448,21 @@ export default function OrderTrackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderTrackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center py-12 px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h2>
+        </div>
+      </div>
+    }>
+      <OrderTrackContent />
+    </Suspense>
   );
 }
 

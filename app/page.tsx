@@ -8,6 +8,7 @@ import {
   featuredProducts as fallbackFeatured,
   smartphoneProducts as fallbackTopSelling,
 } from './data/dummyData';
+import { isProductInStock } from './utils/stockUtils';
 
 // Server Component with SSR
 export default async function Home() {
@@ -24,11 +25,11 @@ export default async function Home() {
         name: product.title,
         price: product.final_price,
         originalPrice: product.price !== product.final_price ? product.price : undefined,
-        image: product.thumbnail,
+        image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
         discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
         badge: product.is_featured ? 'Featured' : undefined,
         rating: 4.5,
-        inStock: !product.is_out_of_stock,
+        inStock: isProductInStock(product.stock, product.is_out_of_stock),
       }))
     : fallbackFeatured; // Fallback to dummy data if API fails
 
@@ -38,11 +39,11 @@ export default async function Home() {
         name: product.title,
         price: product.final_price,
         originalPrice: product.price !== product.final_price ? product.price : undefined,
-        image: product.thumbnail,
+        image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
         discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
         badge: product.is_top_selling ? 'Top Selling' : undefined,
         rating: 4.5,
-        inStock: !product.is_out_of_stock,
+        inStock: isProductInStock(product.stock, product.is_out_of_stock),
       }))
     : fallbackTopSelling; // Fallback to dummy data if API fails
 

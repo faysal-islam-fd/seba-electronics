@@ -23,8 +23,10 @@ export default async function BrandPage({
   // Fetch brands to find the current brand
   const brandsData = await getBrands();
   
-  // Find current brand by slug
-  const currentBrand = brandsData.data?.find(brand => brand.slug === slug);
+  // Find current brand by slug (case-insensitive)
+  const currentBrand = brandsData.data?.find(
+    brand => brand.slug?.toLowerCase() === slug.toLowerCase()
+  );
   
   if (!currentBrand) {
     notFound();
@@ -70,7 +72,10 @@ export default async function BrandPage({
 // Enable ISR
 export const revalidate = 1800; // 30 minutes
 
-// Generate static paths for popular brands
+// Allow dynamic params for brands not pre-generated at build time
+export const dynamicParams = true;
+
+// Generate static paths for popular brands (optional optimization)
 export async function generateStaticParams() {
   try {
     const brandsData = await getBrands();

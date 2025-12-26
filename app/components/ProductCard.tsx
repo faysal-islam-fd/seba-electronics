@@ -6,7 +6,11 @@ import { FiShoppingCart, FiHeart, FiEye } from 'react-icons/fi';
 import { FaStar, FaStarHalfAlt } from 'react-icons/fa';
 import { useCart } from '@/app/context/CartContext';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import QuickViewModal from './QuickViewModal';
+import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
+import { useAuth } from '@/app/context/AuthContext';
+import { useToast } from '@/app/context/ToastContext';
 
 interface ProductCardProps {
   id: string;
@@ -36,10 +40,22 @@ export default function ProductCard({
   soldBy
 }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { isLoggedIn } = useAuth();
+  const { showSuccess, showError } = useToast();
+  const router = useRouter();
   const [isAdding, setIsAdding] = useState(false);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  
+  // Convert id to number for API calls
+  const productId = typeof id === 'string' ? parseInt(id, 10) : id;
+  
+  // Check if product is in wishlist
+  const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
+  
+  const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,10 +84,33 @@ export default function ProductCard({
     }, 500);
   };
 
-  const handleWishlist = (e: React.MouseEvent) => {
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
+    
+    if (!isLoggedIn) {
+      // Redirect to login if not logged in
+      router.push('/login');
+      return;
+    }
+    
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(productId).unwrap();
+        showSuccess('Removed from wishlist');
+      } else {
+        const result = await addToWishlist({ product_id: productId }).unwrap();
+        showSuccess('Added to wishlist');
+        // Force refetch to ensure data is up to date
+        setTimeout(() => {
+          // Small delay to ensure API has processed
+        }, 100);
+      }
+    } catch (error: any) {
+      console.error('Failed to update wishlist:', error);
+      const errorMessage = error?.data?.message || 'Failed to update wishlist. Please try again.';
+      showError(errorMessage);
+    }
   };
 
   const handleQuickView = (e: React.MouseEvent) => {

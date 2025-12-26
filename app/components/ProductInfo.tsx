@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiStar, FiHeart, FiShare2, FiShoppingCart, FiCheck, FiTruck, FiShield, FiRefreshCw } from 'react-icons/fi';
 import { useCart } from '@/app/context/CartContext';
+import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
+import { useAuth } from '@/app/context/AuthContext';
+import { useToast } from '@/app/context/ToastContext';
 
 interface Product {
   id: string;
@@ -27,10 +30,21 @@ interface ProductInfoProps {
 
 export default function ProductInfo({ product }: ProductInfoProps) {
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const { addToCart } = useCart();
+  const { isLoggedIn } = useAuth();
+  const { showSuccess, showError } = useToast();
   const router = useRouter();
+  
+  // Convert id to number for API calls
+  const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+  
+  // Check if product is in wishlist
+  const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
+  
+  const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   const increaseQuantity = () => {
     if (quantity < product.stockCount) {
@@ -191,7 +205,26 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           {isAdding ? 'Adding...' : 'Add to Cart'}
         </button>
         <button
-          onClick={() => setIsWishlisted(!isWishlisted)}
+          onClick={async () => {
+            if (!isLoggedIn) {
+              router.push('/login');
+              return;
+            }
+            
+            try {
+              if (isWishlisted) {
+                await removeFromWishlist(productId).unwrap();
+                showSuccess('Removed from wishlist');
+              } else {
+                const result = await addToWishlist({ product_id: productId }).unwrap();
+                showSuccess('Added to wishlist');
+              }
+            } catch (error: any) {
+              console.error('Failed to update wishlist:', error);
+              const errorMessage = error?.data?.message || 'Failed to update wishlist. Please try again.';
+              showError(errorMessage);
+            }
+          }}
           className={`border-2 ${
             isWishlisted ? 'border-red-500 text-red-500' : 'border-gray-300 text-gray-700'
           } hover:border-red-500 hover:text-red-500 font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2`}

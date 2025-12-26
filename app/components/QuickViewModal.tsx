@@ -8,6 +8,9 @@ import { FiX, FiShoppingCart, FiHeart, FiStar } from 'react-icons/fi';
 import { FaStar, FaStarHalfAlt } from 'react-icons/fa';
 import { useCart } from '@/app/context/CartContext';
 import { useGetProductDetailsQuery } from '@/app/store/api/productsApi';
+import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
+import { useAuth } from '@/app/context/AuthContext';
+import { useToast } from '@/app/context/ToastContext';
 
 interface QuickViewModalProps {
   isOpen: boolean;
@@ -29,11 +32,22 @@ interface QuickViewModalProps {
 
 export default function QuickViewModal({ isOpen, onClose, product }: QuickViewModalProps) {
   const [isAdding, setIsAdding] = useState(false);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
   const { addToCart } = useCart();
+  const { isLoggedIn } = useAuth();
+  const { showSuccess, showError } = useToast();
   const router = useRouter();
+  
+  // Convert id to number for API calls
+  const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+  
+  // Check if product is in wishlist
+  const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn || !isOpen });
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
+  
+  const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   // Fetch full product details when modal opens
   const { data: productDetailsData, isLoading: isLoadingDetails } = useGetProductDetailsQuery(
@@ -138,7 +152,8 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
     if (currentDiscount > 0) {
       return currentPrice;
     }
-    return fullProduct?.price || product.originalPrice;
+    const price = fullProduct?.price || product.originalPrice;
+    return price ? (typeof price === 'string' ? parseFloat(price) : price) : undefined;
   }, [currentPrice, currentDiscount, fullProduct?.price, product.originalPrice]);
 
   // Initialize selected variations (for variable products)
@@ -255,8 +270,26 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
     router.push(`/product/${product.id}`);
   };
 
-  const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
+  const handleWishlist = async () => {
+    if (!isLoggedIn) {
+      onClose();
+      router.push('/login');
+      return;
+    }
+    
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(productId).unwrap();
+        showSuccess('Removed from wishlist');
+      } else {
+        const result = await addToWishlist({ product_id: productId }).unwrap();
+        showSuccess('Added to wishlist');
+      }
+    } catch (error: any) {
+      console.error('Failed to update wishlist:', error);
+      const errorMessage = error?.data?.message || 'Failed to update wishlist. Please try again.';
+      showError(errorMessage);
+    }
   };
 
   const savings = originalPrice && finalPrice < originalPrice ? originalPrice - finalPrice : 0;

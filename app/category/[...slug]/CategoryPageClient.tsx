@@ -6,6 +6,7 @@ import Link from 'next/link';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { ProductsResponse, BrandsResponse, Category } from '@/app/lib/api';
+import { isProductInStock } from '@/app/utils/stockUtils';
 import { FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 
 type SortOption = 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';

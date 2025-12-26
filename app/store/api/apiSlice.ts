@@ -94,8 +94,10 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
         });
       }
       
-      // Don't set Content-Type for profile picture endpoint (FormData needs browser to set boundary)
-      if (endpoint !== 'updateProfilePicture') {
+      // Don't set Content-Type for FormData requests (needs browser to set boundary)
+      // Check endpoint name for FormData endpoints
+      const formDataEndpoints = ['updateProfilePicture', 'createServiceRequest', 'createReturnRequest'];
+      if (!formDataEndpoints.includes(endpoint || '')) {
         headers.set('Content-Type', 'application/json');
       }
       headers.set('Accept', 'application/json');
@@ -110,7 +112,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Products', 'Categories', 'Brands', 'FeaturedProducts', 'TopSellingProducts', 'Profile', 'Orders'],
+  tagTypes: ['Products', 'Categories', 'Brands', 'FeaturedProducts', 'TopSellingProducts', 'Profile', 'Orders', 'ServiceRequests', 'ReturnRequests', 'Wishlist'],
   endpoints: () => ({}),
 });
 

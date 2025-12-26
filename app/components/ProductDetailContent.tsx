@@ -5,6 +5,9 @@ import ProductGallery from '@/app/components/ProductGallery';
 import { useCart } from '@/app/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { FiStar, FiShare2, FiShoppingCart, FiHeart } from 'react-icons/fi';
+import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
+import { useAuth } from '@/app/context/AuthContext';
+import { useToast } from '@/app/context/ToastContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import EMIModal from '@/app/components/EMIModal';
@@ -18,7 +21,19 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
   const [emiModalOpen, setEmiModalOpen] = useState(false);
   const { addToCart } = useCart();
+  const { isLoggedIn } = useAuth();
+  const { showSuccess, showError } = useToast();
   const router = useRouter();
+  
+  // Convert id to number for API calls
+  const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
+  
+  // Check if product is in wishlist
+  const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
+  
+  const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   // Check if this is a variable product
   const isVariableProduct = product.attributes && product.attributes.length > 0;
@@ -245,8 +260,31 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 space-y-4 md:space-y-5 relative">
         {/* Wishlist & Share */}
         <div className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 md:gap-4">
-          <button className="text-gray-400 hover:text-red-500 transition-colors" aria-label="Add to wishlist">
-            <FiHeart size={18} className="md:w-5 md:h-5" />
+          <button 
+            onClick={async () => {
+              if (!isLoggedIn) {
+                router.push('/login');
+                return;
+              }
+              
+              try {
+                if (isWishlisted) {
+                  await removeFromWishlist(productId).unwrap();
+                  showSuccess('Removed from wishlist');
+                } else {
+                  const result = await addToWishlist({ product_id: productId }).unwrap();
+                  showSuccess('Added to wishlist');
+                }
+              } catch (error: any) {
+                console.error('Failed to update wishlist:', error);
+                const errorMessage = error?.data?.message || 'Failed to update wishlist. Please try again.';
+                showError(errorMessage);
+              }
+            }}
+            className={`transition-colors ${isWishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`} 
+            aria-label="Add to wishlist"
+          >
+            <FiHeart size={18} className={`md:w-5 md:h-5 ${isWishlisted ? 'fill-current' : ''}`} />
           </button>
           <button className="flex items-center gap-1.5 md:gap-2 text-gray-600 hover:text-gray-900 text-xs md:text-sm">
             <FiShare2 size={16} className="md:w-[18px] md:h-[18px]" />

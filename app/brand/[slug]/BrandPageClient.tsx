@@ -5,6 +5,7 @@ import { useState } from 'react';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { ProductsResponse, CategoriesResponse, Brand } from '@/app/lib/api';
+import { isProductInStock } from '@/app/utils/stockUtils';
 import { FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 import Image from 'next/image';
 
@@ -298,7 +299,7 @@ export default function BrandPageClient({
                       discount={product.discount_percentage ? Math.round(product.discount_percentage) : undefined}
                       badge={product.is_featured ? 'Featured' : undefined}
                       rating={4.5}
-                      inStock={!product.is_out_of_stock}
+                      inStock={isProductInStock(product.stock, product.is_out_of_stock)}
                     />
                   ))}
                 </div>
