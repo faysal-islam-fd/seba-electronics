@@ -174,6 +174,58 @@ export async function getProducts(params: {
   }
 }
 
+// Fetch product reviews (SSR)
+export interface ProductReviewsResponse {
+  success: boolean;
+  data: Array<{
+    id: number;
+    rating: number;
+    title?: string;
+    comment?: string;
+    user: {
+      id: number;
+      name: string;
+    };
+    created_at: string;
+  }>;
+  rating_summary?: {
+    average: number;
+    total_reviews: number;
+    rating_breakdown: {
+      5: number;
+      4: number;
+      3: number;
+      2: number;
+      1: number;
+    };
+  };
+}
+
+export async function getProductReviews(productId: string | number): Promise<ProductReviewsResponse> {
+  try {
+    const url = `${BASE_URL}/products/${productId}/reviews?per_page=1`;
+    const res = await fetch(url, {
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      return {
+        success: false,
+        data: [],
+      };
+    }
+
+    const jsonData = await res.json();
+    return jsonData;
+  } catch (error) {
+    console.error('Error fetching product reviews:', error);
+    return {
+      success: false,
+      data: [],
+    };
+  }
+}
+
 // Fetch featured products (SSR)
 // Note: Using /products endpoint with filtering since /products/featured returns 500
 export async function getFeaturedProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
@@ -311,6 +363,90 @@ export async function getBrands(active: boolean = true): Promise<BrandsResponse>
   } catch (error) {
     console.error('Error fetching brands:', error);
     return { success: false, data: [] };
+  }
+}
+
+// Sliders interfaces
+export interface SliderTarget {
+  id: number;
+  name: string;
+  slug: string;
+  image_url: string | null;
+}
+
+export interface Slider {
+  id: number;
+  image_url: string;
+  type: string;
+  target: SliderTarget | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SlidersResponse {
+  success: boolean;
+  message: string;
+  data: Slider[];
+}
+
+// Fetch sliders (SSR)
+export async function getSliders(): Promise<SlidersResponse> {
+  const url = `${BASE_URL}/cms/sliders`;
+  
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to fetch sliders: ${res.status}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching sliders:', error);
+    return { 
+      success: false, 
+      message: 'Failed to fetch sliders',
+      data: [] 
+    };
+  }
+}
+
+// Home Categories types
+export interface HomeCategory {
+  id: number;
+  name: string;
+  slug: string;
+  image: string;
+  icon: string | null;
+  title: string | null;
+  heading: string | null;
+}
+
+export interface HomeCategoriesResponse {
+  success: boolean;
+  data: HomeCategory[];
+}
+
+// Fetch home categories for homepage sections
+export async function getHomeCategories(): Promise<HomeCategoriesResponse> {
+  try {
+    const res = await fetch(`${BASE_URL}/home-categories`, {
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to fetch home categories: ${res.status}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching home categories:', error);
+    return { 
+      success: false, 
+      data: [] 
+    };
   }
 }
 

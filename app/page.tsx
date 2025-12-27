@@ -1,9 +1,8 @@
 import HeroBanner from './components/HeroBanner';
 import CategorySidebar from './components/CategorySidebar';
-import PromoCarousel from './components/PromoCarousel';
 import CategorySection from './components/CategorySection';
 import CategoryCardSection from './components/CategoryCardSection';
-import { getFeaturedProducts, getTopSellingProducts } from './lib/api';
+import { getFeaturedProducts, getTopSellingProducts, getHomeCategories } from './lib/api';
 import { 
   featuredProducts as fallbackFeatured,
   smartphoneProducts as fallbackTopSelling,
@@ -13,9 +12,10 @@ import { isProductInStock } from './utils/stockUtils';
 // Server Component with SSR
 export default async function Home() {
   // Fetch data on the server
-  const [featuredData, topSellingData] = await Promise.all([
+  const [featuredData, topSellingData, homeCategoriesData] = await Promise.all([
     getFeaturedProducts(8),
     getTopSellingProducts(8),
+    getHomeCategories(),
   ]);
 
   // Transform API data to component format, with fallback to dummy data
@@ -64,89 +64,37 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Promo Carousel */}
-      <div className="container mx-auto px-3 sm:px-4 pb-8">
-        <PromoCarousel />
-      </div>
+      {/* Dynamic Category Card Sections from API */}
+      {homeCategoriesData.success && homeCategoriesData.data.length > 0 && (
+        <div className="container mx-auto px-3 sm:px-4 py-8">
+          {/* Group categories by heading */}
+          {(() => {
+            // Group categories by heading
+            const groupedCategories = homeCategoriesData.data.reduce((acc, category) => {
+              const heading = category.heading || 'Featured Categories';
+              if (!acc[heading]) {
+                acc[heading] = [];
+              }
+              acc[heading].push(category);
+              return acc;
+            }, {} as Record<string, typeof homeCategoriesData.data>);
 
-      {/* Category Card Sections */}
-      <div className="container mx-auto px-3 sm:px-4 py-8">
-        {/* Destination for Authentic Products with Warranty */}
-        <CategoryCardSection
-          title="Destination for Authentic Products with Warranty"
-          viewAllLink="/categories"
-          categories={[
-            {
-              name: 'Home Appliances',
-              image: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=400&h=300&fit=crop',
-              description: 'Official Warranty | Easy EMI',
-              href: '/category/home-appliances',
-            },
-            {
-              name: '5G Smartphones',
-              image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop',
-              description: 'Official Phones | Best Prices',
-              href: '/category/smartphones',
-            },
-            {
-              name: 'Gadgets',
-              image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
-              description: 'Fast Delivery | Official Warranty',
-              href: '/category/gadgets',
-            },
-            {
-              name: 'Networking & Accessories',
-              image: 'https://images.unsplash.com/photo-1614624532983-4ce03382d63d?w=400&h=300&fit=crop',
-              description: 'Official Warranty | Fast Delivery',
-              href: '/category/networking',
-            },
-            {
-              name: 'Kitchen Appliances',
-              image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&h=300&fit=crop',
-              description: 'Easy EMI | Same-day Delivery',
-              href: '/category/kitchen-appliances',
-            },
-          ]}
-        />
-
-        {/* Home Makeover Deals */}
-        <CategoryCardSection
-          title="Home Makeover Deals"
-          viewAllLink="/category/home-makeover"
-          categories={[
-            {
-              name: 'Washing Machines',
-              image: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400&h=300&fit=crop',
-              description: 'Top Brands | Official Warranty',
-              href: '/category/washing-machines',
-            },
-            {
-              name: 'Refrigerators',
-              image: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400&h=300&fit=crop',
-              description: 'Easy EMI | Fast Delivery',
-              href: '/category/refrigerators',
-            },
-            {
-              name: 'Air Fryer',
-              image: 'https://images.unsplash.com/photo-1608039829570-587539b5532e?w=400&h=300&fit=crop',
-              description: 'Official Warranty | Best Brands',
-              href: '/category/air-fryer',
-            },
-            {
-              name: 'Kitchen Appliances',
-              image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&h=300&fit=crop',
-              description: 'Best Picks | Same-Day Delivery',
-              href: '/category/kitchen-appliances',
-            },
-            {
-              name: 'Television',
-              image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop',
-              description: 'Official Warranty | Top Brands',
-              href: '/category/television',
-            },
-          ]}
-        />
-      </div>
+            return Object.entries(groupedCategories).map(([heading, categories]) => (
+              <CategoryCardSection
+                key={heading}
+                title={heading}
+                viewAllLink="/categories"
+                categories={categories.map(cat => ({
+                  name: cat.name,
+                  image: cat.image || '/products/placeholder.jpg',
+                  description: cat.title || `${cat.icon || ''} Browse ${cat.name}`.trim(),
+                  href: `/category/${cat.slug}`,
+                }))}
+              />
+            ));
+          })()}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="container mx-auto px-3 sm:px-4 py-8 space-y-10">
@@ -155,7 +103,7 @@ export default async function Home() {
           <CategorySection
             title="🔥 Hot Deals with Best Prices"
             products={featuredProducts}
-            viewAllLink="/category/hot-deals"
+            viewAllLink="/hot-deals"
           />
         )}
 
@@ -164,7 +112,7 @@ export default async function Home() {
           <CategorySection
             title="⭐ Best Sellers"
             products={topSellingProducts}
-            viewAllLink="/category/top-selling"
+            viewAllLink="/best-sellers"
           />
         )}
 

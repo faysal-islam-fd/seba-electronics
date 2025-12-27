@@ -22,45 +22,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load user from localStorage on mount and verify token
   useEffect(() => {
     const loadUser = async () => {
-      const token = getAuthToken();
-      const storedUser = getUser();
-      
-      if (token) {
-        // If we have a stored user, set it immediately for faster UI
+      try {
+        const token = getAuthToken();
+        const storedUser = getUser();
+        
+        if (token) {
+          // If we have a stored user, set it immediately for faster UI
+          if (storedUser) {
+            setUserState(storedUser);
+            // Set loading to false early if we have cached user data
+            setIsLoading(false);
+          }
+          
+          // Always verify token by fetching profile to ensure it's valid
+          // Use Promise.race to add a timeout
+          try {
+            const profilePromise = getProfile();
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+            );
+            
+            const profileResult = await Promise.race([profilePromise, timeoutPromise]);
+            
+            if (profileResult.success && profileResult.data) {
+              setUserState(profileResult.data);
+              // Save the fresh user data
+              saveUser(profileResult.data);
+            } else {
+              // Token invalid, clear auth
+              removeAuthToken();
+              setUserState(null);
+            }
+          } catch (error) {
+            // Token invalid or expired, or network error, or timeout
+            console.warn('Profile fetch failed:', error);
+            // Only clear if we don't have a stored user (might be network issue)
+            if (!storedUser) {
+              removeAuthToken();
+              setUserState(null);
+            }
+            // If we have stored user, keep it but mark as potentially stale
+          }
+        } else {
+          // No token, clear any stale user data
+          if (storedUser) {
+            removeAuthToken();
+            setUserState(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+        // Ensure loading is set to false even on error
+        const storedUser = getUser();
         if (storedUser) {
           setUserState(storedUser);
         }
-        
-        // Always verify token by fetching profile to ensure it's valid
-        try {
-          const profileResult = await getProfile();
-          if (profileResult.success && profileResult.data) {
-            setUserState(profileResult.data);
-            // Save the fresh user data
-            saveUser(profileResult.data);
-          } else {
-            // Token invalid, clear auth
-            removeAuthToken();
-            setUserState(null);
-          }
-        } catch (error) {
-          // Token invalid or expired, or network error
-          // Only clear if we don't have a stored user (might be network issue)
-          if (!storedUser) {
-            removeAuthToken();
-            setUserState(null);
-          }
-          // If we have stored user, keep it but mark as potentially stale
-        }
-      } else {
-        // No token, clear any stale user data
-        if (storedUser) {
-          removeAuthToken();
-          setUserState(null);
-        }
+      } finally {
+        // Always set loading to false, even if there was an error
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     loadUser();

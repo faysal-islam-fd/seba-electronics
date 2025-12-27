@@ -545,15 +545,20 @@ export async function deleteAccount(data: {
   return result;
 }
 
-// Logout
+// Logout - uses /api/customer/logout (not /api/v1/customer/logout)
 export async function logout(): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await authenticatedFetch(`${BASE_URL}/logout`, {
+    const response = await authenticatedFetch(`${CUSTOMER_API_BASE}/logout`, {
       method: 'POST',
     });
-    await response.json();
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Logout failed');
+    }
+    return result;
   } catch (error) {
     console.error('Logout error:', error);
+    // Still remove token even if API call fails
   } finally {
     removeAuthToken();
   }

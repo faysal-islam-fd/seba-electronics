@@ -231,31 +231,45 @@ export default function ReturnRequestDetailPage() {
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">Product Information</h2>
                 </div>
-                <div className="flex gap-5 p-5 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-gray-200">
-                  {request.order_item.product.thumbnail && (
-                    <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden flex-shrink-0 relative border-2 border-gray-300 shadow-inner">
-                      <Image
-                        src={request.order_item.product.thumbnail || '/products/placeholder.jpg'}
-                        alt={request.order_item.product.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{request.order_item.product.title}</h3>
-                    <div className="flex items-center gap-4">
-                      <div className="px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Quantity</p>
-                        <p className="text-sm font-bold text-gray-900">{request.order_item.quantity}</p>
+                {(() => {
+                  // Handle different item structures from API
+                  const orderItem = request.order_item;
+                  const productTitle = orderItem.product_name || orderItem.product?.title || (request as any).product?.title || 'Product';
+                  const productThumbnail = orderItem.product_image || orderItem.product?.thumbnail || (request as any).product?.thumbnail_image || '';
+                  const itemPrice = parseFloat(String(orderItem.price || (orderItem as any).unit_price || 0));
+                  const itemQuantity = parseInt(String(orderItem.quantity || 1));
+                  
+                  return (
+                    <div className="flex gap-5 p-5 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-gray-200">
+                      {productThumbnail && (
+                        <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden flex-shrink-0 relative border-2 border-gray-300 shadow-inner">
+                          <Image
+                            src={productThumbnail || '/products/placeholder.jpg'}
+                            alt={productTitle}
+                            fill
+                            className="object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/products/placeholder.jpg';
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{productTitle}</h3>
+                        <div className="flex items-center gap-4">
+                          <div className="px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Quantity</p>
+                            <p className="text-sm font-bold text-gray-900">{itemQuantity}</p>
+                          </div>
+                          <div className="px-3 py-1 bg-green-50 border border-green-200 rounded-lg">
+                            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Price</p>
+                            <p className="text-sm font-bold text-gray-900">৳ {itemPrice.toLocaleString()}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="px-3 py-1 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Price</p>
-                        <p className="text-sm font-bold text-gray-900">৳ {request.order_item.price.toLocaleString()}</p>
-                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             )}
 

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { FiSearch, FiShoppingCart, FiMenu, FiChevronRight, FiUser, FiChevronDown, FiX, FiHeart, FiShield, FiRefreshCw } from 'react-icons/fi';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -40,6 +41,15 @@ const getCategoryIcon = (name: string) => {
     if (nameLower.includes(key)) return icon;
   }
   return '📦'; // Default icon
+};
+
+// Helper function to check if a profile picture is a real uploaded photo (not a fallback/placeholder)
+const isRealProfilePicture = (profilePicture: string | null | undefined): boolean => {
+  if (!profilePicture || profilePicture.trim() === '') return false;
+  // Exclude ui-avatars.com and other placeholder services
+  if (profilePicture.includes('ui-avatars.com')) return false;
+  if (profilePicture.includes('placeholder')) return false;
+  return true;
 };
 
 export default function Header() {
@@ -286,9 +296,21 @@ export default function Header() {
                       onBlur={() => setTimeout(() => setAccountDropdownOpen(false), 200)}
                       className="flex items-center gap-2 text-white hover:text-gray-100 transition-colors"
                     >
-                      <div className="bg-white rounded-full p-1.5">
-                        <FiUser className="text-blue-600" size={20} />
-                      </div>
+                      {isRealProfilePicture(user?.profile_picture) ? (
+                        <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-md">
+                          <Image
+                            src={user!.profile_picture!}
+                            alt={user?.name || 'Profile'}
+                            width={36}
+                            height={36}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-md">
+                          {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <span className="font-medium">{user?.name || 'My Account'}</span>
                       <FiChevronDown size={16} />
                     </button>
@@ -384,9 +406,21 @@ export default function Header() {
                       className="text-white hover:text-gray-200 transition-colors relative"
                       aria-label="Account"
                     >
-                      <div className="bg-white/20 border border-white/30 rounded-full p-1.5 sm:p-2">
-                        <FiUser size={16} className="sm:w-[18px] sm:h-[18px]" />
-                      </div>
+                      {isRealProfilePicture(user?.profile_picture) ? (
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-white/30">
+                          <Image
+                            src={user!.profile_picture!}
+                            alt={user?.name || 'Profile'}
+                            width={36}
+                            height={36}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-xs border-2 border-white/30">
+                          {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
                     </button>
                     {mobileProfileDropdownOpen && (
                       <>
@@ -395,11 +429,28 @@ export default function Header() {
                           onClick={() => setMobileProfileDropdownOpen(false)}
                         />
                         <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[10002]">
-                          <div className="px-4 py-3 border-b border-gray-200">
-                            <p className="text-xs text-gray-500 mb-0.5">Logged in as</p>
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {user?.name || user?.email || 'My Account'}
-                            </p>
+                          <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+                            {isRealProfilePicture(user?.profile_picture) ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                <Image
+                                  src={user!.profile_picture!}
+                                  alt={user?.name || 'Profile'}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                                {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500">Logged in as</p>
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {user?.name || user?.email || 'My Account'}
+                              </p>
+                            </div>
                           </div>
                           <Link
                             href="/account"

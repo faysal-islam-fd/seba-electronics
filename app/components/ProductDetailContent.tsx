@@ -24,15 +24,15 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const { isLoggedIn } = useAuth();
   const { showSuccess, showError } = useToast();
   const router = useRouter();
-  
+
   // Convert id to number for API calls
   const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-  
+
   // Check if product is in wishlist
   const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
   const [addToWishlist] = useAddToWishlistMutation();
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
-  
+
   const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   // Check if this is a variable product
@@ -41,14 +41,14 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   // Extract all unique variations from attributes (for variable products)
   const variations = useMemo(() => {
     if (!isVariableProduct) return [];
-    
+
     const variationsMap: Record<string, Set<string>> = {};
-    
+
     product.attributes.forEach((attr: any) => {
       attr.values?.forEach((val: any) => {
         const variationName = val.variation?.name;
         const variationValue = val.variation_value?.value;
-        
+
         if (variationName && variationValue) {
           if (!variationsMap[variationName]) {
             variationsMap[variationName] = new Set();
@@ -57,7 +57,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         }
       });
     });
-    
+
     return Object.entries(variationsMap).map(([name, values]) => ({
       name,
       values: Array.from(values),
@@ -67,10 +67,10 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   // Find selected attribute based on selected variations (for variable products)
   const selectedAttribute = useMemo(() => {
     if (!isVariableProduct) return null;
-    
+
     const selectedKeys = Object.keys(selectedVariations);
     if (selectedKeys.length === 0) return product.attributes[0];
-    
+
     const found = product.attributes.find((attr: any) => {
       return attr.values?.every((val: any) => {
         const varName = val.variation?.name;
@@ -78,13 +78,13 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         return selectedVariations[varName] === varValue;
       });
     });
-    
+
     // Log for debugging
     if (found) {
       console.log('Found attribute:', found);
       console.log('Attribute ID field:', found.id, found.attribute_id, found.product_attribute_id);
     }
-    
+
     return found || product.attributes[0];
   }, [selectedVariations, product.attributes, isVariableProduct]);
 
@@ -123,11 +123,11 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
     }
     return product.sku;
   }, [isVariableProduct, selectedAttribute, product.sku]);
-  
+
   // Calculate final price with discount
   const finalPrice = useMemo(() => {
     if (!currentDiscount || currentDiscount === 0) return currentPrice;
-    
+
     if (currentDiscountType === 'percent') {
       return currentPrice - (currentPrice * currentDiscount / 100);
     }
@@ -166,7 +166,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       alert('Please select a product variation before adding to cart');
       return;
     }
-    
+
     // For variable products, add variation info to name
     let productName = product.name;
     if (isVariableProduct && Object.keys(selectedVariations).length > 0) {
@@ -175,10 +175,10 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         .join(', ');
       productName = `${product.name} (${variationText})`;
     }
-    
+
     // Extract product_id - convert string id to number if needed
     const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-    
+
     // Extract product_attribute_id for variable products
     // Try multiple possible field names for the attribute ID
     let attributeId: number | undefined;
@@ -186,15 +186,15 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       // Log the full attribute structure for debugging
       console.log('Selected Attribute Object:', selectedAttribute);
       console.log('Attribute Keys:', Object.keys(selectedAttribute || {}));
-      
+
       // Try different possible field names for the attribute ID
-      attributeId = (selectedAttribute as any).id || 
-                    (selectedAttribute as any).attribute_id || 
-                    (selectedAttribute as any).product_attribute_id ||
-                    (selectedAttribute as any).product_attribute?.id ||
-                    (selectedAttribute as any).product_attribute_id ||
-                    undefined;
-      
+      attributeId = (selectedAttribute as any).id ||
+        (selectedAttribute as any).attribute_id ||
+        (selectedAttribute as any).product_attribute_id ||
+        (selectedAttribute as any).product_attribute?.id ||
+        (selectedAttribute as any).product_attribute_id ||
+        undefined;
+
       // Debug logging to help identify the correct field name
       if (!attributeId) {
         console.warn('⚠️ Attribute ID not found in expected fields. Full attribute structure:', JSON.stringify(selectedAttribute, null, 2));
@@ -203,14 +203,14 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         console.log('✅ Found attribute ID:', attributeId);
       }
     }
-    
+
     // For variable products, product_attribute_id is required
     if (isVariableProduct && !attributeId) {
       console.error('❌ Variable product attribute ID not found. Selected attribute:', selectedAttribute);
       alert('Unable to add product to cart. Please try selecting the variation again or contact support.');
       return;
     }
-    
+
     addToCart({
       id: isVariableProduct && currentSku ? `${product.id}-${currentSku}` : product.id,
       name: productName,
@@ -260,13 +260,13 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 space-y-4 md:space-y-5 relative">
         {/* Wishlist & Share */}
         <div className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 md:gap-4">
-          <button 
+          <button
             onClick={async () => {
               if (!isLoggedIn) {
                 router.push('/login');
                 return;
               }
-              
+
               try {
                 if (isWishlisted) {
                   await removeFromWishlist(productId).unwrap();
@@ -281,7 +281,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
                 showError(errorMessage);
               }
             }}
-            className={`transition-colors ${isWishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`} 
+            className={`transition-colors ${isWishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
             aria-label="Add to wishlist"
           >
             <FiHeart size={18} className={`md:w-5 md:h-5 ${isWishlisted ? 'fill-current' : ''}`} />
@@ -299,7 +299,18 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
 
         {/* Review Link */}
         <div>
-          <button className="text-blue-600 font-semibold hover:underline">Add Your Review</button>
+          <button
+            onClick={() => {
+              // Scroll to reviews section and trigger tab switch
+              const tabsSection = document.querySelector('[data-reviews-tab]');
+              if (tabsSection) {
+                tabsSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="text-blue-600 font-semibold hover:underline text-sm"
+          >
+            View Reviews & Ratings
+          </button>
         </div>
 
         {/* Brand and Seller */}
@@ -313,7 +324,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
           <span className="text-gray-300 hidden sm:inline">|</span>
           <div>
             Sold by:{' '}
-            <Link 
+            <Link
               href={`/vendor/${encodeURIComponent((product.soldBy || 'Official Store').toLowerCase().replace(/\s+/g, '-'))}`}
               className="font-semibold text-blue-600 hover:underline"
             >
@@ -358,11 +369,10 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
                     <button
                       key={value}
                       onClick={() => handleVariationChange(variation.name, value)}
-                      className={`px-4 py-2 border-2 rounded-lg font-medium text-sm transition-all ${
-                        selectedVariations[variation.name] === value
+                      className={`px-4 py-2 border-2 rounded-lg font-medium text-sm transition-all ${selectedVariations[variation.name] === value
                           ? 'border-blue-600 bg-blue-50 text-blue-600'
                           : 'border-gray-300 text-gray-700 hover:border-blue-400'
-                      }`}
+                        }`}
                     >
                       {value}
                     </button>

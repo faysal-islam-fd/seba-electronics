@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreateServiceRequestMutation } from '@/app/store/api/serviceRequestsApi';
 import { useGetOrdersQuery, useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
-import { FiShield, FiLoader, FiArrowLeft, FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
+import { FiLoader, FiArrowLeft, FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
 import Image from 'next/image';
 
 export default function NewServiceRequestPage() {
@@ -13,6 +13,7 @@ export default function NewServiceRequestPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | null>(null);
   const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | string | null>(null);
   const [type, setType] = useState<'warranty' | 'repair' | 'other'>('warranty');
   const [description, setDescription] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -20,6 +21,10 @@ export default function NewServiceRequestPage() {
   const [customerAddress, setCustomerAddress] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Use ref to prevent double submissions
+  const submitInProgress = useRef(false);
   
   const { data: ordersData } = useGetOrdersQuery({ page: 1, per_page: 100 });
   const { data: orderDetailsData } = useGetOrderDetailsQuery(selectedOrderNumber || '', {
@@ -32,19 +37,20 @@ export default function NewServiceRequestPage() {
   // Use order details if available, otherwise fall back to order list items
   const orderItems = orderDetailsData?.data?.items || selectedOrder?.items || [];
 
-  useEffect(() => {
-    // Reset order item when order changes
+  // Handle order selection change
+  const handleOrderChange = useCallback((orderId: number | null) => {
+    setSelectedOrderId(orderId);
     setSelectedOrderItemId(null);
-    // Find order number when order ID is selected
-    if (selectedOrderId) {
-      const order = orders.find(o => o.id === selectedOrderId);
+    setSelectedProductId(null);
+    if (orderId) {
+      const order = orders.find(o => o.id === orderId);
       if (order) {
         setSelectedOrderNumber(order.order_number);
       }
     } else {
       setSelectedOrderNumber(null);
     }
-  }, [selectedOrderId, orders]);
+  }, [orders]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -73,7 +79,13 @@ export default function NewServiceRequestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedOrderId || !selectedOrderItemId) {
+    // Prevent double submission
+    if (submitInProgress.current || isSubmitting || isLoading) {
+      console.log('Submission already in progress, ignoring...');
+      return;
+    }
+    
+    if (!selectedOrderNumber || !selectedOrderItemId) {
       alert('Please select an order and item');
       return;
     }
@@ -88,9 +100,13 @@ export default function NewServiceRequestPage() {
       return;
     }
 
+    // Set submission flags
+    submitInProgress.current = true;
+    setIsSubmitting(true);
+
     try {
-      const result = await createRequest({
-        order_id: selectedOrderId,
+      const requestData = {
+        order_number: selectedOrderNumber,
         order_item_id: selectedOrderItemId,
         type,
         description,
@@ -98,12 +114,21 @@ export default function NewServiceRequestPage() {
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_address: customerAddress,
-      }).unwrap();
+      };
+      console.log('Creating service request with data:', requestData);
+      console.log('Selected order:', selectedOrder);
+      console.log('Order items available:', orderItems);
       
+      const result = await createRequest(requestData).unwrap();
+      
+      console.log('Service request created successfully:', result);
       router.push(`/account/service-requests/${result.data.id}`);
     } catch (err: any) {
       console.error('Failed to create service request:', err);
       alert(err?.data?.message || 'Failed to create service request. Please try again.');
+      // Reset flags on error so user can try again
+      submitInProgress.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -132,9 +157,10 @@ export default function NewServiceRequestPage() {
             </label>
             <select
               value={selectedOrderId || ''}
-              onChange={(e) => setSelectedOrderId(parseInt(e.target.value))}
+              onChange={(e) => handleOrderChange(e.target.value ? parseInt(e.target.value) : null)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
               required
+              disabled={isSubmitting}
             >
               <option value="">Choose an order...</option>
               {orders.map((order) => (
@@ -162,33 +188,72 @@ export default function NewServiceRequestPage() {
               )}
               {orderItems.length > 0 ? (
                 <div className="space-y-3">
-                  {orderItems.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setSelectedOrderItemId(item.id)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        selectedOrderItemId === item.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex gap-4">
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
-                          <Image
-                            src={item.product.thumbnail || '/products/placeholder.jpg'}
-                            alt={item.product.title}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 mb-1">{item.product.title}</h3>
-                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">৳ {item.price.toLocaleString()}</p>
+                  {orderItems.map((item: any, index: number) => {
+                    // Debug: Log each item structure
+                    console.log(`Item ${index}:`, item, 'Keys:', Object.keys(item));
+                    
+                    // Handle different item structures:
+                    // - Flat structure: product_name, product_image, product_id (from order details)
+                    // - Nested structure: product.title, product.thumbnail, product.id (from order list)
+                    const productTitle = item.product_name || item.product?.title || item.title || item.name || 'Product';
+                    const productThumbnail = item.product_image || item.product?.thumbnail || item.thumbnail || item.image || '/products/placeholder.jpg';
+                    const itemPrice = item.price || item.unit_price || 0;
+                    const itemQuantity = item.quantity || 1;
+                    
+                    // The order_item_id is the actual ID of the order-product relationship record
+                    // Try multiple possible field names
+                    const itemId = item.order_item_id || item.id || item.item_id || item.pivot?.id || item.product_id || index + 1;
+                    
+                    console.log(`Item ${index} - Using ID:`, itemId, 'from fields:', {
+                      order_item_id: item.order_item_id,
+                      id: item.id,
+                      item_id: item.item_id,
+                      product_id: item.product_id,
+                      pivot_id: item.pivot?.id
+                    });
+                    
+                    // Get product_id separately (always available from API)
+                    const productId = item.product_id || item.product?.id;
+                    
+                    return (
+                      <div
+                        key={`${itemId}-${index}`}
+                        onClick={() => {
+                          console.log('Selected item:', { itemId, productId, item });
+                          setSelectedOrderItemId(itemId);
+                          setSelectedProductId(productId);
+                        }}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          selectedOrderItemId === itemId
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex gap-4">
+                          <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
+                            <Image
+                              src={productThumbnail}
+                              alt={productTitle}
+                              fill
+                              className="object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/products/placeholder.jpg';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 mb-1">{productTitle}</h3>
+                            <p className="text-sm text-gray-600">Quantity: {itemQuantity}</p>
+                            <p className="text-sm font-semibold text-gray-900 mt-1">৳ {itemPrice.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400 mt-1">ID: {itemId}</p>
+                            {selectedOrderItemId === itemId && (
+                              <p className="text-xs text-blue-600 mt-1 font-medium">✓ Selected</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : selectedOrderNumber && orderDetailsData && orderItems.length === 0 ? (
                 <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
@@ -344,6 +409,20 @@ export default function NewServiceRequestPage() {
             </div>
           )}
 
+          {/* Validation Status */}
+          {(!selectedOrderNumber || !selectedOrderItemId) && (
+            <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
+              <FiAlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+              <div className="text-sm text-amber-800">
+                <p className="font-semibold mb-1">Please complete the following:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {!selectedOrderNumber && <li>Select an order</li>}
+                  {selectedOrderNumber && !selectedOrderItemId && <li>Select a product from the order (click on a product card above)</li>}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Submit Button */}
           <div className="flex gap-3 pt-4 border-t-2 border-gray-200">
             <Link
@@ -354,7 +433,7 @@ export default function NewServiceRequestPage() {
             </Link>
             <button
               type="submit"
-              disabled={isLoading || !selectedOrderId || !selectedOrderItemId}
+              disabled={isLoading || isSubmitting || !selectedOrderNumber || !selectedOrderItemId}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-bold transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-sm"
               title={
                 !selectedOrderId
@@ -364,7 +443,7 @@ export default function NewServiceRequestPage() {
                   : ''
               }
             >
-              {isLoading ? (
+              {(isLoading || isSubmitting) ? (
                 <span className="flex items-center justify-center gap-2">
                   <FiLoader className="animate-spin" size={18} />
                   Creating...

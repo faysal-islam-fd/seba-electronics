@@ -206,62 +206,76 @@ export default function CheckoutPage() {
       // Place order
       const result = await placeOrder(orderData).unwrap();
 
+      // Handle different API response structures:
+      // SSL Commerz: result.data.order.order_number
+      // COD: result.data.order_number
+      const order = result.data.order || result.data;
+      const resultData = result.data as any;
+      const orderNumber = order.order_number || resultData.order_number;
+      const orderStatus = order.status || resultData.status;
+      const orderTotal = order.total || resultData.total;
+      const orderIsEmi = order.is_emi || resultData.is_emi;
+      const orderEmiMonths = order.emi_months || resultData.emi_months;
+      const orderEmiAmount = order.emi_amount || resultData.emi_amount;
+      const paymentUrl = result.data.payment_url;
+
       console.log('✅ Order placed successfully:', {
         success: result.success,
         message: result.message,
-        order_number: result.data.order.order_number,
-        payment_url: result.data.payment_url,
+        order_number: orderNumber,
+        payment_url: paymentUrl,
         payment_method: paymentMethod,
-        is_emi: result.data.order.is_emi,
-        emi_months: result.data.order.emi_months,
-        emi_amount: result.data.order.emi_amount,
-        order_total: result.data.order.total,
+        is_emi: orderIsEmi,
+        emi_months: orderEmiMonths,
+        emi_amount: orderEmiAmount,
+        order_total: orderTotal,
+        response_structure: result.data.order ? 'nested' : 'flat',
       });
 
       if (result.success) {
         // Verify EMI data if EMI was requested
         if (paymentMethod === 'ssl_commerz' && isEmi) {
-          if (!result.data.order.is_emi) {
+          if (!orderIsEmi) {
             console.warn('⚠️ EMI was requested but order response does not include is_emi flag');
           }
-          if (!result.data.order.emi_months) {
+          if (!orderEmiMonths) {
             console.warn('⚠️ EMI months were requested but not returned in order response');
           }
-          if (!result.data.order.emi_amount) {
+          if (!orderEmiAmount) {
             console.warn('⚠️ EMI amount not returned in order response');
           }
         }
 
         // If payment URL is provided (SSL Commerz), redirect to payment gateway
-        if (result.data.payment_url) {
+        if (paymentUrl) {
           console.log('🔗 Redirecting to SSL Commerz payment gateway...', {
-            payment_url: result.data.payment_url,
-            order_number: result.data.order.order_number,
-            is_emi: result.data.order.is_emi,
-            emi_months: result.data.order.emi_months,
+            payment_url: paymentUrl,
+            order_number: orderNumber,
+            is_emi: orderIsEmi,
+            emi_months: orderEmiMonths,
           });
           
           // Store order details before redirecting for callback handling
           sessionStorage.setItem('pendingOrder', JSON.stringify({
-            order_number: result.data.order.order_number,
-            status: result.data.order.status,
-            total: result.data.order.total,
-            is_emi: result.data.order.is_emi,
-            emi_months: result.data.order.emi_months,
-            emi_amount: result.data.order.emi_amount,
+            order_number: orderNumber,
+            status: orderStatus,
+            total: orderTotal,
+            is_emi: orderIsEmi,
+            emi_months: orderEmiMonths,
+            emi_amount: orderEmiAmount,
           }));
           
           console.log('💾 Order details stored in sessionStorage:', {
-            order_number: result.data.order.order_number,
-            status: result.data.order.status,
-            is_emi: result.data.order.is_emi,
-            emi_months: result.data.order.emi_months,
+            order_number: orderNumber,
+            status: orderStatus,
+            is_emi: orderIsEmi,
+            emi_months: orderEmiMonths,
           });
           
           // Redirect to payment gateway
           // IMPORTANT: This redirect is what takes the user to SSL Commerz
           // After payment, SSL Commerz will redirect back to your callback URL
-          window.location.href = result.data.payment_url;
+          window.location.href = paymentUrl;
           return;
         }
 
@@ -269,12 +283,12 @@ export default function CheckoutPage() {
         clearCart();
         // Store order details in sessionStorage to display on success page
         sessionStorage.setItem('lastOrder', JSON.stringify({
-          order_number: result.data.order.order_number,
-          status: result.data.order.status,
-          total: result.data.order.total,
-          is_emi: result.data.order.is_emi,
-          emi_months: result.data.order.emi_months,
-          emi_amount: result.data.order.emi_amount,
+          order_number: orderNumber,
+          status: orderStatus,
+          total: orderTotal,
+          is_emi: orderIsEmi,
+          emi_months: orderEmiMonths,
+          emi_amount: orderEmiAmount,
         }));
         router.push('/order-success');
       } else {

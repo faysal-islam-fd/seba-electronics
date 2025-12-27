@@ -3,8 +3,11 @@ import { apiSlice } from './apiSlice';
 // Return Request Types
 export interface ReturnRequest {
   id: number;
+  user_id?: number;
   order_id: number;
-  order_item_id: number;
+  order_item_id: number | string;
+  product_id?: number | string;
+  request_number?: string;
   type: 'single_item' | 'full_order';
   status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
   reason: 'defective' | 'wrong_item' | 'damaged' | 'not_as_described' | 'other';
@@ -17,16 +20,34 @@ export interface ReturnRequest {
   order?: {
     id: number;
     order_number: string;
+    status?: string;
+    payment_status?: string;
+    total?: string | number;
   };
   order_item?: {
     id: number;
-    product: {
+    order_id?: string | number;
+    product_id?: string | number;
+    product_name?: string;
+    product_sku?: string;
+    product_image?: string;
+    variation_details?: string | null;
+    price?: string | number;
+    discount?: string | number;
+    quantity?: string | number;
+    subtotal?: string | number;
+    // Legacy nested product structure
+    product?: {
       id: number;
       title: string;
       thumbnail: string;
     };
-    quantity: number;
-    price: number;
+  };
+  product?: {
+    id: number;
+    title: string;
+    slug?: string;
+    thumbnail_image?: string;
   };
 }
 
@@ -47,8 +68,8 @@ export interface ReturnRequestDetailResponse {
 }
 
 export interface CreateReturnRequestRequest {
-  order_id: number;
-  order_item_id: number;
+  order_number: string; // The order number (e.g., "ORD-20251226-4691")
+  order_item_id: number; // The order_item table ID
   type: 'single_item' | 'full_order';
   reason: 'defective' | 'wrong_item' | 'damaged' | 'not_as_described' | 'other';
   description: string;
@@ -93,7 +114,7 @@ export const returnRequestsApi = apiSlice.injectEndpoints({
       query: (requestData) => {
         // Handle file uploads using FormData
         const formData = new FormData();
-        formData.append('order_id', requestData.order_id.toString());
+        formData.append('order_number', requestData.order_number);
         formData.append('order_item_id', requestData.order_item_id.toString());
         formData.append('type', requestData.type);
         formData.append('reason', requestData.reason);
@@ -110,6 +131,13 @@ export const returnRequestsApi = apiSlice.injectEndpoints({
             formData.append('images[]', image);
           });
         }
+
+        console.log('Return Request FormData:', {
+          order_number: requestData.order_number,
+          order_item_id: requestData.order_item_id,
+          type: requestData.type,
+          reason: requestData.reason,
+        });
 
         return {
           url: '/return-requests',

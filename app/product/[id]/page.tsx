@@ -3,20 +3,30 @@ import ProductTabs from '@/app/components/ProductTabs';
 import RelatedProducts from '@/app/components/RelatedProducts';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import ProductDetailContent from '@/app/components/ProductDetailContent';
-import { getProductDetails } from '@/app/lib/api';
+import { getProductDetails, getProductReviews } from '@/app/lib/api';
 
 // Server Component with SSR
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Fetch product data on the server
-  const data = await getProductDetails(id);
+  // Fetch product data and reviews on the server
+  const [data, reviewsData] = await Promise.all([
+    getProductDetails(id),
+    getProductReviews(id),
+  ]);
 
   if (!data || !data.success) {
     notFound();
   }
 
   const apiProduct = data.data;
+  
+  // Extract rating and review count from reviews data
+  const ratingSummary = reviewsData?.rating_summary;
+  const rating = ratingSummary?.average ?? (reviewsData?.data && reviewsData.data.length > 0
+    ? reviewsData.data.reduce((sum, r) => sum + (r?.rating || 0), 0) / reviewsData.data.length
+    : 0);
+  const reviewCount = ratingSummary?.total_reviews ?? (reviewsData?.data?.length || 0);
 
   // Check if this is a variable product (has variations)
   const isVariableProduct = apiProduct.attributes && apiProduct.attributes.length > 0;
@@ -33,8 +43,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     price: isVariableProduct ? 0 : apiProduct.final_price,
     originalPrice: isVariableProduct ? undefined : (apiProduct.price !== apiProduct.final_price ? apiProduct.price : undefined),
     discount: isVariableProduct ? 0 : (apiProduct.discount_percentage ? Math.round(apiProduct.discount_percentage) : 0),
-    rating: 4.5, // Default since API doesn't provide ratings
-    reviewCount: 0,
+    rating: rating || 0,
+    reviewCount: reviewCount,
     inStock: isVariableProduct ? true : (apiProduct.stock > 0 && !apiProduct.is_out_of_stock), // For variable products, check stock at attribute level
     stockCount: isVariableProduct ? 0 : apiProduct.stock, // For variable products, use attribute stock
     sku: apiProduct.sku,
@@ -52,10 +62,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       });
       return acc;
     }, {}) || {},
-    features: apiProduct.specifications?.flatMap(spec => 
+    features: apiProduct.specifications?.flatMap(spec =>
       spec.items.map(item => `${item.key || 'Feature'}: ${item.value}`)
     ) || [],
-    warranty: apiProduct.warranties?.[0]?.group_name 
+    warranty: apiProduct.warranties?.[0]?.group_name
       ? `${apiProduct.warranties[0].group_name} - ${apiProduct.warranties[0].items?.[0]?.duration} ${apiProduct.warranties[0].items?.[0]?.type}`
       : 'Standard Warranty',
     shipping: 'Free Delivery in Dhaka (3-5 Days)',
@@ -74,28 +84,29 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Breadcrumb */}
-            <Breadcrumb 
-              items={[
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[
             { label: 'Products', href: '/search' },
             { label: product.brand, href: `/brand/${product.brandSlug}` },
-                { label: product.name },
-              ]}
-            />
+            { label: product.name },
+          ]}
+        />
 
         {/* Product detail presentation */}
         <ProductDetailContent product={product} />
 
-            {/* Product Details Tabs */}
-            <ProductTabs 
-              description={product.description}
-              specifications={product.specifications}
-              features={product.features}
-              warranty={product.warranty}
-              shipping={product.shipping}
-            />
+        {/* Product Details Tabs */}
+        <ProductTabs
+          productId={product.id}
+          description={product.description}
+          specifications={product.specifications}
+          features={product.features}
+          warranty={product.warranty}
+          shipping={product.shipping}
+        />
 
-            {/* Related Products */}
+        {/* Related Products */}
         <RelatedProducts currentProductId={product.id} categoryId={apiProduct.category?.id} />
       </div>
     </div>

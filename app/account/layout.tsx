@@ -2,18 +2,13 @@
 
 import { ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import {
     FiUser,
     FiShoppingBag,
     FiStar,
-    FiMessageSquare,
-    FiAward,
-    FiShare2,
-    FiMapPin,
-    FiCreditCard,
-    FiHelpCircle,
     FiShield,
     FiRefreshCw,
     FiHeart,
@@ -29,13 +24,16 @@ const navigationItems = [
     { id: 'service-requests', label: 'Service Requests', icon: FiShield, href: '/account/service-requests' },
     { id: 'return-requests', label: 'Return Requests', icon: FiRefreshCw, href: '/account/return-requests' },
     { id: 'reviews', label: 'My Product Reviews', icon: FiStar, href: '/account/reviews' },
-    { id: 'tickets', label: 'Support Tickets', icon: FiMessageSquare, href: '/account/tickets' },
-    { id: 'club', label: 'Pickaboo Club', icon: FiAward, href: '/account/club' },
-    { id: 'share', label: 'Share & Earn', icon: FiShare2, href: '/account/share' },
-    { id: 'addresses', label: 'Manage Addresses', icon: FiMapPin, href: '/account/addresses' },
-    { id: 'payments', label: 'Saved Payment Methods', icon: FiCreditCard, href: '/account/payments' },
-    { id: 'help', label: 'Help & Knowledge Base', icon: FiHelpCircle, href: '/account/help' },
 ] as const;
+
+// Helper function to check if a profile picture is a real uploaded photo (not a fallback/placeholder)
+const isRealProfilePicture = (profilePicture: string | null | undefined): boolean => {
+    if (!profilePicture || profilePicture.trim() === '') return false;
+    // Exclude ui-avatars.com and other placeholder services
+    if (profilePicture.includes('ui-avatars.com')) return false;
+    if (profilePicture.includes('placeholder')) return false;
+    return true;
+};
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
     const { user, logout } = useAuth();
@@ -81,9 +79,21 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
                         <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-blue-900/5 border border-white/50 p-4">
                             {/* User Info */}
                             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/30">
-                                    {getInitials()}
-                                </div>
+                                {isRealProfilePicture(user?.profile_picture) ? (
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-blue-500/30 flex-shrink-0">
+                                        <Image
+                                            src={user!.profile_picture!}
+                                            alt={user?.name || 'Profile'}
+                                            width={48}
+                                            height={48}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/30 flex-shrink-0">
+                                        {getInitials()}
+                                    </div>
+                                )}
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || 'Welcome back!'}</p>
                                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
@@ -120,9 +130,21 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
                                     </div>
 
                                     <div className="relative flex items-center gap-4">
-                                        <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-2xl ring-4 ring-white/30 shadow-lg">
-                                            {getInitials()}
-                                        </div>
+                                        {isRealProfilePicture(user?.profile_picture) ? (
+                                            <div className="w-16 h-16 rounded-2xl overflow-hidden ring-4 ring-white/30 shadow-lg flex-shrink-0">
+                                                <Image
+                                                    src={user!.profile_picture!}
+                                                    alt={user?.name || 'Profile'}
+                                                    width={64}
+                                                    height={64}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-2xl ring-4 ring-white/30 shadow-lg flex-shrink-0">
+                                                {getInitials()}
+                                            </div>
+                                        )}
                                         <div className="flex-1 min-w-0">
                                             <p className="text-white font-semibold text-lg truncate">{user?.name || 'Welcome!'}</p>
                                             <p className="text-blue-100 text-sm truncate">{user?.email}</p>
@@ -140,8 +162,8 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
                                                 key={item.id}
                                                 href={item.href}
                                                 className={`group w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${isActive
-                                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+                                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                                     }`}
                                             >
                                                 <Icon size={18} className={`transition-transform duration-200 ${isActive ? 'text-white' : 'text-blue-500 group-hover:scale-110'}`} />

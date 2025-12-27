@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreateReturnRequestMutation } from '@/app/store/api/returnRequestsApi';
-import { useGetOrdersQuery } from '@/app/store/api/ordersApi';
+import { useGetOrdersQuery, useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
 import { FiRefreshCw, FiLoader, FiArrowLeft, FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
 import Image from 'next/image';
 
 export default function NewReturnRequestPage() {
   const router = useRouter();
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | null>(null);
   const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
   const [type, setType] = useState<'single_item' | 'full_order'>('single_item');
   const [reason, setReason] = useState<'defective' | 'wrong_item' | 'damaged' | 'not_as_described' | 'other'>('defective');
@@ -21,16 +22,29 @@ export default function NewReturnRequestPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
   const { data: ordersData } = useGetOrdersQuery({ page: 1, per_page: 100 });
+  const { data: orderDetailsData } = useGetOrderDetailsQuery(selectedOrderNumber || '', {
+    skip: !selectedOrderNumber,
+  });
   const [createRequest, { isLoading, error }] = useCreateReturnRequestMutation();
 
   const orders = ordersData?.data || [];
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
-  const orderItems = selectedOrder?.items || [];
+  // Use order details if available (has order_item_id), otherwise fall back to order list items
+  const orderItems = orderDetailsData?.data?.items || selectedOrder?.items || [];
 
-  useEffect(() => {
-    // Reset order item when order changes
+  // Handle order selection change
+  const handleOrderChange = useCallback((orderId: number | null) => {
+    setSelectedOrderId(orderId);
     setSelectedOrderItemId(null);
-  }, [selectedOrderId]);
+    if (orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setSelectedOrderNumber(order.order_number);
+      }
+    } else {
+      setSelectedOrderNumber(null);
+    }
+  }, [orders]);
 
   useEffect(() => {
     // Clear account info when refund method changes to original
@@ -66,7 +80,7 @@ export default function NewReturnRequestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedOrderId || !selectedOrderItemId) {
+    if (!selectedOrderNumber || !selectedOrderItemId) {
       alert('Please select an order and item');
       return;
     }
@@ -83,7 +97,7 @@ export default function NewReturnRequestPage() {
 
     try {
       const result = await createRequest({
-        order_id: selectedOrderId,
+        order_number: selectedOrderNumber,
         order_item_id: selectedOrderItemId,
         type,
         reason,
@@ -125,7 +139,7 @@ export default function NewReturnRequestPage() {
             </label>
             <select
               value={selectedOrderId || ''}
-              onChange={(e) => setSelectedOrderId(parseInt(e.target.value))}
+              onChange={(e) => handleOrderChange(e.target.value ? parseInt(e.target.value) : null)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 font-medium"
               required
             >
@@ -142,40 +156,70 @@ export default function NewReturnRequestPage() {
           </div>
 
           {/* Order Item Selection */}
-          {selectedOrder && orderItems.length > 0 && (
+          {selectedOrder && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Select Product <span className="text-red-500">*</span>
               </label>
+              {selectedOrderNumber && !orderDetailsData && (
+                <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-xl flex items-center gap-3 mb-3">
+                  <FiLoader className="animate-spin text-rose-600" size={20} />
+                  <p className="text-sm text-rose-800">Loading order items...</p>
+                </div>
+              )}
+              {orderItems.length > 0 && (
               <div className="space-y-3">
-                {orderItems.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedOrderItemId(item.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      selectedOrderItemId === item.id
-                        ? 'border-rose-500 bg-rose-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
-                        <Image
-                          src={item.product.thumbnail || '/products/placeholder.jpg'}
-                          alt={item.product.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-gray-900 mb-1">{item.product.title}</h3>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">৳ {item.price.toLocaleString()}</p>
+                {orderItems.map((item: any, index: number) => {
+                  // Handle different item structures:
+                  // - Flat structure: product_name, product_image (from order details)
+                  // - Nested structure: product.title, product.thumbnail (from order list)
+                  const productTitle = item.product_name || item.product?.title || item.title || item.name || 'Product';
+                  const productThumbnail = item.product_image || item.product?.thumbnail || item.thumbnail || item.image || '/products/placeholder.jpg';
+                  const itemPrice = item.price || item.unit_price || 0;
+                  const itemQuantity = item.quantity || 1;
+                  
+                  // Prioritize order_item_id from API response
+                  const itemId = item.order_item_id || item.id || item.item_id || index + 1;
+                  
+                  return (
+                    <div
+                      key={`${itemId}-${index}`}
+                      onClick={() => {
+                        console.log('Selected item:', { itemId, item });
+                        setSelectedOrderItemId(itemId);
+                      }}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        selectedOrderItemId === itemId
+                          ? 'border-rose-500 bg-rose-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex gap-4">
+                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
+                          <Image
+                            src={productThumbnail}
+                            alt={productTitle}
+                            fill
+                            className="object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/products/placeholder.jpg';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 mb-1">{productTitle}</h3>
+                          <p className="text-sm text-gray-600">Quantity: {itemQuantity}</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">৳ {itemPrice.toLocaleString()}</p>
+                          {selectedOrderItemId === itemId && (
+                            <p className="text-xs text-rose-600 mt-1 font-medium">✓ Selected</p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              )}
             </div>
           )}
 

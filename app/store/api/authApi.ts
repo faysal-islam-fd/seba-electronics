@@ -184,10 +184,10 @@ export const authApi = apiSlice.injectEndpoints({
       }),
     }),
     
-    // Logout
+    // Logout - Note: Logout endpoint uses /api/customer (without /v1)
     logout: builder.mutation<{ success: boolean; message: string }, void>({
       query: () => ({
-        url: '/customer/logout',
+        url: '/logout',
         method: 'POST',
       }),
       invalidatesTags: ['Profile'],

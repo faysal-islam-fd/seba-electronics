@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
 import { useCart } from '@/app/context/CartContext';
+import { useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
 
 function PaymentCallbackContent() {
   const router = useRouter();
@@ -13,6 +14,32 @@ function PaymentCallbackContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [message, setMessage] = useState('Processing payment...');
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+
+  // SSL Commerz typically sends status and other params in the callback
+  // Get all possible parameter variations
+  const orderNumberParam = searchParams.get('order_number') || searchParams.get('orderNumber') ||
+    searchParams.get('value_a') || searchParams.get('value_b') ||
+    searchParams.get('valueA') || searchParams.get('valueB') ||
+    searchParams.get('order_id') || searchParams.get('tran_id') || searchParams.get('tranId');
+
+  // Try to get order number from sessionStorage if not in URL
+  let finalOrderNumber = orderNumberParam;
+  if (!finalOrderNumber && typeof window !== 'undefined') {
+    const pendingOrder = sessionStorage.getItem('pendingOrder');
+    if (pendingOrder) {
+      try {
+        const order = JSON.parse(pendingOrder);
+        finalOrderNumber = order.order_number;
+      } catch (e) {
+        console.error('Failed to parse pending order:', e);
+      }
+    }
+  }
+
+  // Fetch order details to verify actual status from backend API
+  const { data: orderData, isLoading: isLoadingOrder } = useGetOrderDetailsQuery(finalOrderNumber || '', {
+    skip: !finalOrderNumber,
+  });
 
   useEffect(() => {
     const processPaymentCallback = async () => {
@@ -28,13 +55,7 @@ function PaymentCallbackContent() {
           timestamp: new Date().toISOString(),
         });
 
-        // SSL Commerz typically sends status and other params in the callback
-        // Get all possible parameter variations
         const paymentStatus = searchParams.get('status') || searchParams.get('Status');
-        const orderId = searchParams.get('order_id') || searchParams.get('tran_id') || searchParams.get('tranId');
-        const orderNumberParam = searchParams.get('order_number') || searchParams.get('orderNumber') ||
-          searchParams.get('value_a') || searchParams.get('value_b') ||
-          searchParams.get('valueA') || searchParams.get('valueB');
         const valId = searchParams.get('val_id') || searchParams.get('valId') || searchParams.get('valID');
         const tranId = searchParams.get('tran_id') || searchParams.get('tranId') || searchParams.get('tranID');
         const payStatus = searchParams.get('pay_status') || searchParams.get('payStatus') || searchParams.get('PayStatus');
@@ -44,25 +65,98 @@ function PaymentCallbackContent() {
         const cardType = searchParams.get('card_type') || searchParams.get('cardType');
         const cardNo = searchParams.get('card_no') || searchParams.get('cardNo');
 
-        // Try to get order number from sessionStorage if not in URL
-        let finalOrderNumber = orderNumberParam;
-        if (!finalOrderNumber) {
-          const pendingOrder = sessionStorage.getItem('pendingOrder');
-          if (pendingOrder) {
-            try {
-              const order = JSON.parse(pendingOrder);
-              finalOrderNumber = order.order_number;
-            } catch (e) {
-              console.error('Failed to parse pending order:', e);
-            }
-          }
-        }
-
         // Store order number if available
         if (finalOrderNumber) {
           setOrderNumber(finalOrderNumber);
         }
 
+        // PRIORITY 1: Check order status from API (most reliable - this is the source of truth)
+        if (orderData?.success && orderData.data) {
+          const order = orderData.data;
+          const orderStatus = order.status?.toLowerCase();
+          const paymentStatusFromApi = (order as any).payment_status?.toLowerCase();
+          
+          console.log('📦 Order details from API:', {
+            order_number: order.order_number,
+            status: orderStatus,
+            payment_status: paymentStatusFromApi,
+          });
+          
+          // Check if order is cancelled or payment failed
+          const isOrderCancelled = orderStatus === 'cancelled';
+          const isPaymentFailed = 
+            paymentStatusFromApi === 'failed' || 
+            paymentStatusFromApi === 'cancelled' ||
+            orderStatus === 'failed';
+          
+          if (isOrderCancelled || isPaymentFailed) {
+            console.log('❌ Order is cancelled or payment failed according to API:', {
+              order_status: orderStatus,
+              payment_status: paymentStatusFromApi,
+            });
+            
+            // Redirect to payment failed page
+            setStatus('failed');
+            setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
+            
+            setTimeout(() => {
+              const params = new URLSearchParams();
+              if (finalOrderNumber) params.set('order', finalOrderNumber);
+              console.log('🔗 Redirecting to payment failed page:', `/payment/failed?${params.toString()}`);
+              router.push(`/payment/failed?${params.toString()}`);
+            }, 2000);
+            return;
+          }
+          
+          // Check if order is confirmed/paid - this is the most reliable check
+          const isOrderConfirmed = 
+            orderStatus === 'confirmed' || 
+            orderStatus === 'paid' ||
+            orderStatus === 'processing' ||
+            paymentStatusFromApi === 'paid' ||
+            paymentStatusFromApi === 'success';
+          
+          if (isOrderConfirmed) {
+            console.log('✅ Order is confirmed/paid according to API, redirecting to success');
+            
+            // Store order details in sessionStorage
+            sessionStorage.setItem('lastOrder', JSON.stringify({
+              order_number: order.order_number,
+              status: order.status,
+              total: order.total,
+              is_emi: order.is_emi,
+              emi_months: order.emi_months,
+              emi_amount: order.emi_amount,
+            }));
+            sessionStorage.removeItem('pendingOrder');
+            
+            // Clear the cart after successful payment
+            clearCart();
+            console.log('🛒 Cart cleared after successful payment');
+            
+            // Redirect to order success page
+            setStatus('success');
+            setMessage('Payment completed successfully! Your order is being processed.');
+            
+            setTimeout(() => {
+              const params = new URLSearchParams();
+              if (finalOrderNumber) params.set('order_number', finalOrderNumber);
+              params.set('status', 'paid');
+              params.set('total', order.total.toString());
+              console.log('🔗 Redirecting to order success page:', `/order-success?${params.toString()}`);
+              router.push(`/order-success?${params.toString()}`);
+            }, 2000);
+            return;
+          }
+        }
+        
+        // PRIORITY 2: If API is still loading and we have order number, wait for it
+        if (isLoadingOrder && finalOrderNumber) {
+          console.log('⏳ Waiting for order details from API...');
+          return;
+        }
+
+        // PRIORITY 3: Check URL parameters for payment status indicators
         // Normalize status values for comparison (case-insensitive)
         const normalizedStatus = paymentStatus?.toUpperCase();
         const normalizedPayStatus = payStatus?.toUpperCase();
@@ -80,15 +174,12 @@ function PaymentCallbackContent() {
         const hasTransactionId = tranId && tranId !== '0' && tranId !== '';
         const hasBankTranId = bankTranId && bankTranId !== '0' && bankTranId !== '';
 
-        const isSuccess =
-          hasValidId || // Most reliable indicator
-          (hasValidStatus && hasTransactionId) ||
-          (hasValidPayStatus && hasTransactionId) ||
-          (hasBankTranId && normalizedStatus !== 'FAILED' && normalizedStatus !== 'CANCELLED');
-
+        // Check for explicit failure indicators
         const isFailed =
           normalizedStatus === 'FAILED' ||
           normalizedPayStatus === 'FAILED' ||
+          normalizedStatus === 'CANCELLED' ||
+          normalizedPayStatus === 'CANCELLED' ||
           (normalizedStatus === 'INVALID' && !hasValidId);
 
         const isCancelled =
@@ -96,8 +187,14 @@ function PaymentCallbackContent() {
           normalizedStatus === 'CANCEL' ||
           normalizedPayStatus === 'CANCELLED';
 
+        const hasSuccessIndicators =
+          hasValidId || // Most reliable indicator
+          (hasValidStatus && hasTransactionId) ||
+          (hasValidPayStatus && hasTransactionId) ||
+          (hasBankTranId && normalizedStatus !== 'FAILED' && normalizedStatus !== 'CANCELLED');
+
         console.log('🔍 Payment status check:', {
-          isSuccess,
+          hasSuccessIndicators,
           isFailed,
           isCancelled,
           paymentStatus,
@@ -116,146 +213,62 @@ function PaymentCallbackContent() {
           currency,
           finalOrderNumber,
           allParams: allParams,
+          orderDataAvailable: !!orderData,
         });
 
-        if (isSuccess) {
-          console.log('✅ Payment successful!', {
-            order_number: finalOrderNumber,
-            valId,
-            tranId,
-            amount,
-          });
-
-          setStatus('success');
-          setMessage('Payment completed successfully! Your order is being processed.');
-
-          // Clear pending order from sessionStorage
-          if (sessionStorage.getItem('pendingOrder')) {
-            const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder') || '{}');
-            // Store in lastOrder for order success page
-            sessionStorage.setItem('lastOrder', JSON.stringify(pendingOrder));
-            sessionStorage.removeItem('pendingOrder');
-            console.log('💾 Order moved from pendingOrder to lastOrder:', pendingOrder);
-          }
-
-          // Clear the cart after successful payment
-          clearCart();
-          console.log('🛒 Cart cleared after successful payment');
-
-          // Redirect to order success page after a short delay
+        if (isFailed || isCancelled) {
+          console.log('❌ Payment explicitly failed or cancelled');
+          setStatus('failed');
+          setMessage(isCancelled ? 'Payment was cancelled. You can try again when ready.' : 'Payment failed. Please try again or choose a different payment method.');
+          
           setTimeout(() => {
             const params = new URLSearchParams();
-            if (finalOrderNumber) params.set('order_number', finalOrderNumber);
-            params.set('status', 'paid');
-            if (amount) params.set('total', amount);
-            console.log('🔗 Redirecting to order success page:', `/order-success?${params.toString()}`);
-            router.push(`/order-success?${params.toString()}`);
+            if (finalOrderNumber) params.set('order', finalOrderNumber);
+            router.push(`/payment/failed?${params.toString()}`);
           }, 2000);
-        } else if (isFailed) {
-          setStatus('failed');
-          setMessage('Payment failed. Please try again or choose a different payment method.');
-        } else if (isCancelled) {
-          setStatus('failed');
-          setMessage('Payment was cancelled. You can try again when ready.');
-        } else {
-          // If status is unclear, check for additional success indicators
-          // In demo/sandbox mode, SSL Commerz might send different parameters
-          // Check for any positive indicators
-          const hasAnySuccessIndicator =
-            hasValidId ||
-            hasBankTranId ||
-            (hasTransactionId && !isFailed && !isCancelled) ||
-            cardType || // If card type is present, payment was likely processed
-            cardNo; // If card number is present, payment was likely processed
+          return;
+        }
 
-          if (hasAnySuccessIndicator) {
-            console.log('✅ Payment appears successful based on indicators:', {
-              hasValidId,
-              hasBankTranId,
-              hasTransactionId,
-              cardType,
-              cardNo,
-            });
-            setStatus('success');
-            setMessage('Payment completed successfully! Your order is being processed.');
-
-            // Clear pending order from sessionStorage
-            if (sessionStorage.getItem('pendingOrder')) {
-              const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder') || '{}');
-              // Store in lastOrder for order success page
-              sessionStorage.setItem('lastOrder', JSON.stringify(pendingOrder));
-              sessionStorage.removeItem('pendingOrder');
-              console.log('💾 Order moved from pendingOrder to lastOrder:', pendingOrder);
-            }
-
-            // Clear the cart after successful payment
-            clearCart();
-            console.log('🛒 Cart cleared after successful payment');
-
-            setTimeout(() => {
-              const params = new URLSearchParams();
-              if (finalOrderNumber) params.set('order_number', finalOrderNumber);
-              params.set('status', 'paid');
-              if (amount) params.set('total', amount);
-              console.log('🔗 Redirecting to order success page:', `/order-success?${params.toString()}`);
-              router.push(`/order-success?${params.toString()}`);
-            }, 2000);
-          } else {
-            // If we have a transaction ID but status is unclear, it might still be processing
-            // Check if we're coming from a demo/sandbox environment
-            const isDemo = window.location.href.includes('sandbox') ||
-              window.location.href.includes('demo') ||
-              window.location.href.includes('sslcommerz.com') ||
-              allParams['store_id']?.toLowerCase().includes('test') ||
-              allParams['store_id']?.toLowerCase().includes('demo');
-
-            // Check if we have a pending order (means user came from our checkout)
-            const hasPendingOrder = !!sessionStorage.getItem('pendingOrder');
-
-            // In demo mode or if we have a pending order and no explicit failure, be more lenient
-            if ((isDemo || hasPendingOrder) && (hasTransactionId || !isFailed)) {
-              // In demo mode or with pending order, if we have a transaction ID or no explicit failure, assume success
-              console.log('✅ Demo/pending order mode detected, assuming success:', {
-                isDemo,
-                hasPendingOrder,
-                hasTransactionId,
-                isFailed,
-                allParams,
-              });
-              setStatus('success');
-              setMessage('Payment completed successfully! Your order is being processed.');
-
-              if (sessionStorage.getItem('pendingOrder')) {
-                const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder') || '{}');
-                sessionStorage.setItem('lastOrder', JSON.stringify(pendingOrder));
+        if (hasSuccessIndicators && hasValidId) {
+          console.log('✅ Payment appears successful based on strong indicators (val_id present)');
+          
+          // Still proceed with caution - if API didn't confirm, wait a bit or proceed if API check failed
+          if (!orderData && !isLoadingOrder) {
+            // API might be slow or failed, but we have strong success indicators
+            const pendingOrder = sessionStorage.getItem('pendingOrder');
+            if (pendingOrder) {
+              try {
+                const order = JSON.parse(pendingOrder);
+                sessionStorage.setItem('lastOrder', pendingOrder);
                 sessionStorage.removeItem('pendingOrder');
-                console.log('💾 Order moved from pendingOrder to lastOrder:', pendingOrder);
+                
+                clearCart();
+                console.log('🛒 Cart cleared after successful payment');
+                
+                setStatus('success');
+                setMessage('Payment completed successfully! Your order is being processed.');
+                
+                setTimeout(() => {
+                  const params = new URLSearchParams();
+                  if (finalOrderNumber) params.set('order_number', finalOrderNumber);
+                  params.set('status', 'paid');
+                  if (amount) params.set('total', amount);
+                  console.log('🔗 Redirecting to order success page:', `/order-success?${params.toString()}`);
+                  router.push(`/order-success?${params.toString()}`);
+                }, 2000);
+                return;
+              } catch (e) {
+                console.error('Failed to parse pending order:', e);
               }
-
-              // Clear the cart after successful payment
-              clearCart();
-              console.log('🛒 Cart cleared after successful payment (demo mode)');
-
-              setTimeout(() => {
-                const params = new URLSearchParams();
-                if (finalOrderNumber) params.set('order_number', finalOrderNumber);
-                params.set('status', 'paid');
-                if (amount) params.set('total', amount);
-                console.log('🔗 Redirecting to order success page (demo/pending mode):', `/order-success?${params.toString()}`);
-                router.push(`/order-success?${params.toString()}`);
-              }, 2000);
-            } else {
-              setStatus('failed');
-              setMessage('Unable to verify payment status. Please contact support if payment was deducted from your account.');
-              console.warn('⚠️ Payment status unclear:', {
-                allParams,
-                hasValidId,
-                hasTransactionId,
-                hasBankTranId,
-                isDemo,
-                hasPendingOrder,
-              });
             }
+          }
+        } else {
+          // If we reach here, status is unclear - don't assume success
+          // Wait for API response or show error
+          if (!orderData && !isLoadingOrder) {
+            console.warn('⚠️ Payment status unclear - no API data and no strong success indicators');
+            setStatus('failed');
+            setMessage('Unable to verify payment status. Please check your order status in your account or contact support if payment was deducted.');
           }
         }
       } catch (error) {
@@ -266,7 +279,7 @@ function PaymentCallbackContent() {
     };
 
     processPaymentCallback();
-  }, [searchParams, router]);
+  }, [searchParams, router, clearCart, orderData, isLoadingOrder, finalOrderNumber]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4">

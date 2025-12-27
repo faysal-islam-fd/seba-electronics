@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
-import { FiShield, FiEdit3, FiMail, FiLock, FiChevronRight, FiUser, FiPhone, FiCalendar, FiMapPin, FiCreditCard } from 'react-icons/fi';
+import { FiShield, FiMail, FiLock, FiChevronRight, FiUser, FiPhone, FiCalendar, FiMapPin, FiCreditCard, FiEdit3 } from 'react-icons/fi';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -71,7 +71,7 @@ export default function AccountPage() {
                 <p className="text-sm text-gray-500">Your basic profile details</p>
               </div>
             </div>
-            <Link
+<Link
               href="/account/profile"
               className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30"
             >
