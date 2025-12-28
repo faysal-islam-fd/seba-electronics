@@ -72,6 +72,9 @@ export interface CreateServiceRequestRequest {
   order_item_id: number; // The order_item table ID
   type: 'warranty' | 'repair' | 'other';
   description: string;
+  reason: 'defective' | 'wrong_item' | 'not_as_described' | 'damaged' | 'changed_mind' | 'other';
+  refund_method: 'original' | 'store_credit' | 'bank_transfer';
+  refund_account_info?: string; // Required if refund_method is 'bank_transfer'
   images?: File[];
   customer_name: string;
   customer_phone: string;
@@ -119,6 +122,14 @@ export const serviceRequestsApi = apiSlice.injectEndpoints({
         formData.append('order_item_id', requestData.order_item_id.toString());
         formData.append('type', requestData.type);
         formData.append('description', requestData.description);
+        formData.append('reason', requestData.reason);
+        formData.append('refund_method', requestData.refund_method);
+        
+        // Append refund_account_info if provided (required for bank_transfer)
+        if (requestData.refund_account_info) {
+          formData.append('refund_account_info', requestData.refund_account_info);
+        }
+        
         formData.append('customer_name', requestData.customer_name);
         formData.append('customer_phone', requestData.customer_phone);
         formData.append('customer_address', requestData.customer_address);
@@ -134,6 +145,9 @@ export const serviceRequestsApi = apiSlice.injectEndpoints({
           order_number: requestData.order_number,
           order_item_id: requestData.order_item_id,
           type: requestData.type,
+          reason: requestData.reason,
+          refund_method: requestData.refund_method,
+          refund_account_info: requestData.refund_account_info,
         });
 
         return {

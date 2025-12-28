@@ -140,7 +140,6 @@ export default function SearchPageClient({
         <div className="hidden md:block mb-4">
           <Breadcrumb 
             items={[
-              { label: 'Home', href: '/' },
               { label: 'Search', href: initialQuery ? `/search?q=${encodeURIComponent(initialQuery)}` : '/search' },
               ...(initialQuery ? [{ label: initialQuery }] : []),
             ]}

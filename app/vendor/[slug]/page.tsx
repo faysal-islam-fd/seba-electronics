@@ -291,7 +291,6 @@ export default async function VendorPage({
         {/* Breadcrumb */}
         <Breadcrumb
           items={[
-            { label: 'Home', href: '/' },
             { label: vendor.name },
           ]}
         />

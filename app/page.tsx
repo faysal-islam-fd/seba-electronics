@@ -101,7 +101,7 @@ export default async function Home() {
         {/* Featured Products - Hot Deals */}
         {featuredProducts.length > 0 && (
           <CategorySection
-            title="🔥 Hot Deals with Best Prices"
+            title="Hot Deals"
             products={featuredProducts}
             viewAllLink="/hot-deals"
           />
@@ -110,7 +110,7 @@ export default async function Home() {
         {/* Top Selling Products */}
         {topSellingProducts.length > 0 && (
           <CategorySection
-            title="⭐ Best Sellers"
+            title="Best Sellers"
             products={topSellingProducts}
             viewAllLink="/best-sellers"
           />

@@ -133,7 +133,6 @@ export default function BrandPageClient({
         <div className="mb-4">
           <Breadcrumb 
             items={[
-              { label: 'Home', href: '/' },
               { label: 'Brands', href: '/brands' },
               { label: currentBrand.name },
             ]}

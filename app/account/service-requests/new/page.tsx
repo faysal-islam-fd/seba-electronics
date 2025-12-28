@@ -7,6 +7,8 @@ import { useCreateServiceRequestMutation } from '@/app/store/api/serviceRequests
 import { useGetOrdersQuery, useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
 import { FiLoader, FiArrowLeft, FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
 import Image from 'next/image';
+import { validatePhoneNumber } from '@/app/utils/phoneValidation';
+import { useToast } from '@/app/context/ToastContext';
 
 export default function NewServiceRequestPage() {
   const router = useRouter();
@@ -15,13 +17,17 @@ export default function NewServiceRequestPage() {
   const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<number | string | null>(null);
   const [type, setType] = useState<'warranty' | 'repair' | 'other'>('warranty');
+  const [reason, setReason] = useState<'defective' | 'wrong_item' | 'not_as_described' | 'damaged' | 'changed_mind' | 'other'>('defective');
   const [description, setDescription] = useState('');
+  const [refundMethod, setRefundMethod] = useState<'original' | 'store_credit' | 'bank_transfer'>('original');
+  const [refundAccountInfo, setRefundAccountInfo] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showError } = useToast();
   
   // Use ref to prevent double submissions
   const submitInProgress = useRef(false);
@@ -76,6 +82,14 @@ export default function NewServiceRequestPage() {
     URL.revokeObjectURL(imagePreviews[index]);
   };
 
+  // Clear account info when refund method changes to original or store_credit
+  const handleRefundMethodChange = (method: 'original' | 'store_credit' | 'bank_transfer') => {
+    setRefundMethod(method);
+    if (method !== 'bank_transfer') {
+      setRefundAccountInfo('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -99,6 +113,18 @@ export default function NewServiceRequestPage() {
       alert('Please fill in all customer information');
       return;
     }
+    
+    // Validate phone number
+    const phoneValidation = validatePhoneNumber(customerPhone);
+    if (!phoneValidation.isValid) {
+      showError(phoneValidation.error || 'Invalid phone number');
+      return;
+    }
+    
+    if (refundMethod === 'bank_transfer' && !refundAccountInfo.trim()) {
+      alert('Please provide bank account information for bank transfer refund');
+      return;
+    }
 
     // Set submission flags
     submitInProgress.current = true;
@@ -109,7 +135,10 @@ export default function NewServiceRequestPage() {
         order_number: selectedOrderNumber,
         order_item_id: selectedOrderItemId,
         type,
+        reason,
         description,
+        refund_method: refundMethod,
+        refund_account_info: refundMethod === 'bank_transfer' ? refundAccountInfo : undefined,
         images: images.length > 0 ? images : undefined,
         customer_name: customerName,
         customer_phone: customerPhone,
@@ -288,6 +317,26 @@ export default function NewServiceRequestPage() {
             </div>
           </div>
 
+          {/* Reason */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value as any)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+              required
+            >
+              <option value="defective">Defective</option>
+              <option value="wrong_item">Wrong Item</option>
+              <option value="damaged">Damaged</option>
+              <option value="not_as_described">Not as Described</option>
+              <option value="changed_mind">Changed Mind</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
           {/* Description */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -301,6 +350,49 @@ export default function NewServiceRequestPage() {
               rows={6}
               required
             />
+          </div>
+
+          {/* Refund Method */}
+          <div className="space-y-4 pt-4 border-t-2 border-gray-200">
+            <h3 className="text-lg font-bold text-gray-900">Refund Method</h3>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                How would you like to receive your refund? <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {(['original', 'store_credit', 'bank_transfer'] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => handleRefundMethodChange(method)}
+                    className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${
+                      refundMethod === method
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {refundMethod === 'bank_transfer' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Bank Account Information <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={refundAccountInfo}
+                  onChange={(e) => setRefundAccountInfo(e.target.value)}
+                  placeholder="Bank name, account number, account holder name..."
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  rows={3}
+                  required={refundMethod === 'bank_transfer'}
+                />
+              </div>
+            )}
           </div>
 
           {/* Customer Information */}
@@ -329,7 +421,7 @@ export default function NewServiceRequestPage() {
                 type="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="01700000000"
+                placeholder="01712345678 or +8801712345678"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />

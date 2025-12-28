@@ -169,31 +169,44 @@ export default function Header() {
                                         onMouseEnter={() => setHoveredCategory(category.name)}
                                       />
                                       <div
-                                        className="absolute left-full top-0 ml-2 w-[520px] bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-[10000]"
+                                        className="absolute left-full top-0 ml-2 w-[600px] bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-[10000]"
                                         onMouseEnter={() => setHoveredCategory(category.name)}
                                         onMouseLeave={() => setHoveredCategory(null)}
                                       >
+                                        <h3 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                                          {category.name}
+                                        </h3>
                                         <div className="grid grid-cols-2 gap-6">
                                           {category.children.map((subcategory) => (
                                             <div key={subcategory.id} className="space-y-2">
                                               <Link
-                                                href={`/category/${subcategory.slug}`}
-                                                className="font-bold text-sm text-gray-900 mb-3 pb-2 border-b border-gray-200 block hover:text-blue-600 transition-colors"
+                                                href={`/category/${category.slug}/${subcategory.slug}`}
+                                                className="font-semibold text-sm text-gray-900 hover:text-blue-600 transition-colors block mb-3"
                                               >
                                                 {subcategory.name}
                                               </Link>
                                               {subcategory.children && subcategory.children.length > 0 && (
                                                 <ul className="space-y-1.5">
-                                                  {subcategory.children.map((item) => (
+                                                  {subcategory.children.slice(0, 5).map((item) => (
                                                     <li key={item.id}>
                                                       <Link
-                                                        href={`/category/${item.slug}`}
+                                                        href={`/category/${category.slug}/${subcategory.slug}/${item.slug}`}
                                                         className="text-sm text-gray-600 hover:text-blue-600 hover:translate-x-1 transition-all block"
                                                       >
                                                         {item.name}
                                                       </Link>
                                                     </li>
                                                   ))}
+                                                  {subcategory.children.length > 5 && (
+                                                    <li>
+                                                      <Link
+                                                        href={`/category/${category.slug}/${subcategory.slug}`}
+                                                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                                      >
+                                                        View all →
+                                                      </Link>
+                                                    </li>
+                                                  )}
                                                 </ul>
                                               )}
                                             </div>

@@ -41,15 +41,15 @@ export default function RootLayout({
       <body className={montserrat.className} suppressHydrationWarning>
         <ReduxProvider>
         <AuthProvider>
-          <CartProvider>
           <ToastProvider>
+          <CartProvider>
         <Header />
         <main className="min-h-screen">
           {children}
         </main>
         <Footer />
-          </ToastProvider>
           </CartProvider>
+          </ToastProvider>
         </AuthProvider>
         </ReduxProvider>
       </body>

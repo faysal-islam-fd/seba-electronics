@@ -14,7 +14,9 @@ export default async function CategoryPage({
   const { slug: slugArray } = await params;
   const searchParamsResolved = await searchParams;
   
-  const slug = Array.isArray(slugArray) ? slugArray[0] : slugArray;
+  // Handle both single slug (category) and multiple slugs (category/subcategory/...)
+  const slugs = Array.isArray(slugArray) ? slugArray : [slugArray];
+  
   const page = parseInt((searchParamsResolved.page as string) || '1');
   const sort = (searchParamsResolved.sort as any) || 'latest';
   const minPrice = searchParamsResolved.min_price ? parseInt(searchParamsResolved.min_price as string) : undefined;
@@ -28,7 +30,7 @@ export default async function CategoryPage({
     getBrands(),
   ]);
 
-  // Find current category by slug (recursively search in all categories)
+  // Find category by slug (recursively search in all categories)
   const findCategoryBySlug = (categories: Category[], targetSlug: string): Category | null => {
     for (const category of categories) {
       if (category.slug === targetSlug) {
@@ -42,16 +44,79 @@ export default async function CategoryPage({
     return null;
   };
 
-  const currentCategory = findCategoryBySlug(categoriesData.data || [], slug);
+  // Navigate through the category tree based on slug path
+  let currentCategory: Category | null = null;
+  let parentCategory: Category | null = null;
+  const categoryPath: Category[] = [];
+
+  // Start from root categories
+  let searchIn = categoriesData.data || [];
+
+  console.log(`🔍 Searching for category path: ${slugs.join(' > ')}`);
+  console.log(`📂 Starting with ${searchIn.length} root categories`);
+  console.log(`📋 Root categories:`, searchIn.map(c => `${c.name} (${c.slug})`).join(', '));
   
+  // Debug: Log all categories and their children
+  if (searchIn.length > 0 && searchIn[0].children) {
+    console.log(`📋 First category children:`, searchIn[0].children.map((c: Category) => `${c.name} (${c.slug})`).join(', '));
+  }
+
+  for (let i = 0; i < slugs.length; i++) {
+    const slug = slugs[i];
+    console.log(`🔎 Step ${i + 1}: Looking for slug "${slug}" in ${searchIn.length} categories`);
+    
+    // Find category in current search scope (case-insensitive matching)
+    // First try exact match, then try case-insensitive
+    let found = searchIn.find(cat => cat.slug === slug);
+    
+    if (!found) {
+      // Try case-insensitive match
+      found = searchIn.find(cat => cat.slug.toLowerCase() === slug.toLowerCase());
+    }
+    
+    if (!found) {
+      // Try matching by name (fallback)
+      found = searchIn.find(cat => 
+        cat.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
+        cat.name.toLowerCase().replace(/\s+/g, '') === slug.toLowerCase().replace(/-/g, '')
+      );
+    }
+    
+    if (!found) {
+      console.error(`❌ Category with slug "${slug}" not found in current scope`);
+      console.error(`📋 Available slugs in scope:`, searchIn.map(c => `${c.slug} (${c.name})`).join(', '));
+      console.error(`📋 Available names in scope:`, searchIn.map(c => c.name).join(', '));
+      notFound();
+    }
+
+    console.log(`✅ Found: ${found.name} (ID: ${found.id})`);
+    
+    // Track the path
+    categoryPath.push(found);
+    
+    // Set parent if this is not the last slug
+    if (i < slugs.length - 1) {
+      parentCategory = found;
+    }
+    
+    // Set current category (the deepest one)
+    currentCategory = found;
+    
+    // Next search in this category's direct children only
+    searchIn = found.children || [];
+    console.log(`📂 Next search will be in ${searchIn.length} children of ${found.name}`);
+  }
+
   if (!currentCategory) {
+    console.error('❌ No category found after navigation');
     notFound();
   }
 
-  // Use subcategory ID if selected, otherwise use current category ID
+  // Use subcategory ID from query params if provided (for filter selection), otherwise use the one from URL
   const categoryIdToFetch = subcategoryId || currentCategory.id;
 
-  console.log(`📦 Fetching products for category "${currentCategory.name}" (slug: ${slug})`);
+  console.log(`📦 Fetching products for category "${currentCategory.name}"`);
+  console.log(`📋 URL: /category/${slugs.join('/')}`);
   console.log(`📋 Category ID: ${categoryIdToFetch}`);
   console.log(`📋 API Call: GET /products?category_id=${categoryIdToFetch}&page=${page}&per_page=20&sort=${sort}`);
 
@@ -92,6 +157,7 @@ export default async function CategoryPage({
     }>
       <CategoryPageClient
         currentCategory={currentCategory}
+        parentCategory={parentCategory || undefined}
         initialProducts={productsData}
         initialBrands={brandsData}
         initialPage={page}
@@ -108,18 +174,36 @@ export default async function CategoryPage({
 // Enable ISR
 export const revalidate = 1800; // 30 minutes
 
-// Generate static paths for main categories
+// Allow dynamic params for categories not pre-generated at build time
+export const dynamicParams = true;
+
+// Generate static paths for main categories (optional optimization)
 export async function generateStaticParams() {
   try {
-    const categoriesData = await getCategories(false);
+    const categoriesData = await getCategories(true); // Get with children to generate subcategory paths
     
     if (!categoriesData.success) {
       return [];
     }
 
-    return categoriesData.data.map((category) => ({
-      slug: [category.slug],
-    }));
+    const paths: { slug: string[] }[] = [];
+
+    // Generate paths for all categories and subcategories recursively
+    const generatePaths = (categories: Category[], parentSlugs: string[] = []) => {
+      for (const category of categories) {
+        const currentPath = [...parentSlugs, category.slug];
+        paths.push({ slug: currentPath });
+        
+        if (category.children && category.children.length > 0) {
+          generatePaths(category.children, currentPath);
+        }
+      }
+    };
+
+    generatePaths(categoriesData.data || []);
+    
+    console.log(`📦 Generated ${paths.length} static paths for categories`);
+    return paths;
   } catch (error) {
     console.error('Error generating static params:', error);
     return [];

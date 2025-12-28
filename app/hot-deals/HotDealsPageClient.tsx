@@ -130,22 +130,18 @@ export default function HotDealsPageClient({
         <div className="mb-4">
           <Breadcrumb 
             items={[
-              { label: 'Home', href: '/' },
               { label: 'Hot Deals', href: '/hot-deals' },
             ]}
           />
         </div>
 
         {/* Page Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-4xl shadow-lg">
-              🔥
-            </div>
-            <div className="text-white">
-              <h1 className="text-2xl md:text-3xl font-bold">Hot Deals with Best Prices</h1>
-              <p className="text-white/80 mt-1">
-                {meta ? `${meta.total} amazing deals available` : 'Loading deals...'}
+        <div className="bg-white border-b border-gray-200 pb-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Hot Deals</h1>
+              <p className="text-gray-600 text-sm">
+                {meta ? `${meta.total} products available` : 'Loading deals...'}
               </p>
             </div>
           </div>
@@ -430,4 +426,5 @@ export default function HotDealsPageClient({
     </div>
   );
 }
+
 

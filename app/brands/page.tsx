@@ -15,7 +15,6 @@ export default async function BrandsPage() {
         <div className="mb-4">
           <Breadcrumb 
             items={[
-              { label: 'Home', href: '/' },
               { label: 'Brands' },
             ]}
           />

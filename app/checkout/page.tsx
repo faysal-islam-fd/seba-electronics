@@ -9,11 +9,14 @@ import { usePlaceOrderMutation } from '@/app/store/api/ordersApi';
 import { useGetProductDetailsQuery } from '@/app/store/api/productsApi';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { FiMapPin, FiCreditCard, FiTruck, FiLock } from 'react-icons/fi';
+import { validatePhoneNumber } from '@/app/utils/phoneValidation';
+import { useToast } from '@/app/context/ToastContext';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, getCartTotal, clearCart } = useCart();
   const { user, isLoggedIn } = useAuth();
+  const { showError } = useToast();
   const [placeOrder, { isLoading: isPlacingOrder }] = usePlaceOrderMutation();
   const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,6 +60,21 @@ export default function CheckoutPage() {
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+    
+    // Validate phone number before proceeding to payment
+    const phoneNumber = shippingInfo.phone?.trim() || '';
+    if (!phoneNumber) {
+      showError('Phone number is required');
+      return;
+    }
+    
+    const phoneValidation = validatePhoneNumber(phoneNumber);
+    if (!phoneValidation.isValid) {
+      showError(phoneValidation.error || 'Invalid phone number');
+      return;
+    }
+    
     setStep('payment');
   };
 
@@ -135,12 +153,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Validate phone number
+      // Get phone number from shipping info (already validated in handleShippingSubmit)
       const phoneNumber = shippingInfo.phone?.trim() || '';
-      if (!phoneNumber) {
-        setErrorMessage('Phone number is required');
-        return;
-      }
 
       // Validate EMI fields if EMI is selected
       if (paymentMethod === 'ssl_commerz' && isEmi) {
@@ -352,7 +366,6 @@ export default function CheckoutPage() {
         <div className="mb-4">
           <Breadcrumb
             items={[
-              { label: 'Home', href: '/' },
               { label: 'Cart', href: '/cart' },
               { label: 'Checkout' },
             ]}
@@ -424,7 +437,7 @@ export default function CheckoutPage() {
                         value={shippingInfo.phone}
                         onChange={(e) => setShippingInfo({ ...shippingInfo, phone: e.target.value })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="01XXXXXXXXX"
+                        placeholder="01712345678 or +8801712345678"
                       />
                     </div>
                   </div>

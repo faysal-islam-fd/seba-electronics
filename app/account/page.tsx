@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
-import { FiShield, FiMail, FiLock, FiChevronRight, FiUser, FiPhone, FiCalendar, FiMapPin, FiCreditCard, FiEdit3 } from 'react-icons/fi';
+import { FiUser, FiPhone, FiEdit3, FiMail } from 'react-icons/fi';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -22,31 +22,9 @@ export default function AccountPage() {
     { label: 'First Name', value: parsedName.firstName, icon: FiUser },
     { label: 'Last Name', value: parsedName.lastName || 'Not set', icon: FiUser },
     { label: 'Email Address', value: user?.email || 'Not set', icon: FiMail },
-    { label: 'Contact Number', value: '+880 1XXXXXXXXX', icon: FiPhone },
-    { label: 'Date of Birth', value: 'Tap to add date', icon: FiCalendar },
-    { label: 'Location', value: 'Dhaka, Bangladesh', icon: FiMapPin },
+    { label: 'Contact Number', value: user?.phone_number || 'Not set', icon: FiPhone },
   ];
 
-  const securityItems = [
-    {
-      label: 'Email Address',
-      value: user?.email || 'Not set',
-      description: 'Used for login and notifications',
-      action: 'Change',
-      link: '/account/change-email',
-      icon: FiMail,
-      color: 'blue'
-    },
-    {
-      label: 'Password',
-      value: '••••••••',
-      description: 'Last changed 30 days ago',
-      action: 'Update',
-      link: '/account/change-password',
-      icon: FiLock,
-      color: 'violet'
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -106,96 +84,7 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {/* Security Section */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-blue-900/5 border border-white/50 overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-              <FiShield className="text-white" size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Security Settings</h2>
-              <p className="text-sm text-gray-500">Keep your account safe and secure</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {securityItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  className="group relative p-5 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color === 'blue' ? 'from-blue-500 to-indigo-500' : 'from-violet-500 to-purple-500'
-                      } flex items-center justify-center shadow-lg ${item.color === 'blue' ? 'shadow-blue-500/25' : 'shadow-violet-500/25'
-                      }`}>
-                      <Icon className="text-white" size={20} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{item.label}</p>
-                      <p className="text-base font-semibold text-gray-900 mt-1 truncate">{item.value}</p>
-                      <p className="text-xs text-gray-500 mt-1">{item.description}</p>
-                    </div>
-                  </div>
-                  <Link
-                    href={item.link}
-                    className="absolute top-5 right-5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all duration-200 shadow-sm"
-                  >
-                    {item.action}
-                    <FiChevronRight size={12} />
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link
-          href="/account/orders"
-          className="group p-5 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25">
-              <FiShield className="text-white" size={18} />
-            </div>
-            <span className="text-sm font-semibold text-gray-900 group-hover:text-amber-700 transition-colors">My Orders</span>
-          </div>
-          <p className="text-xs text-gray-500">Track and manage your purchases</p>
-        </Link>
-
-        <Link
-          href="/account/addresses"
-          className="group p-5 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 hover:border-emerald-200 hover:shadow-lg transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-              <FiMapPin className="text-white" size={18} />
-            </div>
-            <span className="text-sm font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">Addresses</span>
-          </div>
-          <p className="text-xs text-gray-500">Manage your delivery locations</p>
-        </Link>
-
-        <Link
-          href="/account/payments"
-          className="group p-5 bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl border border-violet-100 hover:border-violet-200 hover:shadow-lg transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <FiCreditCard className="text-white" size={18} />
-            </div>
-            <span className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 transition-colors">Payment Methods</span>
-          </div>
-          <p className="text-xs text-gray-500">Manage cards and wallets</p>
-        </Link>
-      </div>
     </div>
   );
 }

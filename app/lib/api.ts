@@ -76,7 +76,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
-  image: string;
+  image?: string;
   parent_id: number | null;
   children?: Category[];
 }
@@ -332,14 +332,31 @@ export async function getCategories(withChildren: boolean = false): Promise<Cate
   
   try {
     const res = await fetch(url, {
-      next: { revalidate: 86400 }, // Cache for 24 hours
+      next: { revalidate: 0 }, // No cache - always fetch fresh data
     });
     
     if (!res.ok) {
       throw new Error(`Failed to fetch categories: ${res.status}`);
     }
     
-    return await res.json();
+    const data = await res.json();
+    
+    // Debug logging
+    if (withChildren) {
+      console.log('📦 Categories API Response:', JSON.stringify(data, null, 2));
+      if (data.success && data.data) {
+        data.data.forEach((cat: any) => {
+          console.log(`  - ${cat.name} (${cat.slug}) has ${cat.children?.length || 0} children`);
+          if (cat.children && cat.children.length > 0) {
+            cat.children.forEach((child: any) => {
+              console.log(`    └─ ${child.name} (${child.slug})`);
+            });
+          }
+        });
+      }
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error fetching categories:', error);
     return { success: false, data: [] };

@@ -11,6 +11,7 @@ import QuickViewModal from './QuickViewModal';
 import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
+import { useGetProductReviewsQuery } from '@/app/store/api/reviewsApi';
 
 interface ProductCardProps {
   id: string;
@@ -54,6 +55,42 @@ export default function ProductCard({
   const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
   const [addToWishlist] = useAddToWishlistMutation();
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
+  
+  // Fetch product reviews to get real rating
+  const { data: reviewsData, isLoading: isLoadingReviews } = useGetProductReviewsQuery(
+    { productId, per_page: 1 },
+    { skip: !productId }
+  );
+  
+  // Extract rating and review count from reviews data
+  const ratingSummary = reviewsData?.summary || reviewsData?.rating_summary;
+  
+  // Get rating from API if available
+  let apiRating: number | null = null;
+  let apiReviewCount: number | null = null;
+  
+  if (ratingSummary) {
+    if ('average_rating' in ratingSummary && ratingSummary.average_rating !== undefined) {
+      apiRating = parseFloat(String(ratingSummary.average_rating));
+    } else if ('average' in ratingSummary && ratingSummary.average !== undefined) {
+      apiRating = parseFloat(String(ratingSummary.average));
+    }
+    if ('total_reviews' in ratingSummary && ratingSummary.total_reviews !== undefined) {
+      apiReviewCount = ratingSummary.total_reviews;
+    }
+  }
+  
+  // Use prop rating as default, only override with API data if API has actual rating data (> 0)
+  // This ensures immediate display with prop, then updates with real data from API when available
+  const displayRating = (!isLoadingReviews && apiRating !== null && apiRating > 0) 
+    ? apiRating 
+    : (rating !== undefined && rating !== null ? rating : 0);
+  const displayReviewCount = (!isLoadingReviews && apiReviewCount !== null && apiReviewCount > 0)
+    ? apiReviewCount
+    : (reviewCount !== undefined && reviewCount !== null ? reviewCount : 0);
+  
+  // Show rating if we have a rating > 0 (from prop or API) or if we have review count > 0
+  const shouldShowRating = displayRating > 0 || displayReviewCount > 0;
   
   const isWishlisted = wishlistCheck?.in_wishlist || false;
 
@@ -125,8 +162,8 @@ export default function ProductCard({
   // Render stars
   const renderStars = () => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
+    const fullStars = Math.floor(displayRating);
+    const hasHalfStar = displayRating % 1 >= 0.5;
 
     for (let i = 0; i < fullStars; i++) {
       stars.push(<FaStar key={i} className="text-yellow-400 text-[10px] sm:text-xs" />);
@@ -134,7 +171,7 @@ export default function ProductCard({
     if (hasHalfStar) {
       stars.push(<FaStarHalfAlt key="half" className="text-yellow-400 text-[10px] sm:text-xs" />);
     }
-    const emptyStars = 5 - Math.ceil(rating);
+    const emptyStars = 5 - Math.ceil(displayRating);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(<FaStar key={`empty-${i}`} className="text-gray-300 text-[10px] sm:text-xs" />);
     }
@@ -218,13 +255,17 @@ export default function ProductCard({
         </Link>
 
         {/* Rating */}
-        {rating > 0 && (
+        {shouldShowRating && (
           <div className="flex items-center gap-1 sm:gap-1.5">
             <div className="flex items-center gap-0.5">
               {renderStars()}
             </div>
             <span className="text-[10px] sm:text-xs text-gray-500">
-              {reviewCount !== undefined ? `(${reviewCount})` : `(${rating.toFixed(1)})`}
+              {displayReviewCount > 0 
+                ? `(${displayReviewCount})` 
+                : displayRating > 0
+                ? `(${displayRating.toFixed(1)})`
+                : ''}
             </span>
           </div>
         )}
@@ -310,8 +351,8 @@ export default function ProductCard({
           image,
           discount,
           badge,
-          rating,
-          reviewCount,
+          rating: displayRating,
+          reviewCount: displayReviewCount,
           inStock,
           soldBy,
         }}

@@ -7,10 +7,13 @@ import { FiMail, FiArrowLeft } from 'react-icons/fi';
 import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '@/app/context/AuthContext';
 import { getGoogleOAuthUrl } from '@/app/lib/authApi';
+import { validatePhoneNumber } from '@/app/utils/phoneValidation';
+import { useToast } from '@/app/context/ToastContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { showError } = useToast();
   const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -21,6 +24,13 @@ export default function LoginPage() {
   const handleMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate phone number
+    const validation = validatePhoneNumber(mobileNumber);
+    if (!validation.isValid) {
+      showError(validation.error || 'Invalid phone number');
+      return;
+    }
     
     // Redirect to registration with mobile number
     router.push(`/register?phone=${encodeURIComponent(mobileNumber)}`);
@@ -98,7 +108,7 @@ export default function LoginPage() {
                 type="tel"
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
-                placeholder="Please enter a mobile number"
+                placeholder="01712345678 or +8801712345678"
                 required
                 className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
               />

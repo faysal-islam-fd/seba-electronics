@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 export default async function CategoriesPage() {
   const categoriesData = await getCategories(true);
   const categories = categoriesData.success ? categoriesData.data : [];
-
+  console.log(categoriesData);
+  
   // Separate parent categories and their children
   const parentCategories = categories.filter(cat => !cat.parent_id);
 

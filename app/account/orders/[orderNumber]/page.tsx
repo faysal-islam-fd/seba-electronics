@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useGetOrderDetailsQuery, useCancelOrderMutation } from '@/app/store/api/ordersApi';
 import { useAuth } from '@/app/context/AuthContext';
+import { useToast } from '@/app/context/ToastContext';
 import { 
   FiLoader, 
   FiArrowLeft, 
@@ -25,6 +26,7 @@ export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { showSuccess, showError } = useToast();
   
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -34,7 +36,7 @@ export default function OrderDetailPage() {
   const orderNumber = rawOrderNumber ? decodeURIComponent(rawOrderNumber) : '';
   
   // Fetch order details
-  const { data, isLoading, error } = useGetOrderDetailsQuery(orderNumber || '', {
+  const { data, isLoading, error, refetch } = useGetOrderDetailsQuery(orderNumber || '', {
     skip: !orderNumber || orderNumber === '',
   });
   
@@ -171,15 +173,29 @@ export default function OrderDetailPage() {
   };
 
   const handleCancelOrder = async () => {
-    if (!cancelReason.trim()) return;
+    if (!cancelReason.trim()) {
+      showError('Please provide a reason for cancellation');
+      return;
+    }
     
     try {
-      await cancelOrder({ orderNumber: orderNumber, reason: cancelReason }).unwrap();
+      const result = await cancelOrder({ 
+        orderNumber: orderNumber, 
+        reason: cancelReason.trim() 
+      }).unwrap();
+      
+      showSuccess(result.message || 'Order cancelled successfully');
       setShowCancelModal(false);
-      router.refresh();
-    } catch (error) {
+      setCancelReason('');
+      
+      // Refetch order details to show updated status
+      await refetch();
+    } catch (error: any) {
       console.error('Failed to cancel order:', error);
-      alert('Failed to cancel order. Please try again.');
+      const errorMessage = error?.data?.message || 
+                          error?.message || 
+                          'Failed to cancel order. Please try again.';
+      showError(errorMessage);
     }
   };
 

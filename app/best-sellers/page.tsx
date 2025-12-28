@@ -127,3 +127,4 @@ export default async function BestSellersPage({
 // Enable ISR
 export const revalidate = 1800; // 30 minutes
 
+

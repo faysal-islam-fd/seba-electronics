@@ -4,7 +4,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
-  image: string;
+  image?: string;
   parent_id: number | null;
   children?: Category[];
 }

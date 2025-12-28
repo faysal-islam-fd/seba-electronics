@@ -13,6 +13,7 @@ type SortOption = 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_des
 
 interface CategoryPageClientProps {
   currentCategory: Category;
+  parentCategory?: Category;
   initialProducts: ProductsResponse;
   initialBrands: BrandsResponse;
   initialPage: number;
@@ -55,6 +56,7 @@ function FilterSection({ title, isOpen, onToggle, children }: FilterSectionProps
 
 export default function CategoryPageClient({
   currentCategory,
+  parentCategory,
   initialProducts,
   initialBrands,
   initialPage,
@@ -150,8 +152,10 @@ export default function CategoryPageClient({
         <div className="mb-4">
           <Breadcrumb 
             items={[
-              { label: 'Home', href: '/' },
-              { label: currentCategory.name, href: `/category/${currentCategory.slug}` },
+              ...(parentCategory ? [
+                { label: parentCategory.name, href: `/category/${parentCategory.slug}` }
+              ] : []),
+              { label: currentCategory.name, href: `/category/${parentCategory ? `${parentCategory.slug}/${currentCategory.slug}` : currentCategory.slug}` },
             ]}
           />
         </div>

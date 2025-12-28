@@ -5,10 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiArrowLeft, FiPhone } from 'react-icons/fi';
 import { sendRegistrationOTP } from '@/app/lib/authApi';
+import { validatePhoneNumber } from '@/app/utils/phoneValidation';
+import { useToast } from '@/app/context/ToastContext';
 
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showError } = useToast();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +27,14 @@ function RegisterContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate phone number
+    const validation = validatePhoneNumber(phoneNumber);
+    if (!validation.isValid) {
+      showError(validation.error || 'Invalid phone number');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -106,7 +117,7 @@ function RegisterContent() {
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="01712345678"
+                placeholder="01712345678 or +8801712345678"
                 required
                 className="w-full pl-10 pr-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
               />

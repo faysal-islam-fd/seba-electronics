@@ -137,13 +137,22 @@ export interface OrdersQueryParams {
 // Track Order Types (Public endpoint)
 export interface TrackOrderRequest {
   order_number: string;
-  phone_or_email: string;
+  phone_or_email?: string; // Optional - can track by order number only
 }
 
 export interface TrackOrderResponse {
   success: boolean;
   message: string;
-  data?: OrderDetailResponse['data'];
+  data?: {
+    order_number: string;
+    status: string;
+    timeline?: Array<{
+      status: string;
+      note: string;
+      date: string;
+    }>;
+    tracking_info?: any;
+  };
 }
 
 // Cancel Order Types
@@ -207,12 +216,27 @@ export const ordersApi = apiSlice.injectEndpoints({
       // This is a public endpoint, so we don't invalidate tags
     }),
     cancelOrder: builder.mutation<CancelOrderResponse, { orderNumber: string; reason: string }>({
-      query: ({ orderNumber, reason }) => ({
-        url: `/orders/${orderNumber}/cancel`,
-        method: 'POST',
-        body: { reason },
-      }),
-      invalidatesTags: ['Orders'],
+      query: ({ orderNumber, reason }) => {
+        // Clean order number (remove any encoding issues)
+        const cleanOrderNumber = orderNumber.trim();
+        
+        console.log('📡 [Cancel Order] Making request:', {
+          orderNumber: cleanOrderNumber,
+          reason,
+          url: `/orders/${cleanOrderNumber}/cancel`,
+          fullUrl: `https://seba.rangpurit.com/api/v1/orders/${cleanOrderNumber}/cancel`,
+        });
+        
+        return {
+          url: `/orders/${cleanOrderNumber}/cancel`,
+          method: 'POST',
+          body: { reason },
+        };
+      },
+      invalidatesTags: (result, error, { orderNumber }) => [
+        'Orders',
+        { type: 'Orders', id: orderNumber },
+      ],
     }),
   }),
 });

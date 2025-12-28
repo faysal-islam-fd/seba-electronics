@@ -122,3 +122,4 @@ export default async function HotDealsPage({
 // Enable ISR
 export const revalidate = 1800; // 30 minutes
 
+

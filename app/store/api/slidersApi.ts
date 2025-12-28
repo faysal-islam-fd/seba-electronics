@@ -36,3 +36,4 @@ export const slidersApi = apiSlice.injectEndpoints({
 export const { useGetSlidersQuery } = slidersApi;
 
 
+

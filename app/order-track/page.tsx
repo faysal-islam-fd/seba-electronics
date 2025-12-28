@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useTrackOrderMutation } from '@/app/store/api/ordersApi';
+import { useTrackOrderMutation, useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
 import {
   FiSearch,
   FiPackage,
@@ -13,7 +13,6 @@ import {
   FiClock,
   FiMapPin,
   FiPhone,
-  FiMail,
   FiLoader,
   FiAlertCircle,
   FiXCircle,
@@ -59,19 +58,51 @@ function OrderTrackContent() {
   const initialOrderId = searchParams.get('orderId') || '';
 
   const [orderNumber, setOrderNumber] = useState(initialOrderId.replace('#', ''));
-  const [phoneOrEmail, setPhoneOrEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [trackedOrderNumber, setTrackedOrderNumber] = useState<string | null>(null);
 
-  const [trackOrder, { isLoading, data: trackData, error }] = useTrackOrderMutation();
+  const [trackOrder, { isLoading: isTracking, data: trackData, error }] = useTrackOrderMutation();
+  
+  // Fetch full order details after successful tracking
+  const { data: orderDetailsData, isLoading: isLoadingDetails } = useGetOrderDetailsQuery(
+    trackedOrderNumber || '',
+    {
+      skip: !trackedOrderNumber || trackedOrderNumber === '',
+    }
+  );
 
   // CRITICAL: Process orderData with useMemo to ensure shipping object is extracted BEFORE any rendering
   // This prevents React from trying to render the shipping object directly
+  // Use order details data if available, otherwise fall back to track data
   const orderData = useMemo(() => {
-    const rawOrderData = trackData?.success && trackData.data ? trackData.data : null;
+    // Prioritize order details data (has full order info)
+    const rawOrderData = orderDetailsData?.data 
+      ? orderDetailsData.data 
+      : (trackData?.success && trackData.data ? trackData.data : null);
 
     if (!rawOrderData) return null;
 
     const orderDataAny = rawOrderData as any;
+    
+    // Handle shipping_address object (from order details API)
+    if (orderDataAny.shipping_address && typeof orderDataAny.shipping_address === 'object' && !Array.isArray(orderDataAny.shipping_address)) {
+      const shipping = orderDataAny.shipping_address;
+      // Create new order object without shipping_address property
+      const { shipping_address, ...rest } = orderDataAny;
+      return {
+        ...rest,
+        shipping_name: String(shipping.name || ''),
+        shipping_phone: String(shipping.phone || ''),
+        shipping_email: String(shipping.email || ''),
+        shipping_address: String(shipping.address || ''),
+        shipping_city: String(shipping.city || ''),
+        shipping_state: String(shipping.state || ''),
+        shipping_zip: String(shipping.zip || ''),
+        shipping_country: String(shipping.country || ''),
+      };
+    }
+    
+    // Handle shipping object (from track API - legacy format)
     if (orderDataAny.shipping && typeof orderDataAny.shipping === 'object' && !Array.isArray(orderDataAny.shipping)) {
       const shipping = orderDataAny.shipping;
       // Extract shipping object to individual fields
@@ -99,9 +130,15 @@ function OrderTrackContent() {
     }
 
     return rawOrderData;
-  }, [trackData?.success, trackData?.data]);
+  }, [orderDetailsData?.data, trackData?.success, trackData?.data]);
+  
+  // Get timeline from track data (has timeline array)
+  const timelineData = useMemo(() => {
+    return trackData?.success && trackData.data?.timeline ? trackData.data.timeline : null;
+  }, [trackData?.success, trackData?.data?.timeline]);
 
   const hasResult = !!orderData;
+  const isLoading = isTracking || isLoadingDetails;
 
   // Helper function to get shipping information
   // Shipping object has already been extracted to individual fields above
@@ -155,26 +192,33 @@ function OrderTrackContent() {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!orderNumber.trim() || !phoneOrEmail.trim()) {
-      setErrorMessage('Please enter both order number and phone/email');
+    if (!orderNumber.trim()) {
+      setErrorMessage('Please enter your order number');
       return;
     }
 
     try {
-      await trackOrder({
-        order_number: orderNumber.trim().replace('#', ''),
-        phone_or_email: phoneOrEmail.trim(),
+      const cleanedOrderNumber = orderNumber.trim().replace('#', '');
+      const result = await trackOrder({
+        order_number: cleanedOrderNumber,
       }).unwrap();
+      
+      // If tracking is successful, fetch full order details
+      if (result.success) {
+        setTrackedOrderNumber(cleanedOrderNumber);
+      }
     } catch (err: any) {
       console.error('Track order error:', err);
+      setTrackedOrderNumber(null); // Reset on error
       setErrorMessage(
         err.data?.message ||
         err.message ||
-        'Failed to track order. Please check your order number and contact information.'
+        'Failed to track order. Please check your order number.'
       );
     }
   };
 
+  // Use timeline from track API if available, otherwise fall back to status steps
   const statusSteps = orderData ? getStatusSteps(orderData.status) : [];
 
   return (
@@ -194,7 +238,7 @@ function OrderTrackContent() {
               Track your delivery
             </h1>
             <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl">
-              Enter your order ID and phone/email to see real-time status, ETA, and delivery details.
+              Enter your order ID to see real-time status, ETA, and delivery details.
             </p>
           </div>
           <Link
@@ -223,7 +267,7 @@ function OrderTrackContent() {
                 </div>
               </div>
 
-              <form className="grid sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
                     Order ID
@@ -237,36 +281,23 @@ function OrderTrackContent() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                    Phone or Email
-                  </label>
-                  <input
-                    type="text"
-                    value={phoneOrEmail}
-                    onChange={(e) => setPhoneOrEmail(e.target.value)}
-                    placeholder="01XXXXXXXXX or you@example.com"
-                    className="w-full px-3.5 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-inner shadow-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
                 {errorMessage && (
-                  <div className="sm:col-span-2 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
                     <FiAlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
                     <p className="text-sm text-red-700">{errorMessage}</p>
                   </div>
                 )}
 
-                <div className="sm:col-span-2 flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button
                     type="submit"
-                    disabled={isLoading || !orderNumber.trim() || !phoneOrEmail.trim()}
+                    disabled={isLoading || !orderNumber.trim()}
                     className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-500/20"
                   >
                     {isLoading ? (
                       <>
                         <FiLoader className="animate-spin" size={16} />
-                        Checking status...
+                        {isTracking ? 'Checking status...' : 'Loading details...'}
                       </>
                     ) : (
                       <>
@@ -355,47 +386,109 @@ function OrderTrackContent() {
                       </p>
                     </div>
                     <ol className="relative border-l-4 border-gradient-to-b from-blue-200 to-blue-300 ml-4 pl-6 space-y-6">
-                      {statusSteps.map((step, index) => {
-                        const stepInfo = timelineSteps[step];
-                        const isActive = index < statusSteps.length - 1;
-                        const isLast = index === statusSteps.length - 1;
-                        const isCancelled = step === 'cancelled';
+                      {timelineData && timelineData.length > 0 ? (
+                        // Use timeline from track API (reverse to show oldest to newest)
+                        [...timelineData].reverse().map((timelineItem: any, index: number) => {
+                          const isActive = index === timelineData.length - 1; // Most recent (last after reverse) is active
+                          const isCancelled = timelineItem.status?.toLowerCase() === 'cancelled';
+                          const statusLower = timelineItem.status?.toLowerCase() || '';
+                          
+                          const getTimelineIcon = () => {
+                            if (isCancelled) return <FiXCircle className="text-red-600" size={18} />;
+                            if (isActive) return <FiCheckCircle className="text-blue-600" size={18} />;
+                            if (statusLower === 'shipped' || statusLower === 'out_for_delivery') return <FiTruck className="text-slate-400" size={18} />;
+                            return <FiPackage className="text-slate-400" size={18} />;
+                          };
 
-                        return (
-                          <li key={step} className="relative">
-                            <div className={`absolute -left-[34px] top-0 flex h-10 w-10 items-center justify-center rounded-full border-4 shadow-lg transition-all duration-300 ${isCancelled
-                                ? 'border-red-500 bg-red-50 shadow-red-500/30'
-                                : isActive
-                                  ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-blue-500/30 animate-pulse'
-                                  : 'border-slate-300 bg-white shadow-slate-500/20'
-                              }`}>
-                              {isCancelled ? (
-                                <FiXCircle className="text-red-600" size={18} />
-                              ) : isActive ? (
-                                <FiCheckCircle className="text-blue-600" size={18} />
-                              ) : step === 'shipped' ? (
-                                <FiTruck className="text-slate-400" size={18} />
-                              ) : (
-                                <FiPackage className="text-slate-400" size={18} />
-                              )}
-                            </div>
-                            <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${isCancelled
-                                ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
-                                : isActive
-                                  ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-md'
-                                  : 'bg-white border-slate-200'
-                              }`}>
-                              <p className={`text-base font-bold mb-1 ${isActive ? 'text-slate-900' : 'text-slate-500'
+                          const getStatusLabel = () => {
+                            return timelineItem.status
+                              ? timelineItem.status.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                              : 'Unknown';
+                          };
+
+                          return (
+                            <li key={index} className="relative">
+                              <div className={`absolute -left-[34px] top-0 flex h-10 w-10 items-center justify-center rounded-full border-4 shadow-lg transition-all duration-300 ${isCancelled
+                                  ? 'border-red-500 bg-red-50 shadow-red-500/30'
+                                  : isActive
+                                    ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-blue-500/30 animate-pulse'
+                                    : 'border-slate-300 bg-white shadow-slate-500/20'
                                 }`}>
-                                {stepInfo.label}
-                              </p>
-                              <p className={`text-sm ${isActive ? 'text-slate-700' : 'text-slate-500'}`}>
-                                {stepInfo.description}
-                              </p>
-                            </div>
-                          </li>
-                        );
-                      })}
+                                {getTimelineIcon()}
+                              </div>
+                              <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${isCancelled
+                                  ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
+                                  : isActive
+                                    ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-md'
+                                    : 'bg-white border-slate-200'
+                                }`}>
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <p className={`text-base font-bold ${isActive ? 'text-slate-900' : 'text-slate-500'}`}>
+                                    {getStatusLabel()}
+                                  </p>
+                                  {timelineItem.date && (
+                                    <p className={`text-xs whitespace-nowrap ${isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                                      {new Date(timelineItem.date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </p>
+                                  )}
+                                </div>
+                                <p className={`text-sm ${isActive ? 'text-slate-700' : 'text-slate-500'}`}>
+                                  {timelineItem.note || 'No additional information'}
+                                </p>
+                              </div>
+                            </li>
+                          );
+                        })
+                      ) : (
+                        // Fall back to status steps if no timeline data
+                        statusSteps.map((step, index) => {
+                          const stepInfo = timelineSteps[step];
+                          const isActive = index < statusSteps.length - 1;
+                          const isLast = index === statusSteps.length - 1;
+                          const isCancelled = step === 'cancelled';
+
+                          return (
+                            <li key={step} className="relative">
+                              <div className={`absolute -left-[34px] top-0 flex h-10 w-10 items-center justify-center rounded-full border-4 shadow-lg transition-all duration-300 ${isCancelled
+                                  ? 'border-red-500 bg-red-50 shadow-red-500/30'
+                                  : isActive
+                                    ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-blue-500/30 animate-pulse'
+                                    : 'border-slate-300 bg-white shadow-slate-500/20'
+                                }`}>
+                                {isCancelled ? (
+                                  <FiXCircle className="text-red-600" size={18} />
+                                ) : isActive ? (
+                                  <FiCheckCircle className="text-blue-600" size={18} />
+                                ) : step === 'shipped' ? (
+                                  <FiTruck className="text-slate-400" size={18} />
+                                ) : (
+                                  <FiPackage className="text-slate-400" size={18} />
+                                )}
+                              </div>
+                              <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${isCancelled
+                                  ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
+                                  : isActive
+                                    ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-md'
+                                    : 'bg-white border-slate-200'
+                                }`}>
+                                <p className={`text-base font-bold mb-1 ${isActive ? 'text-slate-900' : 'text-slate-500'
+                                  }`}>
+                                  {stepInfo.label}
+                                </p>
+                                <p className={`text-sm ${isActive ? 'text-slate-700' : 'text-slate-500'}`}>
+                                  {stepInfo.description}
+                                </p>
+                              </div>
+                            </li>
+                          );
+                        })
+                      )}
                     </ol>
                   </div>
                 </>
@@ -408,7 +501,7 @@ function OrderTrackContent() {
                     Track your order to see live updates
                   </h2>
                   <p className="text-sm text-slate-600 max-w-sm">
-                    Enter your order number and phone/email to pull the latest status, ETA, and delivery details.
+                    Enter your order number to pull the latest status, ETA, and delivery details.
                   </p>
                 </div>
               )}
@@ -454,22 +547,29 @@ function OrderTrackContent() {
               <div className="rounded-2xl border border-slate-200/70 bg-white shadow-xl shadow-slate-900/5 p-5 sm:p-6">
                 <h3 className="text-base font-semibold text-slate-900 mb-3">Order Items</h3>
                 <div className="space-y-3">
-                  {orderData.items.slice(0, 3).map((item: any) => (
-                    <div key={item.id} className="flex gap-3">
-                      <div className="w-12 h-12 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative">
-                        <Image
-                          src={item.product.thumbnail || '/products/placeholder.jpg'}
-                          alt={item.product.title}
-                          fill
-                          className="object-cover"
-                        />
+                  {orderData.items.slice(0, 3).map((item: any, index: number) => {
+                    // Handle both nested product object and flat fields
+                    const productImage = item.product?.thumbnail || item.product_image || '/products/placeholder.jpg';
+                    const productTitle = item.product?.title || item.product_name || 'Product';
+                    const itemId = item.id || item.product_id || index;
+                    
+                    return (
+                      <div key={itemId} className="flex gap-3">
+                        <div className="w-12 h-12 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative">
+                          <Image
+                            src={productImage}
+                            alt={productTitle}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{productTitle}</p>
+                          <p className="text-xs text-slate-600">Qty: {item.quantity}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{item.product.title}</p>
-                        <p className="text-xs text-slate-600">Qty: {item.quantity}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {orderData.items && orderData.items.length > 3 && (
                     <p className="text-xs text-slate-500 text-center pt-2">
                       +{orderData.items.length - 3} more {orderData.items.length - 3 === 1 ? 'item' : 'items'}
