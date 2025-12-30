@@ -1,6 +1,24 @@
 import { Suspense } from 'react';
+import { Metadata } from 'next';
 import SearchPageClient from './SearchPageClient';
 import { getProducts, getBrands } from '@/app/lib/api';
+
+// Generate Metadata for SEO
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }): Promise<Metadata> {
+  const params = await searchParams;
+  const query = (params.q as string) || '';
+
+  const title = query ? `Search results for "${query}" | Pickaboo` : 'Search Products | Pickaboo';
+
+  return {
+    title,
+    description: `Search for ${query || 'products'} at Pickaboo.`,
+    robots: {
+      index: false, // Search results should typically not be indexed
+      follow: true,
+    },
+  };
+}
 
 // Server Component with SSR
 export default async function SearchPage({

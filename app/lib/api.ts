@@ -127,7 +127,7 @@ export async function getProducts(params: {
   sort?: 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 } = {}): Promise<ProductsResponse> {
   const queryParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
       queryParams.append(key, String(value));
@@ -135,29 +135,29 @@ export async function getProducts(params: {
   });
 
   const url = `${BASE_URL}/products?${queryParams.toString()}`;
-  
+
   console.log(`🌐 API Request: ${url}`);
-  
+
   try {
     const res = await fetch(url, {
       next: { revalidate: 1800 }, // Cache for 30 minutes
     });
-    
+
     console.log(`📡 API Response Status: ${res.status} ${res.statusText}`);
-    
+
     if (!res.ok) {
       const errorText = await res.text();
       console.error(`❌ API Error Response:`, errorText);
       throw new Error(`Failed to fetch products: ${res.status}`);
     }
-    
+
     const jsonData = await res.json();
     console.log(`✅ API Response Data:`, {
       success: jsonData.success,
       dataLength: jsonData.data?.length || 0,
       meta: jsonData.meta,
     });
-    
+
     return jsonData;
   } catch (error) {
     console.error('❌ Error fetching products:', error);
@@ -231,29 +231,29 @@ export async function getProductReviews(productId: string | number): Promise<Pro
 export async function getFeaturedProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
   try {
     console.log('🔄 Fetching featured products from /products endpoint...');
-    
+
     // Fetch more products and filter for featured ones
     const res = await fetch(`${BASE_URL}/products?per_page=50`, {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
-    
+
     if (!res.ok) {
       console.warn(`⚠️ API returned ${res.status} for products. Using fallback.`);
       return { success: false, data: [] };
     }
-    
+
     const result = await res.json();
-    
+
     if (!result.success || !result.data) {
       console.warn('⚠️ Invalid API response structure');
       return { success: false, data: [] };
     }
-    
+
     // Filter for featured products
     const featuredProducts = result.data.filter((p: Product) => p.is_featured).slice(0, limit);
-    
+
     console.log(`✅ Found ${featuredProducts.length} featured products`);
-    
+
     return {
       success: true,
       data: featuredProducts,
@@ -269,35 +269,35 @@ export async function getFeaturedProducts(limit: number = 10): Promise<{ success
 export async function getTopSellingProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
   try {
     console.log('🔄 Fetching top-selling products from /products endpoint...');
-    
+
     // Fetch more products and filter for top-selling ones
     const res = await fetch(`${BASE_URL}/products?per_page=50`, {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
-    
+
     if (!res.ok) {
       console.warn(`⚠️ API returned ${res.status} for products. Using fallback.`);
       return { success: false, data: [] };
     }
-    
+
     const result = await res.json();
-    
+
     if (!result.success || !result.data) {
       console.warn('⚠️ Invalid API response structure');
       return { success: false, data: [] };
     }
-    
+
     // Filter for top-selling products, or just return latest if none marked
     let topSellingProducts = result.data.filter((p: Product) => p.is_top_selling);
-    
+
     // If no products are marked as top-selling, use the latest products
     if (topSellingProducts.length === 0) {
       console.log('ℹ️ No top-selling products marked, using latest products');
       topSellingProducts = result.data;
     }
-    
+
     console.log(`✅ Found ${topSellingProducts.slice(0, limit).length} top-selling products`);
-    
+
     return {
       success: true,
       data: topSellingProducts.slice(0, limit),
@@ -314,11 +314,11 @@ export async function getProductDetails(identifier: string | number): Promise<Pr
     const res = await fetch(`${BASE_URL}/products/${identifier}`, {
       next: { revalidate: 7200 }, // Cache for 2 hours
     });
-    
+
     if (!res.ok) {
       return null;
     }
-    
+
     return await res.json();
   } catch (error) {
     console.error('Error fetching product details:', error);
@@ -329,18 +329,18 @@ export async function getProductDetails(identifier: string | number): Promise<Pr
 // Fetch categories (SSR)
 export async function getCategories(withChildren: boolean = false): Promise<CategoriesResponse> {
   const url = `${BASE_URL}/categories${withChildren ? '?with_children=true' : ''}`;
-  
+
   try {
     const res = await fetch(url, {
-      next: { revalidate: 0 }, // No cache - always fetch fresh data
+      next: { revalidate: 3600 }, // Cache for 1 hour to allow static generation
     });
-    
+
     if (!res.ok) {
       throw new Error(`Failed to fetch categories: ${res.status}`);
     }
-    
+
     const data = await res.json();
-    
+
     // Debug logging
     if (withChildren) {
       console.log('📦 Categories API Response:', JSON.stringify(data, null, 2));
@@ -355,7 +355,7 @@ export async function getCategories(withChildren: boolean = false): Promise<Cate
         });
       }
     }
-    
+
     return data;
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -366,16 +366,16 @@ export async function getCategories(withChildren: boolean = false): Promise<Cate
 // Fetch brands (SSR)
 export async function getBrands(active: boolean = true): Promise<BrandsResponse> {
   const url = `${BASE_URL}/brands${active ? '?active=true' : ''}`;
-  
+
   try {
     const res = await fetch(url, {
       next: { revalidate: 86400 }, // Cache for 24 hours
     });
-    
+
     if (!res.ok) {
       throw new Error(`Failed to fetch brands: ${res.status}`);
     }
-    
+
     return await res.json();
   } catch (error) {
     console.error('Error fetching brands:', error);
@@ -409,23 +409,23 @@ export interface SlidersResponse {
 // Fetch sliders (SSR)
 export async function getSliders(): Promise<SlidersResponse> {
   const url = `${BASE_URL}/cms/sliders`;
-  
+
   try {
     const res = await fetch(url, {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
-    
+
     if (!res.ok) {
       throw new Error(`Failed to fetch sliders: ${res.status}`);
     }
-    
+
     return await res.json();
   } catch (error) {
     console.error('Error fetching sliders:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Failed to fetch sliders',
-      data: [] 
+      data: []
     };
   }
 }
@@ -452,17 +452,17 @@ export async function getHomeCategories(): Promise<HomeCategoriesResponse> {
     const res = await fetch(`${BASE_URL}/home-categories`, {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
-    
+
     if (!res.ok) {
       throw new Error(`Failed to fetch home categories: ${res.status}`);
     }
-    
+
     return await res.json();
   } catch (error) {
     console.error('Error fetching home categories:', error);
-    return { 
-      success: false, 
-      data: [] 
+    return {
+      success: false,
+      data: []
     };
   }
 }

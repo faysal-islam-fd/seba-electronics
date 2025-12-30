@@ -1,9 +1,61 @@
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
 import ProductTabs from '@/app/components/ProductTabs';
 import RelatedProducts from '@/app/components/RelatedProducts';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import ProductDetailContent from '@/app/components/ProductDetailContent';
 import { getProductDetails, getProductReviews, getBrands } from '@/app/lib/api';
+
+// Generate Metadata for SEO
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const data = await getProductDetails(id);
+
+  if (!data || !data.success) {
+    return {
+      title: 'Product Not Found | Pickaboo',
+      description: 'The product you are looking for does not exist.',
+    };
+  }
+
+  const product = data.data;
+  const title = `${product.title} | Pickaboo`;
+  const description = product.description
+    ? product.description.replace(/<[^>]*>/g, '').slice(0, 160)
+    : `Buy ${product.title} at the best price in Bangladesh from Pickaboo.`;
+
+  const images = (() => {
+    const galleryImages = product.galleries
+      ?.filter(g => g.type === 'image')
+      .map(g => g.file_path)
+      .filter(path => path && path.trim() !== '') as string[];
+
+    // Combine gallery images with thumbnail, prioritizing thumbnail
+    const allImages = [product.thumbnail, ...(galleryImages || [])].filter(Boolean) as string[];
+    // Remove duplicates
+    return [...new Set(allImages)];
+  })();
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: images.length > 0 ? images : ['/images/logo.png'],
+      type: 'website',
+      url: `https://pickaboo.com/product/${id}`, // Adjust base URL as needed
+      siteName: 'Pickaboo',
+      locale: 'en_BD',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: images.length > 0 ? images[0] : undefined,
+    },
+  };
+}
 
 // Server Component with SSR
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,12 +95,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     || (apiProduct.brand?.name ? apiProduct.brand.name.toLowerCase() : 'unknown');
 
   // Transform API data to match the component's expected format
+  const thumbnail = apiProduct.thumbnail || '/products/placeholder.jpg';
   const product = {
     id: apiProduct.id.toString(),
     name: apiProduct.title,
     brand: apiProduct.brand?.name || undefined,
     brandSlug: brandSlug,
-    thumbnail: apiProduct.thumbnail,
+    thumbnail: thumbnail,
     // For normal products: use root level values
     // For variable products: these will be overridden by selected attribute
     price: isVariableProduct ? 0 : apiProduct.final_price,
@@ -63,18 +116,29 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       const galleryImages = apiProduct.galleries
         ?.filter(g => g.type === 'image')
         .map(g => g.file_path)
-        .filter(path => path && path.trim() !== '') || [];
-      return galleryImages.length > 0 ? galleryImages : [apiProduct.thumbnail];
+        .filter(path => path && path.trim() !== '') as string[];
+
+      // Ensure we have at least one valid image
+      if (galleryImages && galleryImages.length > 0) {
+        return galleryImages;
+      }
+      return [thumbnail];
     })(),
     description: apiProduct.description,
     specifications: apiProduct.specifications?.reduce((acc: any, spec) => {
-      spec.items.forEach(item => {
-        acc[item.key || 'Specification'] = item.value;
-      });
+      if (spec.items && Array.isArray(spec.items)) {
+        spec.items.forEach(item => {
+          if (item) {
+            acc[item.key || 'Specification'] = item.value;
+          }
+        });
+      }
       return acc;
     }, {}) || {},
     features: apiProduct.specifications?.flatMap(spec =>
-      spec.items.map(item => `${item.key || 'Feature'}: ${item.value}`)
+      (spec.items && Array.isArray(spec.items))
+        ? spec.items.map(item => `${item.key || 'Feature'}: ${item.value}`)
+        : []
     ) || [],
     warranty: apiProduct.warranties?.[0]?.group_name
       ? `${apiProduct.warranties[0].group_name} - ${apiProduct.warranties[0].items?.[0]?.duration} ${apiProduct.warranties[0].items?.[0]?.type}`
