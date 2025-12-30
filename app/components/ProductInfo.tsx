@@ -13,6 +13,7 @@ interface Product {
   id: string;
   name: string;
   brand: string;
+  brandSlug?: string;
   price: number;
   originalPrice?: number;
   discount?: number;
@@ -92,7 +93,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     <div className="space-y-6">
       {/* Brand */}
       <div>
-        <Link href={`/brand/${product.brand.toLowerCase()}`} className="text-blue-600 hover:underline font-medium text-sm">
+        <Link href={`/brand/${product.brandSlug || product.brand.toLowerCase()}`} className="text-blue-600 hover:underline font-medium text-sm">
           {product.brand}
         </Link>
       </div>

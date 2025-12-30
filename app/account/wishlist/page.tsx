@@ -7,6 +7,7 @@ import { useGetWishlistQuery, useRemoveFromWishlistMutation, useClearWishlistMut
 import { useCart } from '@/app/context/CartContext';
 import { useToast } from '@/app/context/ToastContext';
 import { useAuth } from '@/app/context/AuthContext';
+import { useConfirm } from '@/app/context/ConfirmContext';
 import { normalizeImageUrl } from '@/app/utils/imageUtils';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -34,6 +35,7 @@ export default function WishlistPage() {
   const [clearWishlist] = useClearWishlistMutation();
   const { addToCart } = useCart();
   const { showSuccess, showError } = useToast();
+  const { confirm } = useConfirm();
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
   const [isClearing, setIsClearing] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -68,22 +70,30 @@ export default function WishlistPage() {
   }, [removeFromWishlist, showSuccess, showError]);
 
   const handleClearWishlist = useCallback(async () => {
-    if (!confirm('Are you sure you want to clear your entire wishlist?')) {
-      return;
-    }
-    setIsClearing(true);
-    try {
-      await clearWishlist().unwrap();
-      showSuccess('Wishlist cleared');
-      // Cache invalidation will automatically refetch
-    } catch (err: any) {
-      console.error('Failed to clear wishlist:', err);
-      const errorMessage = err?.data?.message || 'Failed to clear wishlist. Please try again.';
-      showError(errorMessage);
-    } finally {
-      setIsClearing(false);
-    }
-  }, [clearWishlist, showSuccess, showError]);
+    confirm(
+      'Are you sure you want to clear your entire wishlist? This action cannot be undone.',
+      async () => {
+        setIsClearing(true);
+        try {
+          await clearWishlist().unwrap();
+          showSuccess('Wishlist cleared');
+          // Cache invalidation will automatically refetch
+        } catch (err: any) {
+          console.error('Failed to clear wishlist:', err);
+          const errorMessage = err?.data?.message || 'Failed to clear wishlist. Please try again.';
+          showError(errorMessage);
+        } finally {
+          setIsClearing(false);
+        }
+      },
+      {
+        type: 'danger',
+        title: 'Clear Wishlist',
+        confirmText: 'Clear All',
+        cancelText: 'Cancel',
+      }
+    );
+  }, [clearWishlist, showSuccess, showError, confirm]);
 
   const handleAddToCart = useCallback((product: any) => {
     const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
@@ -160,8 +170,8 @@ export default function WishlistPage() {
             <FiHeart className="text-white" size={26} />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">My Wishlist</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">My Wishlist</h1>
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               {itemCount > 0
                 ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'} saved for later`
                 : 'Save your favorite products here'}
@@ -185,7 +195,7 @@ export default function WishlistPage() {
           <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
             <FiHeart className="text-gray-400" size={48} />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Your wishlist is empty</h3>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Your wishlist is empty</h3>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
             Start adding products to your wishlist! Click the heart icon on any product to save it for later.
           </p>
@@ -198,7 +208,7 @@ export default function WishlistPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
           {wishlistItems.map((item) => {
             const product = item.product;
             const isRemoving = removingIds.has(item.product_id);

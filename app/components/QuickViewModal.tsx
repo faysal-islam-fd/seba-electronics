@@ -11,6 +11,7 @@ import { useGetProductDetailsQuery } from '@/app/store/api/productsApi';
 import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
+import { useAlert } from '@/app/context/AlertContext';
 
 interface QuickViewModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
   const { addToCart } = useCart();
   const { isLoggedIn } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { showWarning, showError: showAlertError } = useAlert();
   const router = useRouter();
   
   // Convert id to number for API calls
@@ -204,7 +206,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
     
     // For variable products, ensure a variation is selected
     if (isVariableProduct && !selectedAttribute) {
-      alert('Please select a product variation before adding to cart');
+      showWarning('Please select a product variation before adding to cart', 'Variation Required');
       setIsAdding(false);
       return;
     }
@@ -233,7 +235,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
     // For variable products, product_attribute_id is required
     if (isVariableProduct && !attributeId) {
       console.error('Variable product attribute ID not found. Selected attribute:', selectedAttribute);
-      alert('Unable to add product to cart. Please try selecting the variation again or contact support.');
+      showAlertError('Unable to add product to cart. Please try selecting the variation again or contact support.', 'Add to Cart Failed');
       setIsAdding(false);
       return;
     }

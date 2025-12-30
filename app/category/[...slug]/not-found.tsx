@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { FiPackage, FiHome, FiArrowLeft, FiSearch, FiShoppingBag } from 'react-icons/fi';
+import { FiFolder, FiHome, FiArrowLeft, FiSearch } from 'react-icons/fi';
 
-export default function ProductNotFound() {
+export default function CategoryNotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center px-3 sm:px-4 py-8 sm:py-12">
       <div className="max-w-2xl w-full text-center">
@@ -9,7 +9,7 @@ export default function ProductNotFound() {
         <div className="relative mb-6 sm:mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full blur-3xl opacity-20 animate-pulse"></div>
           <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl">
-            <FiPackage className="text-white w-12 h-12 sm:w-16 sm:h-16" />
+            <FiFolder className="text-white w-12 h-12 sm:w-16 sm:h-16" />
           </div>
         </div>
 
@@ -20,23 +20,23 @@ export default function ProductNotFound() {
 
         {/* Title */}
         <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
-          Product Not Found
+          Category Not Found
         </h2>
 
         {/* Description */}
         <p className="text-sm sm:text-base md:text-lg text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto px-2">
-          Sorry, the product you're looking for doesn't exist or may have been removed. 
-          Let's help you find something great!
+          Oops! The category you're looking for doesn't exist or may have been moved. 
+          Let's help you find what you need.
         </p>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
           <Link
-            href="/"
+            href="/categories"
             className="group inline-flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
           >
-            <FiShoppingBag size={18} className="sm:w-5 sm:h-5" />
-            Browse Products
+            <FiSearch size={18} className="sm:w-5 sm:h-5" />
+            Browse Categories
           </Link>
           
           <Link
@@ -50,13 +50,13 @@ export default function ProductNotFound() {
 
         {/* Additional Help */}
         <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-200">
-          <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">Looking for something specific?</p>
+          <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">Need help finding something?</p>
           <Link
             href="/search"
             className="inline-flex items-center gap-1.5 sm:gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors text-xs sm:text-sm"
           >
             <FiSearch size={16} className="sm:w-[18px] sm:h-[18px]" />
-            Search for products
+            Try searching for products
           </Link>
         </div>
       </div>

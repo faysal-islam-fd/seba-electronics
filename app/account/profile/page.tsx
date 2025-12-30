@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiUser, FiMail, FiLock, FiCamera, FiEdit2, FiSave, FiX, FiTrash2 } from 'react-icons/fi';
 import { useAuth } from '@/app/context/AuthContext';
+import { useConfirm } from '@/app/context/ConfirmContext';
 import {
   useUpdateProfileMutation,
   useUpdateProfilePictureMutation,
@@ -17,6 +18,7 @@ import {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
+  const { confirm } = useConfirm();
   
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'statistics' | 'delete'>('profile');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -124,17 +126,26 @@ export default function ProfilePage() {
 
   // Delete Profile Picture
   const handleDeletePicture = async () => {
-    if (!confirm('Remove your profile picture?')) return;
-    
-    try {
-      const result = await deletePicture().unwrap();
-      if (result.success) {
-        showMessage(result.message || 'Profile picture removed!');
-        await refreshUser();
+    confirm(
+      'Are you sure you want to remove your profile picture?',
+      async () => {
+        try {
+          const result = await deletePicture().unwrap();
+          if (result.success) {
+            showMessage(result.message || 'Profile picture removed!');
+            await refreshUser();
+          }
+        } catch (err: any) {
+          showMessage(err.data?.message || 'Failed to delete picture', true);
+        }
+      },
+      {
+        type: 'warning',
+        title: 'Remove Profile Picture',
+        confirmText: 'Remove',
+        cancelText: 'Cancel',
       }
-    } catch (err: any) {
-      showMessage(err.data?.message || 'Failed to delete picture', true);
-    }
+    );
   };
 
   // Change Password
@@ -206,7 +217,7 @@ export default function ProfilePage() {
           <FiArrowLeft size={20} />
           <span>Back to Account</span>
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Profile Settings</h1>
       </div>
 
       {/* Tabs */}
@@ -251,7 +262,7 @@ export default function ProfilePage() {
           {activeTab === 'profile' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
+                <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900">Profile Information</h2>
                 {!isEditMode && (
                   <button
                     onClick={() => setIsEditMode(true)}
@@ -365,7 +376,7 @@ export default function ProfilePage() {
           {/* Password Tab */}
           {activeTab === 'password' && (
             <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Change Password</h2>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Change Password</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
@@ -422,7 +433,7 @@ export default function ProfilePage() {
           {/* Statistics Tab */}
           {activeTab === 'statistics' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Statistics</h2>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Account Statistics</h2>
               {isLoadingStats ? (
                 <div className="text-center py-8">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>

@@ -5,33 +5,27 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreateServiceRequestMutation } from '@/app/store/api/serviceRequestsApi';
 import { useGetOrdersQuery, useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
+import { useAlert } from '@/app/context/AlertContext';
 import { FiLoader, FiArrowLeft, FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
 import Image from 'next/image';
-import { validatePhoneNumber } from '@/app/utils/phoneValidation';
-import { useToast } from '@/app/context/ToastContext';
 
 export default function NewServiceRequestPage() {
   const router = useRouter();
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const { showError, showWarning } = useAlert();
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | null>(null);
   const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<number | string | null>(null);
-  const [type, setType] = useState<'warranty' | 'repair' | 'other'>('warranty');
+  const [type, setType] = useState<'full_order' | 'single_item'>('full_order');
   const [reason, setReason] = useState<'defective' | 'wrong_item' | 'not_as_described' | 'damaged' | 'changed_mind' | 'other'>('defective');
   const [description, setDescription] = useState('');
   const [refundMethod, setRefundMethod] = useState<'original' | 'store_credit' | 'bank_transfer'>('original');
   const [refundAccountInfo, setRefundAccountInfo] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { showError } = useToast();
-  
+
   // Use ref to prevent double submissions
   const submitInProgress = useRef(false);
-  
+
   const { data: ordersData } = useGetOrdersQuery({ page: 1, per_page: 100 });
   const { data: orderDetailsData } = useGetOrderDetailsQuery(selectedOrderNumber || '', {
     skip: !selectedOrderNumber,
@@ -39,35 +33,25 @@ export default function NewServiceRequestPage() {
   const [createRequest, { isLoading, error }] = useCreateServiceRequestMutation();
 
   const orders = ordersData?.data || [];
-  const selectedOrder = orders.find(o => o.id === selectedOrderId);
-  // Use order details if available, otherwise fall back to order list items
+  const selectedOrder = orders.find(o => o.order_number === selectedOrderNumber);
   const orderItems = orderDetailsData?.data?.items || selectedOrder?.items || [];
 
   // Handle order selection change
-  const handleOrderChange = useCallback((orderId: number | null) => {
-    setSelectedOrderId(orderId);
+  const handleOrderChange = useCallback((orderNumber: string | null) => {
+    setSelectedOrderNumber(orderNumber);
     setSelectedOrderItemId(null);
-    setSelectedProductId(null);
-    if (orderId) {
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        setSelectedOrderNumber(order.order_number);
-      }
-    } else {
-      setSelectedOrderNumber(null);
-    }
-  }, [orders]);
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length + images.length > 5) {
-      alert('Maximum 5 images allowed');
+      showWarning('Maximum 5 images allowed', 'Image Limit Reached');
       return;
     }
-    
+
     const newImages = [...images, ...files];
     setImages(newImages);
-    
+
     // Create previews
     const newPreviews = files.map(file => URL.createObjectURL(file));
     setImagePreviews([...imagePreviews, ...newPreviews]);
@@ -82,47 +66,32 @@ export default function NewServiceRequestPage() {
     URL.revokeObjectURL(imagePreviews[index]);
   };
 
-  // Clear account info when refund method changes to original or store_credit
-  const handleRefundMethodChange = (method: 'original' | 'store_credit' | 'bank_transfer') => {
-    setRefundMethod(method);
-    if (method !== 'bank_transfer') {
-      setRefundAccountInfo('');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent double submission
     if (submitInProgress.current || isSubmitting || isLoading) {
       console.log('Submission already in progress, ignoring...');
       return;
     }
-    
-    if (!selectedOrderNumber || !selectedOrderItemId) {
-      alert('Please select an order and item');
+
+    if (!selectedOrderNumber) {
+      showWarning('Please select an order', 'Order Required');
       return;
     }
-    
-    if (!description.trim()) {
-      alert('Please provide a description');
+
+    if (type === 'single_item' && !selectedOrderItemId) {
+      showWarning('Please select an item for service request', 'Item Required');
       return;
     }
-    
-    if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
-      alert('Please fill in all customer information');
+
+    if (!description.trim() || description.trim().length < 10) {
+      showWarning('Please provide a detailed description (at least 10 characters)', 'Description Required');
       return;
     }
-    
-    // Validate phone number
-    const phoneValidation = validatePhoneNumber(customerPhone);
-    if (!phoneValidation.isValid) {
-      showError(phoneValidation.error || 'Invalid phone number');
-      return;
-    }
-    
+
     if (refundMethod === 'bank_transfer' && !refundAccountInfo.trim()) {
-      alert('Please provide bank account information for bank transfer refund');
+      showWarning('Please provide bank account information for bank transfer refund', 'Account Information Required');
       return;
     }
 
@@ -133,28 +102,23 @@ export default function NewServiceRequestPage() {
     try {
       const requestData = {
         order_number: selectedOrderNumber,
-        order_item_id: selectedOrderItemId,
+        order_item_id: (type === 'single_item' && selectedOrderItemId !== null) ? selectedOrderItemId : undefined,
         type,
         reason,
-        description,
-        refund_method: refundMethod,
-        refund_account_info: refundMethod === 'bank_transfer' ? refundAccountInfo : undefined,
+        description: description.trim(),
         images: images.length > 0 ? images : undefined,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        customer_address: customerAddress,
+        refund_method: refundMethod,
+        refund_account_info: refundMethod === 'bank_transfer' ? refundAccountInfo.trim() : undefined,
       };
       console.log('Creating service request with data:', requestData);
-      console.log('Selected order:', selectedOrder);
-      console.log('Order items available:', orderItems);
-      
+
       const result = await createRequest(requestData).unwrap();
-      
+
       console.log('Service request created successfully:', result);
       router.push(`/account/service-requests/${result.data.id}`);
     } catch (err: any) {
       console.error('Failed to create service request:', err);
-      alert(err?.data?.message || 'Failed to create service request. Please try again.');
+      showError(err?.data?.message || 'Failed to create service request. Please try again.', 'Request Failed');
       // Reset flags on error so user can try again
       submitInProgress.current = false;
       setIsSubmitting(false);
@@ -174,7 +138,7 @@ export default function NewServiceRequestPage() {
           </Link>
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">New Service Request</h1>
-            <p className="text-sm text-gray-600 mt-1">Create a warranty or repair request</p>
+            <p className="text-sm text-gray-600 mt-1">Submit a service request for an order</p>
           </div>
         </div>
 
@@ -185,15 +149,15 @@ export default function NewServiceRequestPage() {
               Select Order <span className="text-red-500">*</span>
             </label>
             <select
-              value={selectedOrderId || ''}
-              onChange={(e) => handleOrderChange(e.target.value ? parseInt(e.target.value) : null)}
+              value={selectedOrderNumber || ''}
+              onChange={(e) => handleOrderChange(e.target.value || null)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
               required
               disabled={isSubmitting}
             >
               <option value="">Choose an order...</option>
               {orders.map((order) => (
-                <option key={order.id} value={order.id}>
+                <option key={order.order_number} value={order.order_number}>
                   {order.order_number} - {order.items_count} item(s) - ৳ {order.total.toLocaleString()}
                 </option>
               ))}
@@ -203,8 +167,35 @@ export default function NewServiceRequestPage() {
             )}
           </div>
 
-          {/* Order Item Selection */}
-          {selectedOrder && (
+          {/* Request Type */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Return Type <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {(['full_order', 'single_item'] as const).map((reqType) => (
+                <button
+                  key={reqType}
+                  type="button"
+                  onClick={() => {
+                    setType(reqType);
+                    if (reqType === 'full_order') {
+                      setSelectedOrderItemId(null);
+                    }
+                  }}
+                  className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${type === reqType
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                    }`}
+                >
+                  {reqType === 'full_order' ? 'Full Order' : 'Single Item'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Order Item Selection - Only show if type is single_item */}
+          {selectedOrder && type === 'single_item' && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Select Product <span className="text-red-500">*</span>
@@ -220,7 +211,7 @@ export default function NewServiceRequestPage() {
                   {orderItems.map((item: any, index: number) => {
                     // Debug: Log each item structure
                     console.log(`Item ${index}:`, item, 'Keys:', Object.keys(item));
-                    
+
                     // Handle different item structures:
                     // - Flat structure: product_name, product_image, product_id (from order details)
                     // - Nested structure: product.title, product.thumbnail, product.id (from order list)
@@ -228,11 +219,11 @@ export default function NewServiceRequestPage() {
                     const productThumbnail = item.product_image || item.product?.thumbnail || item.thumbnail || item.image || '/products/placeholder.jpg';
                     const itemPrice = item.price || item.unit_price || 0;
                     const itemQuantity = item.quantity || 1;
-                    
+
                     // The order_item_id is the actual ID of the order-product relationship record
                     // Try multiple possible field names
                     const itemId = item.order_item_id || item.id || item.item_id || item.pivot?.id || item.product_id || index + 1;
-                    
+
                     console.log(`Item ${index} - Using ID:`, itemId, 'from fields:', {
                       order_item_id: item.order_item_id,
                       id: item.id,
@@ -240,23 +231,18 @@ export default function NewServiceRequestPage() {
                       product_id: item.product_id,
                       pivot_id: item.pivot?.id
                     });
-                    
-                    // Get product_id separately (always available from API)
-                    const productId = item.product_id || item.product?.id;
-                    
+
                     return (
                       <div
                         key={`${itemId}-${index}`}
                         onClick={() => {
-                          console.log('Selected item:', { itemId, productId, item });
+                          console.log('Selected item:', { itemId, item });
                           setSelectedOrderItemId(itemId);
-                          setSelectedProductId(productId);
                         }}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                          selectedOrderItemId === itemId
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedOrderItemId === itemId
                             ? 'border-blue-500 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                          }`}
                       >
                         <div className="flex gap-4">
                           <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
@@ -294,44 +280,22 @@ export default function NewServiceRequestPage() {
             </div>
           )}
 
-          {/* Request Type */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Request Type <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {(['warranty', 'repair', 'other'] as const).map((reqType) => (
-                <button
-                  key={reqType}
-                  type="button"
-                  onClick={() => setType(reqType)}
-                  className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${
-                    type === reqType
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {reqType.charAt(0).toUpperCase() + reqType.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Reason */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Reason <span className="text-red-500">*</span>
+              Return Reason <span className="text-red-500">*</span>
             </label>
             <select
               value={reason}
-              onChange={(e) => setReason(e.target.value as any)}
+              onChange={(e) => setReason(e.target.value as typeof reason)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
               required
+              disabled={isSubmitting}
             >
               <option value="defective">Defective</option>
               <option value="wrong_item">Wrong Item</option>
-              <option value="damaged">Damaged</option>
               <option value="not_as_described">Not as Described</option>
+              <option value="damaged">Damaged</option>
               <option value="changed_mind">Changed Mind</option>
               <option value="other">Other</option>
             </select>
@@ -340,106 +304,69 @@ export default function NewServiceRequestPage() {
           {/* Description */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Issue Description <span className="text-red-500">*</span>
+              Detailed Description <span className="text-red-500">*</span>
+              {description.length > 0 && (
+                <span className={`ml-2 text-xs ${description.trim().length < 10 ? 'text-red-500' : 'text-green-600'}`}>
+                  ({description.trim().length}/10 minimum)
+                </span>
+              )}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the issue with your product..."
+              placeholder="Please provide a detailed explanation of the return reason (minimum 10 characters)..."
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
               rows={6}
               required
+              minLength={10}
             />
+            {description.trim().length > 0 && description.trim().length < 10 && (
+              <p className="text-sm text-red-600 mt-1">Description must be at least 10 characters long</p>
+            )}
           </div>
 
           {/* Refund Method */}
           <div className="space-y-4 pt-4 border-t-2 border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900">Refund Method</h3>
-            
+            <h3 className="text-lg font-bold text-gray-900">Refund Information</h3>
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                How would you like to receive your refund? <span className="text-red-500">*</span>
+                Refund Method <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                {(['original', 'store_credit', 'bank_transfer'] as const).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => handleRefundMethodChange(method)}
-                    className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${
-                      refundMethod === method
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    {method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={refundMethod}
+                onChange={(e) => {
+                  setRefundMethod(e.target.value as typeof refundMethod);
+                  if (e.target.value !== 'bank_transfer') {
+                    setRefundAccountInfo('');
+                  }
+                }}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                required
+                disabled={isSubmitting}
+              >
+                <option value="original">Original Payment Method</option>
+                <option value="store_credit">Store Credit</option>
+                <option value="bank_transfer">Bank Transfer</option>
+              </select>
             </div>
 
+            {/* Bank Account Info - Only show if refund_method is bank_transfer */}
             {refundMethod === 'bank_transfer' && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Bank Account Information <span className="text-red-500">*</span>
+                  Bank Account Details <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={refundAccountInfo}
                   onChange={(e) => setRefundAccountInfo(e.target.value)}
-                  placeholder="Bank name, account number, account holder name..."
+                  placeholder="Enter your bank account number, bank name, branch name, and account holder name..."
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                  rows={3}
-                  required={refundMethod === 'bank_transfer'}
+                  rows={4}
+                  required
                 />
               </div>
             )}
-          </div>
-
-          {/* Customer Information */}
-          <div className="space-y-4 pt-4 border-t-2 border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900">Contact Information</h3>
-            
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="01712345678 or +8801712345678"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Address <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                placeholder="Your complete address..."
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                rows={3}
-                required
-              />
-            </div>
           </div>
 
           {/* Image Upload */}
@@ -463,7 +390,7 @@ export default function NewServiceRequestPage() {
                   disabled={images.length >= 5}
                 />
               </label>
-              
+
               {imagePreviews.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                   {imagePreviews.map((preview, index) => (
@@ -502,14 +429,16 @@ export default function NewServiceRequestPage() {
           )}
 
           {/* Validation Status */}
-          {(!selectedOrderNumber || !selectedOrderItemId) && (
+          {(!selectedOrderNumber || (type === 'single_item' && !selectedOrderItemId) || description.trim().length < 10 || (refundMethod === 'bank_transfer' && !refundAccountInfo.trim())) && (
             <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
               <FiAlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
               <div className="text-sm text-amber-800">
                 <p className="font-semibold mb-1">Please complete the following:</p>
                 <ul className="list-disc list-inside space-y-1">
                   {!selectedOrderNumber && <li>Select an order</li>}
-                  {selectedOrderNumber && !selectedOrderItemId && <li>Select a product from the order (click on a product card above)</li>}
+                  {type === 'single_item' && !selectedOrderItemId && <li>Select a product from the order (click on a product card above)</li>}
+                  {description.trim().length < 10 && <li>Provide a detailed description (at least 10 characters)</li>}
+                  {refundMethod === 'bank_transfer' && !refundAccountInfo.trim() && <li>Provide bank account information for bank transfer refund</li>}
                 </ul>
               </div>
             </div>
@@ -525,14 +454,25 @@ export default function NewServiceRequestPage() {
             </Link>
             <button
               type="submit"
-              disabled={isLoading || isSubmitting || !selectedOrderNumber || !selectedOrderItemId}
+              disabled={
+                isLoading ||
+                isSubmitting ||
+                !selectedOrderNumber ||
+                (type === 'single_item' && !selectedOrderItemId) ||
+                description.trim().length < 10 ||
+                (refundMethod === 'bank_transfer' && !refundAccountInfo.trim())
+              }
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-bold transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-sm"
               title={
-                !selectedOrderId
+                !selectedOrderNumber
                   ? 'Please select an order'
-                  : !selectedOrderItemId
-                  ? 'Please select a product from the order'
-                  : ''
+                  : type === 'single_item' && !selectedOrderItemId
+                    ? 'Please select a product from the order'
+                    : description.trim().length < 10
+                      ? 'Please provide a detailed description (at least 10 characters)'
+                      : refundMethod === 'bank_transfer' && !refundAccountInfo.trim()
+                        ? 'Please provide bank account information'
+                        : ''
               }
             >
               {(isLoading || isSubmitting) ? (

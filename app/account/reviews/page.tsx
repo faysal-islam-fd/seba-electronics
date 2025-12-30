@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { FiStar, FiEdit2, FiTrash2, FiPackage, FiAlertCircle } from 'react-icons/fi';
 import { useGetMyReviewsQuery, useDeleteReviewMutation, useUpdateReviewMutation } from '@/app/store/api/reviewsApi';
 import { useToast } from '@/app/context/ToastContext';
+import { useConfirm } from '@/app/context/ConfirmContext';
 import ReviewForm from '@/app/components/ReviewForm';
 
 export default function MyReviewsPage() {
@@ -13,6 +14,7 @@ export default function MyReviewsPage() {
     const [deleteReview, { isLoading: isDeleting }] = useDeleteReviewMutation();
     const [updateReview, { isLoading: isUpdating }] = useUpdateReviewMutation();
     const { showSuccess, showError } = useToast();
+    const { confirm } = useConfirm();
 
     const [editingReview, setEditingReview] = useState<{
         id: number;
@@ -23,18 +25,27 @@ export default function MyReviewsPage() {
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const handleDeleteReview = async (reviewId: number) => {
-        if (!confirm('Are you sure you want to delete this review?')) return;
-
-        setDeletingId(reviewId);
-        try {
-            await deleteReview(reviewId).unwrap();
-            showSuccess('Review deleted successfully');
-            refetch();
-        } catch (err: any) {
-            showError(err?.data?.message || 'Failed to delete review');
-        } finally {
-            setDeletingId(null);
-        }
+        confirm(
+            'Are you sure you want to delete this review? This action cannot be undone.',
+            async () => {
+                setDeletingId(reviewId);
+                try {
+                    await deleteReview(reviewId).unwrap();
+                    showSuccess('Review deleted successfully');
+                    refetch();
+                } catch (err: any) {
+                    showError(err?.data?.message || 'Failed to delete review');
+                } finally {
+                    setDeletingId(null);
+                }
+            },
+            {
+                type: 'danger',
+                title: 'Delete Review',
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
+            }
+        );
     };
 
     const handleUpdateReview = async (data: {

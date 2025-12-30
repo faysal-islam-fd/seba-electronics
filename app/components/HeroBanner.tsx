@@ -12,7 +12,7 @@ function SliderSkeleton() {
     <div className="relative w-full h-full bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse overflow-hidden rounded-xl">
       {/* Shimmer effect */}
       <div className="absolute inset-0 shimmer-animation bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-      
+
       {/* Decorative elements */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 opacity-30">
@@ -21,7 +21,7 @@ function SliderSkeleton() {
           <div className="h-3 w-32 bg-white/30 rounded animate-pulse" />
         </div>
       </div>
-      
+
       {/* Bottom dots skeleton */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {[1, 2, 3].map((i) => (
@@ -48,27 +48,34 @@ export default function HeroBanner() {
         id: slider.id,
         image: slider.image_url,
         alt: slider.target?.name || `Slider ${slider.id}`,
-        href: slider.target 
-          ? (slider.type === 'category_id' 
-              ? `/category/${slider.target.slug}` 
-              : slider.target.slug 
-                ? `/${slider.target.slug}` 
-                : '#')
+        href: slider.target
+          ? (slider.type === 'category_id'
+            ? `/category/${slider.target.slug}`
+            : slider.target.slug
+              ? `/${slider.target.slug}`
+              : '#')
           : '#',
       }));
     }
     return [];
   }, [slidersData]);
 
+  // Reset current slide to 0 only if index is out of bounds
   useEffect(() => {
-    if (isHovered || slides.length === 0) return;
+    if (currentSlide >= slides.length && slides.length > 0) {
+      setCurrentSlide(0);
+    }
+  }, [slides, currentSlide]);
+
+  useEffect(() => {
+    if (isHovered || slides.length <= 1) return;
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [isHovered, slides.length]);
+  }, [isHovered, slides]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -85,7 +92,7 @@ export default function HeroBanner() {
   // Show skeleton while loading or if no slides
   if (isLoading || slides.length === 0) {
     return (
-      <div className="relative w-full h-[350px] md:h-[450px] lg:h-[550px] rounded-xl overflow-hidden">
+      <div className="relative w-full h-[200px] sm:h-[250px] md:h-[350px] lg:h-[450px] xl:h-[550px] rounded-xl overflow-hidden">
         <SliderSkeleton />
       </div>
     );
@@ -93,7 +100,7 @@ export default function HeroBanner() {
 
   return (
     <div
-      className="relative w-full h-[350px] md:h-[450px] lg:h-[550px] rounded-xl overflow-hidden group"
+      className="relative w-full h-[200px] sm:h-[250px] md:h-[350px] lg:h-[450px] xl:h-[550px] rounded-xl overflow-hidden group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -103,9 +110,8 @@ export default function HeroBanner() {
           <Link
             key={slide.id}
             href={slide.href}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
           >
             <Image
               src={slide.image}
@@ -125,33 +131,32 @@ export default function HeroBanner() {
         <>
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-2 sm:p-3 rounded-full shadow-lg opacity-70 sm:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
             aria-label="Previous slide"
           >
-            <FiChevronLeft size={24} />
+            <FiChevronLeft size={18} className="sm:w-6 sm:h-6" />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-2 sm:p-3 rounded-full shadow-lg opacity-70 sm:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
             aria-label="Next slide"
           >
-            <FiChevronRight size={24} />
+            <FiChevronRight size={18} className="sm:w-6 sm:h-6" />
           </button>
         </>
       )}
 
       {/* Navigation Dots */}
       {slides.length > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 sm:gap-2">
           {slides.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`transition-all duration-300 rounded-full ${
-                index === currentSlide
-                  ? 'bg-white w-10 h-2.5 shadow-lg'
-                  : 'bg-white/50 w-2.5 h-2.5 hover:bg-white/75 hover:w-6'
-              }`}
+              className={`transition-all duration-300 rounded-full ${index === currentSlide
+                ? 'bg-white w-8 sm:w-10 h-2 sm:h-2.5 shadow-lg'
+                : 'bg-white/50 w-2 sm:w-2.5 h-2 sm:h-2.5 hover:bg-white/75 hover:w-4 sm:hover:w-6'
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}

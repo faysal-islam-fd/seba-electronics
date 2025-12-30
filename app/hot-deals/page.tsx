@@ -123,3 +123,9 @@ export default async function HotDealsPage({
 export const revalidate = 1800; // 30 minutes
 
 
+
+
+
+
+
+

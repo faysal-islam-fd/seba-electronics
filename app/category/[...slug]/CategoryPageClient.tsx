@@ -167,8 +167,8 @@ export default function CategoryPageClient({
               {currentCategory.name.charAt(0)}
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{currentCategory.name}</h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">{currentCategory.name}</h1>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 {meta ? `${meta.total} products available` : 'Loading products...'}
               </p>
             </div>

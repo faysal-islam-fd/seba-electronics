@@ -6,6 +6,8 @@ import Footer from "./components/Footer";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { AlertProvider } from "./context/AlertContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
 import { ReduxProvider } from "./store/Provider";
 
 const montserrat = Montserrat({ 
@@ -42,6 +44,8 @@ export default function RootLayout({
         <ReduxProvider>
         <AuthProvider>
           <ToastProvider>
+          <AlertProvider>
+          <ConfirmProvider>
           <CartProvider>
         <Header />
         <main className="min-h-screen">
@@ -49,6 +53,8 @@ export default function RootLayout({
         </main>
         <Footer />
           </CartProvider>
+          </ConfirmProvider>
+          </AlertProvider>
           </ToastProvider>
         </AuthProvider>
         </ReduxProvider>

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useGetServiceRequestQuery, useCancelServiceRequestMutation } from '@/app/store/api/serviceRequestsApi';
+import { useAlert } from '@/app/context/AlertContext';
 import { FiLoader, FiArrowLeft, FiShield, FiXCircle, FiClock, FiCheckCircle, FiAlertCircle, FiPackage, FiMapPin, FiPhone, FiMail } from 'react-icons/fi';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -10,6 +11,7 @@ import { useState } from 'react';
 export default function ServiceRequestDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { showError } = useAlert();
   const id = parseInt(params?.id as string);
   const [showCancelModal, setShowCancelModal] = useState(false);
   
@@ -101,7 +103,7 @@ export default function ServiceRequestDetailPage() {
       router.refresh();
     } catch (error) {
       console.error('Failed to cancel request:', error);
-      alert('Failed to cancel request. Please try again.');
+      showError('Failed to cancel request. Please try again.', 'Cancellation Failed');
     }
   };
 

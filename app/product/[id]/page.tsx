@@ -3,16 +3,17 @@ import ProductTabs from '@/app/components/ProductTabs';
 import RelatedProducts from '@/app/components/RelatedProducts';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import ProductDetailContent from '@/app/components/ProductDetailContent';
-import { getProductDetails, getProductReviews } from '@/app/lib/api';
+import { getProductDetails, getProductReviews, getBrands } from '@/app/lib/api';
 
 // Server Component with SSR
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Fetch product data and reviews on the server
-  const [data, reviewsData] = await Promise.all([
+  // Fetch product data, reviews, and brands on the server
+  const [data, reviewsData, brandsData] = await Promise.all([
     getProductDetails(id),
     getProductReviews(id),
+    getBrands(),
   ]);
 
   if (!data || !data.success) {
@@ -20,7 +21,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   }
 
   const apiProduct = data.data;
-  
+
   // Extract rating and review count from reviews data
   const ratingSummary = reviewsData?.rating_summary;
   const rating = ratingSummary?.average ?? (reviewsData?.data && reviewsData.data.length > 0
@@ -31,12 +32,22 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   // Check if this is a variable product (has variations)
   const isVariableProduct = apiProduct.attributes && apiProduct.attributes.length > 0;
 
+  // Find the brand slug from the brands list
+  // First try to find by brand ID, then by brand name
+  const brandFromList = apiProduct.brand?.id
+    ? brandsData.data?.find(b => b.id === apiProduct.brand?.id)
+    : brandsData.data?.find(b => b.name.toLowerCase() === apiProduct.brand?.name?.toLowerCase());
+
+  const brandSlug = brandFromList?.slug
+    || (apiProduct.brand?.slug && apiProduct.brand.slug.trim() !== '' ? apiProduct.brand.slug : null)
+    || (apiProduct.brand?.name ? apiProduct.brand.name.toLowerCase() : 'unknown');
+
   // Transform API data to match the component's expected format
   const product = {
     id: apiProduct.id.toString(),
     name: apiProduct.title,
-    brand: apiProduct.brand?.name || 'Unknown Brand',
-    brandSlug: apiProduct.brand?.slug || apiProduct.brand?.name.toLowerCase() || 'unknown',
+    brand: apiProduct.brand?.name || undefined,
+    brandSlug: brandSlug,
     thumbnail: apiProduct.thumbnail,
     // For normal products: use root level values
     // For variable products: these will be overridden by selected attribute
@@ -81,17 +92,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     isVariableProduct,
   };
 
+  const breadcrumbItems = [
+    { label: 'Products', href: '/search' },
+    ...(product.brand ? [{ label: product.brand, href: `/brand/${product.brandSlug}` }] : []),
+    { label: product.name },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: 'Products', href: '/search' },
-            { label: product.brand, href: `/brand/${product.brandSlug}` },
-            { label: product.name },
-          ]}
-        />
+        <Breadcrumb items={breadcrumbItems} />
 
         {/* Product detail presentation */}
         <ProductDetailContent product={product} />

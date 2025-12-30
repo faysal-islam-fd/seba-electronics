@@ -139,8 +139,8 @@ export default function BestSellersPageClient({
         <div className="bg-white border-b border-gray-200 pb-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Best Sellers</h1>
-              <p className="text-gray-600 text-sm">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">Best Sellers</h1>
+              <p className="text-gray-600 text-xs sm:text-sm">
                 {meta ? `${meta.total} products available` : 'Loading products...'}
               </p>
             </div>

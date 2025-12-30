@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { FiStar, FiThumbsUp, FiMessageSquare, FiChevronDown, FiUser, FiChevronLeft, FiChevronRight, FiEdit2 } from 'react-icons/fi';
 import Image from 'next/image';
 import { useGetProductReviewsQuery, useMarkReviewHelpfulMutation, useCreateReviewMutation, useCheckCanReviewQuery, useReplyToReviewMutation, useUpdateReviewMutation } from '@/app/store/api/reviewsApi';
@@ -20,8 +20,56 @@ interface ProductTabsProps {
   shipping: string;
 }
 
-export default function ProductTabs({ productId, description, specifications, features, warranty, shipping }: ProductTabsProps) {
+export interface ProductTabsRef {
+  switchToReviewsTab: () => void;
+}
+
+const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, description, specifications, features, warranty, shipping }, ref) => {
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
+  
+  // Expose method to switch to reviews tab from parent
+  useImperativeHandle(ref, () => ({
+    switchToReviewsTab: () => {
+      setActiveTab('reviews');
+      // Small delay to ensure tab content is rendered before scrolling
+      setTimeout(() => {
+        const tabsSection = document.querySelector('[data-reviews-tab]');
+        if (tabsSection) {
+          tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    },
+  }));
+
+  // Check URL hash on mount and when component is visible
+  useEffect(() => {
+    // Check if URL has #reviews hash
+    if (typeof window !== 'undefined' && window.location.hash === '#reviews') {
+      setActiveTab('reviews');
+      setTimeout(() => {
+        const tabsSection = document.querySelector('[data-reviews-tab]');
+        if (tabsSection) {
+          tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+
+    // Listen for custom event to switch to reviews tab
+    const handleSwitchToReviews = () => {
+      setActiveTab('reviews');
+      setTimeout(() => {
+        const tabsSection = document.querySelector('[data-reviews-tab]');
+        if (tabsSection) {
+          tabsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    };
+
+    window.addEventListener('switchToReviewsTab', handleSwitchToReviews);
+    return () => {
+      window.removeEventListener('switchToReviewsTab', handleSwitchToReviews);
+    };
+  }, []);
   const [sortBy, setSortBy] = useState<'recent' | 'helpful' | 'rating_high' | 'rating_low'>('recent');
   const [filterRating, setFilterRating] = useState<number | undefined>(undefined);
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
@@ -726,4 +774,8 @@ export default function ProductTabs({ productId, description, specifications, fe
       )}
     </div>
   );
-}
+});
+
+ProductTabs.displayName = 'ProductTabs';
+
+export default ProductTabs;

@@ -8,6 +8,7 @@ import { FiStar, FiShare2, FiShoppingCart, FiHeart } from 'react-icons/fi';
 import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
+import { useAlert } from '@/app/context/AlertContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import EMIModal from '@/app/components/EMIModal';
@@ -23,6 +24,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const { addToCart } = useCart();
   const { isLoggedIn } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { showWarning, showError: showAlertError } = useAlert();
   const router = useRouter();
 
   // Convert id to number for API calls
@@ -163,7 +165,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
   const handleAddToCart = () => {
     // For variable products, ensure a variation is selected
     if (isVariableProduct && !selectedAttribute) {
-      alert('Please select a product variation before adding to cart');
+      showWarning('Please select a product variation before adding to cart', 'Variation Required');
       return;
     }
 
@@ -207,7 +209,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
     // For variable products, product_attribute_id is required
     if (isVariableProduct && !attributeId) {
       console.error('❌ Variable product attribute ID not found. Selected attribute:', selectedAttribute);
-      alert('Unable to add product to cart. Please try selecting the variation again or contact support.');
+      showAlertError('Unable to add product to cart. Please try selecting the variation again or contact support.', 'Add to Cart Failed');
       return;
     }
 
@@ -215,7 +217,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       id: isVariableProduct && currentSku ? `${product.id}-${currentSku}` : product.id,
       name: productName,
       image: product.images?.[0] || product.thumbnail,
-      seller: product.soldBy || `${product.brand} Official`,
+      seller: product.soldBy || (product.brand ? `${product.brand} Official` : 'Official Store'),
       price: finalPrice,
       originalPrice: currentDiscount > 0 ? currentPrice : undefined,
       discount: currentDiscount,
@@ -301,11 +303,9 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         <div>
           <button
             onClick={() => {
-              // Scroll to reviews section and trigger tab switch
-              const tabsSection = document.querySelector('[data-reviews-tab]');
-              if (tabsSection) {
-                tabsSection.scrollIntoView({ behavior: 'smooth' });
-              }
+              // Dispatch custom event to switch to reviews tab
+              const event = new CustomEvent('switchToReviewsTab');
+              window.dispatchEvent(event);
             }}
             className="text-blue-600 font-semibold hover:underline text-sm"
           >
@@ -315,13 +315,17 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
 
         {/* Brand and Seller */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
-          <div>
-            Brand:{' '}
-            <Link href={`/brand/${product.brandSlug || product.brand.toLowerCase()}`} className="font-semibold text-blue-600 hover:underline">
-              {product.brand}
-            </Link>
-          </div>
-          <span className="text-gray-300 hidden sm:inline">|</span>
+          {product.brand && (
+            <>
+              <div>
+                Brand:{' '}
+                <Link href={`/brand/${product.brandSlug || product.brand.toLowerCase()}`} className="font-semibold text-blue-600 hover:underline">
+                  {product.brand}
+                </Link>
+              </div>
+              <span className="text-gray-300 hidden sm:inline">|</span>
+            </>
+          )}
           <div>
             Sold by:{' '}
             <Link
@@ -370,8 +374,8 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
                       key={value}
                       onClick={() => handleVariationChange(variation.name, value)}
                       className={`px-4 py-2 border-2 rounded-lg font-medium text-sm transition-all ${selectedVariations[variation.name] === value
-                          ? 'border-blue-600 bg-blue-50 text-blue-600'
-                          : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                        ? 'border-blue-600 bg-blue-50 text-blue-600'
+                        : 'border-gray-300 text-gray-700 hover:border-blue-400'
                         }`}
                     >
                       {value}

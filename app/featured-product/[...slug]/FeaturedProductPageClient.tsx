@@ -2,15 +2,19 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import Link from 'next/link';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
-import { ProductsResponse, BrandsResponse } from '@/app/lib/api';
+import { ProductsResponse, BrandsResponse, Category } from '@/app/lib/api';
 import { isProductInStock } from '@/app/utils/stockUtils';
 import { FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 
 type SortOption = 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 
-interface HotDealsPageClientProps {
+interface FeaturedProductPageClientProps {
+  currentCategory: Category;
+  parentCategory?: Category;
+  categoryPath: Category[];
   initialProducts: ProductsResponse;
   initialBrands: BrandsResponse;
   initialPage: number;
@@ -18,6 +22,7 @@ interface HotDealsPageClientProps {
   initialMinPrice?: number;
   initialMaxPrice?: number;
   initialBrandId?: number;
+  initialSubcategoryId?: number;
 }
 
 interface FilterSectionProps {
@@ -50,7 +55,10 @@ function FilterSection({ title, isOpen, onToggle, children }: FilterSectionProps
   );
 }
 
-export default function HotDealsPageClient({
+export default function FeaturedProductPageClient({
+  currentCategory,
+  parentCategory,
+  categoryPath,
   initialProducts,
   initialBrands,
   initialPage,
@@ -58,7 +66,8 @@ export default function HotDealsPageClient({
   initialMinPrice,
   initialMaxPrice,
   initialBrandId,
-}: HotDealsPageClientProps) {
+  initialSubcategoryId,
+}: FeaturedProductPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -68,16 +77,43 @@ export default function HotDealsPageClient({
     initialMaxPrice || 300000
   ]);
   const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | undefined>(initialSubcategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
+    subcategories: false,
   });
 
   const products = initialProducts.data || [];
   const meta = initialProducts.meta;
   const brands = initialBrands.data || [];
+  const subcategories = currentCategory.children || [];
+
+  // Build breadcrumb items from category path
+  const buildBreadcrumbPath = () => {
+    const items = [
+      { label: 'Home', href: '/' },
+      { label: 'Featured Categories', href: '/categories' },
+    ];
+    
+    // Add category path items
+    categoryPath.forEach((cat, index) => {
+      const pathSlugs = categoryPath.slice(0, index + 1).map(c => c.slug);
+      items.push({
+        label: cat.name,
+        href: `/featured-product/${pathSlugs.join('/')}`,
+      });
+    });
+    
+    return items;
+  };
+
+  // Build URL path from category path
+  const buildCategoryPath = () => {
+    return categoryPath.map(c => c.slug).join('/');
+  };
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
@@ -90,7 +126,8 @@ export default function HotDealsPageClient({
       }
     });
     
-    router.push(`/hot-deals?${params.toString()}`);
+    const categoryPathStr = buildCategoryPath();
+    router.push(`/featured-product/${categoryPathStr}?${params.toString()}`);
   };
 
   const handleSortChange = (newSort: SortOption) => {
@@ -102,6 +139,12 @@ export default function HotDealsPageClient({
     const newBrandId = selectedBrandId === brandId ? undefined : brandId;
     setSelectedBrandId(newBrandId);
     updateURL({ brand_id: newBrandId, page: 1 });
+  };
+
+  const handleSubcategoryChange = (subcategoryId: number) => {
+    const newSubcategoryId = selectedSubcategoryId === subcategoryId ? undefined : subcategoryId;
+    setSelectedSubcategoryId(newSubcategoryId);
+    updateURL({ subcategory_id: newSubcategoryId, page: 1 });
   };
 
   const handlePriceChange = () => {
@@ -119,8 +162,10 @@ export default function HotDealsPageClient({
   const clearFilters = () => {
     setPriceRange([0, 300000]);
     setSelectedBrandId(undefined);
+    setSelectedSubcategoryId(undefined);
     setSortBy('latest');
-    router.push(`/hot-deals`);
+    const categoryPathStr = buildCategoryPath();
+    router.push(`/featured-product/${categoryPathStr}`);
   };
 
   return (
@@ -128,20 +173,25 @@ export default function HotDealsPageClient({
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
         <div className="mb-4">
-          <Breadcrumb 
-            items={[
-              { label: 'Hot Deals', href: '/hot-deals' },
-            ]}
-          />
+          <Breadcrumb items={buildBreadcrumbPath()} />
         </div>
 
-        {/* Page Header */}
-        <div className="bg-white border-b border-gray-200 pb-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Category Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-3xl text-white shadow-lg">
+              ⭐
+            </div>
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">Hot Deals</h1>
-              <p className="text-gray-600 text-xs sm:text-sm">
-                {meta ? `${meta.total} products available` : 'Loading deals...'}
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">
+                {parentCategory 
+                  ? `${parentCategory.name} - ${currentCategory.name}` 
+                  : `Featured Category - ${currentCategory.name}`}
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                {meta 
+                  ? `${meta.total} ${currentCategory.parent_id ? 'subcategory' : 'category'} products available` 
+                  : 'Loading products...'}
               </p>
             </div>
           </div>
@@ -153,7 +203,7 @@ export default function HotDealsPageClient({
             <div className="bg-white rounded-lg shadow-sm sticky top-20">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Filters</h3>
-                {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000) && (
+                {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000 || selectedSubcategoryId) && (
                   <button
                     onClick={clearFilters}
                     className="text-sm text-orange-600 hover:text-orange-700"
@@ -162,6 +212,34 @@ export default function HotDealsPageClient({
                   </button>
                 )}
               </div>
+
+              {/* Subcategories Filter */}
+              {subcategories.length > 0 && (
+                <FilterSection
+                  title="Subcategories"
+                  isOpen={filtersOpen.subcategories}
+                  onToggle={() => setFiltersOpen(prev => ({ ...prev, subcategories: !prev.subcategories }))}
+                >
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {subcategories.map((subcat) => (
+                      <Link
+                        key={subcat.id}
+                        href={`/featured-product/${buildCategoryPath()}/${subcat.slug}`}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSubcategoryId === subcat.id}
+                          onChange={() => handleSubcategoryChange(subcat.id)}
+                          onClick={(e) => e.preventDefault()}
+                          className="w-4 h-4 text-orange-500 focus:ring-orange-500 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{subcat.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </FilterSection>
+              )}
 
               {/* Price Filter */}
               <FilterSection
@@ -226,7 +304,7 @@ export default function HotDealsPageClient({
               <div>
                 {meta && (
                   <p className="text-sm text-gray-600">
-                    Showing {((meta.current_page - 1) * meta.per_page) + 1} - {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} deals
+                    Showing {((meta.current_page - 1) * meta.per_page) + 1} - {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} products
                   </p>
                 )}
               </div>
@@ -259,9 +337,9 @@ export default function HotDealsPageClient({
             {/* Products Grid */}
             {products.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <div className="text-gray-400 text-6xl mb-4">🔥</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No hot deals found</h3>
-                <p className="text-gray-600 mb-4">Check back soon for amazing deals!</p>
+                <div className="text-gray-400 text-6xl mb-4">⭐</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
+                <p className="text-gray-600 mb-4">Try adjusting your filters or check back later</p>
                 <button
                   onClick={clearFilters}
                   className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
@@ -281,7 +359,7 @@ export default function HotDealsPageClient({
                       originalPrice={product.price !== product.final_price ? product.price : undefined}
                       image={product.thumbnail}
                       discount={product.discount_percentage ? Math.round(product.discount_percentage) : undefined}
-                      badge="Hot Deal"
+                      badge="Featured"
                       rating={4.5}
                       inStock={isProductInStock(product.stock, product.is_out_of_stock)}
                     />
@@ -340,7 +418,7 @@ export default function HotDealsPageClient({
           <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="font-bold text-gray-900">Filters</h3>
-              {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000) && (
+              {(selectedBrandId || priceRange[0] > 0 || priceRange[1] < 300000 || selectedSubcategoryId) && (
                 <button
                   onClick={clearFilters}
                   className="text-sm text-orange-600 hover:text-orange-700"
@@ -357,6 +435,34 @@ export default function HotDealsPageClient({
             </div>
 
             <div className="overflow-y-auto">
+              {/* Subcategories Filter */}
+              {subcategories.length > 0 && (
+                <FilterSection
+                  title="Subcategories"
+                  isOpen={filtersOpen.subcategories}
+                  onToggle={() => setFiltersOpen(prev => ({ ...prev, subcategories: !prev.subcategories }))}
+                >
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {subcategories.map((subcat) => (
+                      <Link
+                        key={subcat.id}
+                        href={`/featured-product/${buildCategoryPath()}/${subcat.slug}`}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSubcategoryId === subcat.id}
+                          onChange={() => handleSubcategoryChange(subcat.id)}
+                          onClick={(e) => e.preventDefault()}
+                          className="w-4 h-4 text-orange-500 focus:ring-orange-500 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{subcat.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </FilterSection>
+              )}
+
               {/* Price Filter */}
               <FilterSection
                 title="Price Range"
@@ -426,5 +532,4 @@ export default function HotDealsPageClient({
     </div>
   );
 }
-
 

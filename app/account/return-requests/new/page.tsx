@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreateReturnRequestMutation } from '@/app/store/api/returnRequestsApi';
 import { useGetOrdersQuery, useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
+import { useAlert } from '@/app/context/AlertContext';
 import { FiRefreshCw, FiLoader, FiArrowLeft, FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
 import Image from 'next/image';
 
 export default function NewReturnRequestPage() {
   const router = useRouter();
+  const { showError, showWarning } = useAlert();
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | null>(null);
   const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
@@ -56,7 +58,7 @@ export default function NewReturnRequestPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length + images.length > 5) {
-      alert('Maximum 5 images allowed');
+      showWarning('Maximum 5 images allowed', 'Image Limit Reached');
       return;
     }
     
@@ -81,17 +83,17 @@ export default function NewReturnRequestPage() {
     e.preventDefault();
     
     if (!selectedOrderNumber || !selectedOrderItemId) {
-      alert('Please select an order and item');
+      showWarning('Please select an order and item', 'Selection Required');
       return;
     }
     
     if (!description.trim()) {
-      alert('Please provide a description');
+      showWarning('Please provide a description', 'Description Required');
       return;
     }
     
     if (refundMethod === 'bank_transfer' && !refundAccountInfo.trim()) {
-      alert('Please provide bank account information for bank transfer refund');
+      showWarning('Please provide bank account information for bank transfer refund', 'Account Information Required');
       return;
     }
 
@@ -110,7 +112,7 @@ export default function NewReturnRequestPage() {
       router.push(`/account/return-requests/${result.data.id}`);
     } catch (err: any) {
       console.error('Failed to create return request:', err);
-      alert(err?.data?.message || 'Failed to create return request. Please try again.');
+      showError(err?.data?.message || 'Failed to create return request. Please try again.', 'Request Failed');
     }
   };
 

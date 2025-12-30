@@ -1,13 +1,18 @@
 import Link from 'next/link';
 import { FaFacebook, FaTwitter, FaInstagram, FaYoutube, FaLinkedin } from 'react-icons/fa';
 import { FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
+import { getCategories } from '@/app/lib/api';
 
-export default function Footer() {
+export default async function Footer() {
+  // Fetch categories dynamically - same as left sidebar on home page
+  const categoriesData = await getCategories(true);
+  const categories = categoriesData.success ? categoriesData.data : [];
+
   return (
     <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-300 mt-8 sm:mt-12 md:mt-16">
       {/* Main Footer */}
       <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 md:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8 md:gap-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8 md:gap-10">
           {/* Company Info */}
           <div>
             <h3 className="text-white text-base sm:text-lg md:text-xl font-extrabold mb-4 sm:mb-5 md:mb-6 flex items-center gap-1.5 sm:gap-2">
@@ -129,36 +134,53 @@ export default function Footer() {
               CATEGORIES
             </h3>
             <ul className="space-y-2 sm:space-y-2.5 md:space-y-3">
-              <li>
-                <Link href="/category/laptops" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
-                  <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
-                  Laptops
-                </Link>
-              </li>
-              <li>
-                <Link href="/category/desktops" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
-                  <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
-                  Desktops
-                </Link>
-              </li>
-              <li>
-                <Link href="/category/components" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
-                  <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
-                  Components
-                </Link>
-              </li>
-              <li>
-                <Link href="/category/monitors" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
-                  <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
-                  Monitors
-                </Link>
-              </li>
-              <li>
-                <Link href="/category/accessories" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
-                  <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
-                  Accessories
-                </Link>
-              </li>
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <li key={category.id}>
+                    <Link 
+                      href={`/category/${category.slug}`} 
+                      className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base"
+                    >
+                      <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
+                      {category.name}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                // Fallback categories if API fails
+                <>
+                  <li>
+                    <Link href="/category/laptops" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
+                      <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
+                      Laptops
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/category/desktops" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
+                      <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
+                      Desktops
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/category/components" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
+                      <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
+                      Components
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/category/monitors" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
+                      <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
+                      Monitors
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/category/accessories" className="hover:text-amber-400 transition-colors duration-300 flex items-center gap-1.5 sm:gap-2 group text-sm sm:text-base">
+                      <span className="w-0 group-hover:w-1.5 sm:group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300"></span>
+                      Accessories
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 
@@ -209,9 +231,6 @@ export default function Footer() {
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-5 md:py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-2 sm:gap-3 text-xs sm:text-sm">
             <p className="text-gray-400 font-medium text-center md:text-left">&copy; 2025 Sheba Electronics. All rights reserved.</p>
-            <p className="text-gray-500 text-center md:text-right">
-              Powered by <span className="text-blue-400 font-semibold">Next.js</span> | Designed with <span className="text-red-500">❤</span>
-            </p>
           </div>
         </div>
       </div>
