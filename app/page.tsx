@@ -10,19 +10,19 @@ import { isProductInStock } from './utils/stockUtils';
 // Separate async components for Suspense
 async function FeaturedProductsSection() {
   const featuredData = await getFeaturedProducts(8);
-  
-  const featuredProducts = featuredData.success && featuredData.data.length > 0 
+
+  const featuredProducts = featuredData.success && featuredData.data.length > 0
     ? featuredData.data.map(product => ({
-        id: product.id.toString(),
-        name: product.title,
-        price: product.final_price,
-        originalPrice: product.price !== product.final_price ? product.price : undefined,
-        image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
-        discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
-        badge: product.is_featured ? 'Featured' : undefined,
-        rating: 4.5,
-        inStock: isProductInStock(product.stock, product.is_out_of_stock),
-      }))
+      id: product.id.toString(),
+      name: product.title,
+      price: product.final_price,
+      originalPrice: product.price !== product.final_price ? product.price : undefined,
+      image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
+      discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
+      badge: product.is_featured ? 'Featured' : undefined,
+      rating: 4.5,
+      inStock: isProductInStock(product.stock, product.is_out_of_stock),
+    }))
     : []; // Empty array if API fails - will show skeletons
 
   return (
@@ -36,19 +36,19 @@ async function FeaturedProductsSection() {
 
 async function TopSellingProductsSection() {
   const topSellingData = await getTopSellingProducts(8);
-  
+
   const topSellingProducts = topSellingData.success && topSellingData.data.length > 0
     ? topSellingData.data.map(product => ({
-        id: product.id.toString(),
-        name: product.title,
-        price: product.final_price,
-        originalPrice: product.price !== product.final_price ? product.price : undefined,
-        image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
-        discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
-        badge: product.is_top_selling ? 'Top Selling' : undefined,
-        rating: 4.5,
-        inStock: isProductInStock(product.stock, product.is_out_of_stock),
-      }))
+      id: product.id.toString(),
+      name: product.title,
+      price: product.final_price,
+      originalPrice: product.price !== product.final_price ? product.price : undefined,
+      image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
+      discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
+      badge: product.is_top_selling ? 'Top Selling' : undefined,
+      rating: 4.5,
+      inStock: isProductInStock(product.stock, product.is_out_of_stock),
+    }))
     : []; // Empty array if API fails - will show skeletons
 
   return (
@@ -82,12 +82,12 @@ function ProductsSectionSkeleton({ title }: { title: string }) {
 function findCategoryPath(categories: any[], targetSlug: string, path: string[] = []): string[] | null {
   for (const category of categories) {
     const currentPath = [...path, category.slug];
-    
+
     // Check if this is the target
     if (category.slug === targetSlug) {
       return currentPath;
     }
-    
+
     // Search in children
     if (category.children && category.children.length > 0) {
       const found = findCategoryPath(category.children, targetSlug, currentPath);
@@ -150,13 +150,13 @@ export default async function Home() {
                   const fullPath = categoriesData.success && categoriesData.data.length > 0
                     ? findCategoryPath(categoriesData.data, cat.slug)
                     : null;
-                  
+
                   // Use full path if found, otherwise fallback to just the slug
                   // The featured-product page can handle both cases
-                  const href = fullPath 
+                  const href = fullPath
                     ? `/featured-product/${fullPath.join('/')}`
                     : `/featured-product/${cat.slug}`;
-                  
+
                   return {
                     name: cat.name,
                     image: cat.image || '/products/placeholder.jpg',

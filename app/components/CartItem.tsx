@@ -62,7 +62,7 @@ export default function CartItem({
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{name}</h3>
             <p className="text-sm text-gray-600 mb-3">Sold by: <span className="font-medium">{seller}</span></p>
-            
+
             {/* Pricing */}
             <div className="flex items-center gap-3 mb-4">
               <span className="text-xl font-bold text-gray-900">৳ {price.toLocaleString()}</span>

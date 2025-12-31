@@ -42,7 +42,7 @@ export default function CheckoutPage() {
   const shipping: number = 100; // Default shipping charge (can be adjusted)
   const discount: number = 0; // Will be calculated by backend
   const total = subtotal - discount + shipping;
-  
+
   // Calculate EMI amount if EMI is selected
   const calculateEMIAmount = () => {
     if (paymentMethod === 'ssl_commerz' && isEmi && emiMonths) {
@@ -55,26 +55,26 @@ export default function CheckoutPage() {
     }
     return 0;
   };
-  
+
   const emiAmount = calculateEMIAmount();
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    
+
     // Validate phone number before proceeding to payment
     const phoneNumber = shippingInfo.phone?.trim() || '';
     if (!phoneNumber) {
       showError('Phone number is required');
       return;
     }
-    
+
     const phoneValidation = validatePhoneNumber(phoneNumber);
     if (!phoneValidation.isValid) {
       showError(phoneValidation.error || 'Invalid phone number');
       return;
     }
-    
+
     setStep('payment');
   };
 
@@ -85,20 +85,20 @@ export default function CheckoutPage() {
     if (item?.product_id) {
       return item.product_id;
     }
-    
+
     // Otherwise, try to extract from ID string (format: "productId" or "productId-sku")
     const parts = itemId.split('-');
     const productId = parseInt(parts[0], 10);
     if (!isNaN(productId)) {
       return productId;
     }
-    
+
     throw new Error(`Invalid product ID in cart item: ${itemId}`);
   };
 
   const handlePlaceOrder = async () => {
     setErrorMessage(null);
-    
+
     try {
       // Validate that all cart items have required fields
       // Check for variable products that might be missing product_attribute_id
@@ -106,7 +106,7 @@ export default function CheckoutPage() {
         // If item ID contains a hyphen (suggests variable product with SKU) but no product_attribute_id
         return item.id.includes('-') && !item.product_attribute_id;
       });
-      
+
       if (itemsWithMissingAttributes.length > 0) {
         const productNames = itemsWithMissingAttributes.map(item => item.name).join(', ');
         setErrorMessage(
@@ -114,7 +114,7 @@ export default function CheckoutPage() {
         );
         return;
       }
-      
+
       // Map cart items to order items
       const items = cartItems.map((item) => {
         const productId = item.product_id || extractProductId(item.id);
@@ -122,7 +122,7 @@ export default function CheckoutPage() {
           product_id: productId,
           quantity: item.quantity,
         };
-        
+
         // For variable products, product_attribute_id is REQUIRED
         // If product_attribute_id exists in cart item, include it
         if (item.product_attribute_id) {
@@ -130,10 +130,10 @@ export default function CheckoutPage() {
         }
         // If product_attribute_id is missing but item ID suggests it's a variable product,
         // we'll let the backend validate and return an error
-        
+
         return orderItem;
       });
-      
+
       // Additional validation: Check if any items are missing product_attribute_id
       // This will catch cases where the item was added before attribute ID support
       const missingAttributeItems = items.filter(item => {
@@ -141,7 +141,7 @@ export default function CheckoutPage() {
         const cartItem = cartItems.find(ci => (ci.product_id || extractProductId(ci.id)) === item.product_id);
         return cartItem && cartItem.id.includes('-') && !item.product_attribute_id;
       });
-      
+
       if (missingAttributeItems.length > 0) {
         const productNames = missingAttributeItems.map(item => {
           const cartItem = cartItems.find(ci => (ci.product_id || extractProductId(ci.id)) === item.product_id);
@@ -196,7 +196,7 @@ export default function CheckoutPage() {
         // Set cus_phone for SSL Commerz - this is required by the payment gateway
         // Use the already validated phoneNumber
         orderData.cus_phone = phoneNumber;
-        
+
         // Add EMI information if EMI is selected
         if (isEmi && emiMonths) {
           orderData.is_emi = true;
@@ -268,7 +268,7 @@ export default function CheckoutPage() {
             is_emi: orderIsEmi,
             emi_months: orderEmiMonths,
           });
-          
+
           // Store order details before redirecting for callback handling
           sessionStorage.setItem('pendingOrder', JSON.stringify({
             order_number: orderNumber,
@@ -278,14 +278,14 @@ export default function CheckoutPage() {
             emi_months: orderEmiMonths,
             emi_amount: orderEmiAmount,
           }));
-          
+
           console.log('💾 Order details stored in sessionStorage:', {
             order_number: orderNumber,
             status: orderStatus,
             is_emi: orderIsEmi,
             emi_months: orderEmiMonths,
           });
-          
+
           // Redirect to payment gateway
           // IMPORTANT: This redirect is what takes the user to SSL Commerz
           // After payment, SSL Commerz will redirect back to your callback URL
@@ -317,14 +317,14 @@ export default function CheckoutPage() {
         isEmi,
         emiMonths,
       });
-      
+
       // Handle error response
       if (error.data) {
         // Check for specific EMI-related errors
         if (error.data.errors) {
           const errorMessages = Object.values(error.data.errors).flat() as string[];
-          const emiError = errorMessages.find(msg => 
-            msg.toLowerCase().includes('emi') || 
+          const emiError = errorMessages.find(msg =>
+            msg.toLowerCase().includes('emi') ||
             msg.toLowerCase().includes('installment')
           );
           if (emiError) {
@@ -379,9 +379,8 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <div className="flex items-center justify-between">
                 <div className={`flex items-center gap-3 ${step === 'shipping' ? 'text-blue-600' : 'text-green-600'}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                    step === 'shipping' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'shipping' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
+                    }`}>
                     {step === 'shipping' ? '1' : '✓'}
                   </div>
                   <div>
@@ -391,9 +390,8 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex-1 h-0.5 bg-gray-200 mx-4"></div>
                 <div className={`flex items-center gap-3 ${step === 'payment' ? 'text-blue-600' : 'text-gray-400'}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                    step === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                    }`}>
                     2
                   </div>
                   <div>
@@ -538,11 +536,10 @@ export default function CheckoutPage() {
 
                 <div className="space-y-3 mb-6">
                   {/* Cash on Delivery */}
-                  <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'cod' 
-                      ? 'border-blue-600 bg-blue-50 shadow-md' 
+                  <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'cod'
+                      ? 'border-blue-600 bg-blue-50 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}>
+                    }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -575,11 +572,10 @@ export default function CheckoutPage() {
                   </label>
 
                   {/* SSL Commerz (Mobile Banking, Cards, Bank Online) */}
-                  <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'ssl_commerz' 
-                      ? 'border-blue-600 bg-blue-50 shadow-md' 
+                  <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'ssl_commerz'
+                      ? 'border-blue-600 bg-blue-50 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}>
+                    }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -654,7 +650,7 @@ export default function CheckoutPage() {
                           </select>
                           <p className="text-xs text-gray-500 mt-1.5">Select your preferred EMI tenure</p>
                         </div>
-                        
+
                         {emiAmount > 0 && (
                           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
                             <div className="flex items-center gap-2 mb-3">
@@ -784,14 +780,14 @@ export default function CheckoutPage() {
                   <span className="text-gray-600">Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} {cartItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'})</span>
                   <span className="font-semibold text-gray-900">৳ {subtotal.toLocaleString()}</span>
                 </div>
-                
+
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount</span>
                     <span className="font-semibold text-green-600">-৳ {discount.toLocaleString()}</span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping Charge</span>
                   <span className="font-semibold text-gray-900">

@@ -70,9 +70,12 @@ export interface ServiceRequestDetailResponse {
 export interface CreateServiceRequestRequest {
   order_number: string;
   order_item_id?: number;
-  type: 'full_order' | 'single_item';
+  type: 'warranty' | 'repair' | 'other';
   reason: 'defective' | 'wrong_item' | 'not_as_described' | 'damaged' | 'changed_mind' | 'other';
   description: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
   images?: File[];
   refund_method: 'original' | 'store_credit' | 'bank_transfer';
   refund_account_info?: string;
@@ -116,20 +119,25 @@ export const serviceRequestsApi = apiSlice.injectEndpoints({
         // Handle file uploads using FormData
         const formData = new FormData();
         formData.append('order_number', requestData.order_number);
-        
-        if (requestData.order_item_id !== undefined) {
+
+        // WORKAROUND: Backend requires order_item_id even for full_order type
+        // Always send it when available (frontend now passes first item ID for full_order)
+        if (requestData.order_item_id !== undefined && requestData.order_item_id !== null) {
           formData.append('order_item_id', requestData.order_item_id.toString());
         }
-        
+
         formData.append('type', requestData.type);
         formData.append('reason', requestData.reason);
         formData.append('description', requestData.description);
+        formData.append('customer_name', requestData.customer_name);
+        formData.append('customer_phone', requestData.customer_phone);
+        formData.append('customer_address', requestData.customer_address);
         formData.append('refund_method', requestData.refund_method);
-        
+
         if (requestData.refund_account_info) {
           formData.append('refund_account_info', requestData.refund_account_info);
         }
-        
+
         // Append images if provided
         if (requestData.images && requestData.images.length > 0) {
           requestData.images.forEach((image) => {

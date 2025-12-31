@@ -48,7 +48,7 @@ export interface Review {
     rating: string | number; // API returns as string, but we'll convert to number
     title?: string | null;
     comment?: string | null;
-    images?: ReviewImage[];
+    images?: string[]; // API returns array of image URLs (strings), not objects
     is_verified_purchase?: boolean;
     is_approved?: boolean;
     is_featured?: boolean;

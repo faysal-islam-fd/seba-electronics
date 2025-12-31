@@ -329,7 +329,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
           <div>
             Sold by:{' '}
             <Link
-              href={`/vendor/${encodeURIComponent((product.soldBy || 'Official Store').toLowerCase().replace(/\s+/g, '-'))}`}
+              href={product.vendor?.id ? `/vendor/seller-${product.vendor.id}` : '/vendor/official'}
               className="font-semibold text-blue-600 hover:underline"
             >
               {product.soldBy || 'Official Store'}

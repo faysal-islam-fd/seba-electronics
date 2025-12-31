@@ -7,9 +7,9 @@ import ProductDetailContent from '@/app/components/ProductDetailContent';
 import { getProductDetails, getProductReviews, getBrands } from '@/app/lib/api';
 
 // Generate Metadata for SEO
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const data = await getProductDetails(id);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const data = await getProductDetails(slug);
 
   if (!data || !data.success) {
     return {
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description,
       images: images.length > 0 ? images : ['/images/logo.png'],
       type: 'website',
-      url: `https://pickaboo.com/product/${id}`, // Adjust base URL as needed
+      url: `https://pickaboo.com/product/${slug}`, // Adjust base URL as needed
       siteName: 'Pickaboo',
       locale: 'en_BD',
     },
@@ -58,13 +58,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 // Server Component with SSR
-export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
 
-  // Fetch product data, reviews, and brands on the server
-  const [data, reviewsData, brandsData] = await Promise.all([
-    getProductDetails(id),
-    getProductReviews(id),
+  // 1. Fetch product details first
+  const data = await getProductDetails(slug);
+
+  if (!data || !data.success) {
+    notFound();
+  }
+
+  // 2. Fetch reviews (using ID) and brands
+  const [reviewsData, brandsData] = await Promise.all([
+    getProductReviews(data.data.id),
     getBrands(),
   ]);
 
@@ -145,6 +151,12 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       : 'Standard Warranty',
     shipping: 'Free Delivery in Dhaka (3-5 Days)',
     soldBy: apiProduct.vendor?.name || 'Official Store',
+    // Pass vendor object for proper routing
+    vendor: apiProduct.vendor ? {
+      id: apiProduct.vendor.id,
+      name: apiProduct.vendor.name,
+      slug: apiProduct.vendor.slug,
+    } : null, // null means official store (no vendor_id needed)
     emi: apiProduct.is_support_emi ? 'EMI Available' : 'Not Available',
     specialPrice: `৳${apiProduct.final_price.toLocaleString()}`,
     badgeText: apiProduct.is_featured ? 'Featured' : undefined,

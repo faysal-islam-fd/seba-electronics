@@ -5,19 +5,19 @@ import Link from 'next/link';
 import { useGetOrderDetailsQuery, useCancelOrderMutation } from '@/app/store/api/ordersApi';
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
-import { 
-  FiLoader, 
-  FiArrowLeft, 
-  FiPackage, 
-  FiMapPin, 
-  FiPhone, 
-  FiMail, 
-  FiXCircle, 
-  FiTruck, 
-  FiCheckCircle, 
-  FiClock, 
-  FiDollarSign, 
-  FiCreditCard 
+import {
+  FiLoader,
+  FiArrowLeft,
+  FiPackage,
+  FiMapPin,
+  FiPhone,
+  FiMail,
+  FiXCircle,
+  FiTruck,
+  FiCheckCircle,
+  FiClock,
+  FiDollarSign,
+  FiCreditCard
 } from 'react-icons/fi';
 import Image from 'next/image';
 import { useState, useMemo } from 'react';
@@ -27,27 +27,27 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
-  
+
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
-  
+
   // Get order number from params
   const rawOrderNumber = params?.orderNumber as string;
   const orderNumber = rawOrderNumber ? decodeURIComponent(rawOrderNumber) : '';
-  
+
   // Fetch order details
   const { data, isLoading, error, refetch } = useGetOrderDetailsQuery(orderNumber || '', {
     skip: !orderNumber || orderNumber === '',
   });
-  
+
   const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
 
   // Process order data - extract shipping_address object to individual fields
   const order = useMemo(() => {
     if (!data?.data) return null;
-    
+
     const rawOrder = JSON.parse(JSON.stringify(data.data)); // Deep clone to avoid mutations
-    
+
     // Extract shipping_address object if it exists
     if (rawOrder.shipping_address && typeof rawOrder.shipping_address === 'object' && !Array.isArray(rawOrder.shipping_address)) {
       const shipping = rawOrder.shipping_address;
@@ -65,7 +65,7 @@ export default function OrderDetailPage() {
         shipping_country: String(shipping.country || ''),
       };
     }
-    
+
     // Return order as-is if shipping_address is already extracted or doesn't exist
     return rawOrder;
   }, [data?.data]);
@@ -75,13 +75,13 @@ export default function OrderDetailPage() {
   const safeOrder = useMemo(() => {
     if (!order) return null;
     const orderAny = order as any;
-    
+
     // Double-check: if shipping_address still exists as object, remove it completely
     if (orderAny.shipping_address && typeof orderAny.shipping_address === 'object' && !Array.isArray(orderAny.shipping_address)) {
       const { shipping_address, ...rest } = orderAny;
       return rest;
     }
-    
+
     // Ensure all shipping fields are strings, not objects
     const cleaned: any = { ...orderAny };
     ['shipping_name', 'shipping_phone', 'shipping_email', 'shipping_address', 'shipping_city', 'shipping_state', 'shipping_zip', 'shipping_country'].forEach(key => {
@@ -91,7 +91,7 @@ export default function OrderDetailPage() {
         cleaned[key] = String(cleaned[key] || '');
       }
     });
-    
+
     return cleaned;
   }, [order]);
 
@@ -177,24 +177,24 @@ export default function OrderDetailPage() {
       showError('Please provide a reason for cancellation');
       return;
     }
-    
+
     try {
-      const result = await cancelOrder({ 
-        orderNumber: orderNumber, 
-        reason: cancelReason.trim() 
+      const result = await cancelOrder({
+        orderNumber: orderNumber,
+        reason: cancelReason.trim()
       }).unwrap();
-      
+
       showSuccess(result.message || 'Order cancelled successfully');
       setShowCancelModal(false);
       setCancelReason('');
-      
+
       // Refetch order details to show updated status
       await refetch();
     } catch (error: any) {
       console.error('Failed to cancel order:', error);
-      const errorMessage = error?.data?.message || 
-                          error?.message || 
-                          'Failed to cancel order. Please try again.';
+      const errorMessage = error?.data?.message ||
+        error?.message ||
+        'Failed to cancel order. Please try again.';
       showError(errorMessage);
     }
   };
@@ -244,7 +244,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const canCancel = safeOrder?.status && 
+  const canCancel = safeOrder?.status &&
     !['cancelled', 'delivered', 'shipped'].includes(safeOrder.status.toLowerCase());
 
   const statusColors = getStatusColor(safeOrder.status);
@@ -308,11 +308,10 @@ export default function OrderDetailPage() {
                     {getStatusDisplay(safeOrder.status)}
                   </span>
                   {safeOrder.payment_status && (
-                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border ${
-                      safeOrder.payment_status === 'paid' ? 'bg-green-100 text-green-700 border-green-200' :
-                      safeOrder.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                      'bg-red-100 text-red-700 border-red-200'
-                    }`}>
+                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border ${safeOrder.payment_status === 'paid' ? 'bg-green-100 text-green-700 border-green-200' :
+                        safeOrder.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                          'bg-red-100 text-red-700 border-red-200'
+                      }`}>
                       Payment: {String(safeOrder.payment_status).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                     </span>
                   )}
@@ -331,7 +330,7 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="space-y-4">
                   {safeOrder.status_history.map((history: any, index: number) => (
-                    <div 
+                    <div
                       key={index}
                       className="flex gap-4 p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-gray-200"
                     >
@@ -365,10 +364,10 @@ export default function OrderDetailPage() {
                     const quantity = Number(item.quantity) || 0;
                     const price = Number(item.price) || 0;
                     const subtotal = Number(item.subtotal) || (price * quantity);
-                    
+
                     return (
-                      <div 
-                        key={item.product_id || index} 
+                      <div
+                        key={item.product_id || index}
                         className="flex gap-5 p-5 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-gray-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden flex-shrink-0 relative border-2 border-gray-300 shadow-inner">

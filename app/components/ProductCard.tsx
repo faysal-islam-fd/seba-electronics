@@ -47,28 +47,28 @@ export default function ProductCard({
   const [isAdding, setIsAdding] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-  
+
   // Convert id to number for API calls
   const productId = typeof id === 'string' ? parseInt(id, 10) : id;
-  
+
   // Check if product is in wishlist
   const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
   const [addToWishlist] = useAddToWishlistMutation();
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
-  
+
   // Fetch product reviews to get real rating
   const { data: reviewsData, isLoading: isLoadingReviews } = useGetProductReviewsQuery(
     { productId, per_page: 1 },
     { skip: !productId }
   );
-  
+
   // Extract rating and review count from reviews data
   const ratingSummary = reviewsData?.summary || reviewsData?.rating_summary;
-  
+
   // Get rating from API if available
   let apiRating: number | null = null;
   let apiReviewCount: number | null = null;
-  
+
   if (ratingSummary) {
     if ('average_rating' in ratingSummary && ratingSummary.average_rating !== undefined) {
       apiRating = parseFloat(String(ratingSummary.average_rating));
@@ -79,31 +79,31 @@ export default function ProductCard({
       apiReviewCount = ratingSummary.total_reviews;
     }
   }
-  
+
   // Use prop rating as default, only override with API data if API has actual rating data (> 0)
   // This ensures immediate display with prop, then updates with real data from API when available
-  const displayRating = (!isLoadingReviews && apiRating !== null && apiRating > 0) 
-    ? apiRating 
+  const displayRating = (!isLoadingReviews && apiRating !== null && apiRating > 0)
+    ? apiRating
     : (rating !== undefined && rating !== null ? rating : 0);
   const displayReviewCount = (!isLoadingReviews && apiReviewCount !== null && apiReviewCount > 0)
     ? apiReviewCount
     : (reviewCount !== undefined && reviewCount !== null ? reviewCount : 0);
-  
+
   // Show rating if we have a rating > 0 (from prop or API) or if we have review count > 0
   const shouldShowRating = displayRating > 0 || displayReviewCount > 0;
-  
+
   const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!inStock) return;
-    
+
     setIsAdding(true);
     // Extract product_id - convert string id to number if needed
     const productId = typeof id === 'string' ? parseInt(id, 10) : id;
-    
+
     addToCart({
       id,
       name,
@@ -115,7 +115,7 @@ export default function ProductCard({
       quantity: 1,
       product_id: productId,
     });
-    
+
     setTimeout(() => {
       setIsAdding(false);
     }, 500);
@@ -124,13 +124,13 @@ export default function ProductCard({
   const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!isLoggedIn) {
       // Redirect to login if not logged in
       router.push('/login');
       return;
     }
-    
+
     try {
       if (isWishlisted) {
         await removeFromWishlist(productId).unwrap();
@@ -179,7 +179,7 @@ export default function ProductCard({
   };
 
   return (
-    <div 
+    <div
       className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 relative flex flex-col h-full group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -202,11 +202,10 @@ export default function ProductCard({
       <div className={`absolute top-1.5 sm:top-3 right-1.5 sm:right-3 z-20 flex flex-col gap-1 sm:gap-2 transition-all duration-300 ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'}`}>
         <button
           onClick={handleWishlist}
-          className={`p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
-            isWishlisted 
-              ? 'bg-red-500 text-white' 
-              : 'bg-white/90 text-gray-700 hover:bg-red-500 hover:text-white'
-          }`}
+          className={`p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${isWishlisted
+            ? 'bg-red-500 text-white'
+            : 'bg-white/90 text-gray-700 hover:bg-red-500 hover:text-white'
+            }`}
           aria-label="Add to wishlist"
         >
           <FiHeart size={14} className="sm:w-4 sm:h-4" />
@@ -228,14 +227,13 @@ export default function ProductCard({
               src={image}
               alt={name}
               fill
-              className={`object-contain transition-transform duration-500 ${
-                isHovered ? 'scale-110' : 'scale-100'
-              }`}
+              className={`object-contain transition-transform duration-500 ${isHovered ? 'scale-110' : 'scale-100'
+                }`}
               unoptimized
             />
           </div>
         </Link>
-        
+
         {/* Stock overlay */}
         {!inStock && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
@@ -261,11 +259,11 @@ export default function ProductCard({
               {renderStars()}
             </div>
             <span className="text-[10px] sm:text-xs text-gray-500">
-              {displayReviewCount > 0 
-                ? `(${displayReviewCount})` 
+              {displayReviewCount > 0
+                ? `(${displayReviewCount})`
                 : displayRating > 0
-                ? `(${displayRating.toFixed(1)})`
-                : ''}
+                  ? `(${displayRating.toFixed(1)})`
+                  : ''}
             </span>
           </div>
         )}
@@ -307,13 +305,12 @@ export default function ProductCard({
           <button
             onClick={handleAddToCart}
             disabled={!inStock || isAdding}
-            className={`w-full py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
-              isAdding
-                ? 'bg-blue-400 text-white cursor-wait'
-                : inStock
+            className={`w-full py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${isAdding
+              ? 'bg-blue-400 text-white cursor-wait'
+              : inStock
                 ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transform hover:scale-[1.02]'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
           >
             <FiShoppingCart size={16} />
             {isAdding ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}
@@ -326,13 +323,12 @@ export default function ProductCard({
         <button
           onClick={handleAddToCart}
           disabled={!inStock || isAdding}
-          className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-200 ${
-            isAdding
-              ? 'bg-blue-400 text-white cursor-wait'
-              : inStock
+          className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-200 ${isAdding
+            ? 'bg-blue-400 text-white cursor-wait'
+            : inStock
               ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+            }`}
         >
           <FiShoppingCart size={14} className="sm:w-4 sm:h-4" />
           {isAdding ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}

@@ -2,288 +2,107 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
+import { getVendorProducts, VendorType } from '@/app/lib/api';
+import { isProductInStock } from '@/app/utils/stockUtils';
 
-// Mock vendor data - in real app, this would come from API/database
-type ProductType = {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  originalPrice?: number;
-  discount?: number;
-  badge?: string;
-  rating?: number;
-  reviewCount?: number;
-  inStock?: boolean;
-  soldBy?: string;
-};
-
-const vendorData: Record<string, {
+// Vendor slug mappings
+// "official" slug -> vendor_type=official (no vendor_id needed)
+// "seller-{id}" slug -> vendor_type=seller&vendor_id={id}
+interface VendorConfig {
+  type: VendorType;
+  vendorId?: number;
   name: string;
   description: string;
-  rating: number;
-  totalProducts: number;
-  products: ProductType[];
-}> = {
-  'philips-official': {
-    name: 'Philips Official',
-    description: 'Official Philips store with authentic products and warranty',
-    rating: 4.9,
-    totalProducts: 16,
-    products: [
-      {
-        id: '1',
-        name: 'Philips 4.2 Liters 1700W Air Fryer (NA221/00)',
-        price: 13990,
-        originalPrice: 24500,
-        image: 'https://images.unsplash.com/photo-1608039829570-587539b5532e?w=400&h=400&fit=crop',
-        discount: 35,
-        badge: 'Official Warranty',
-        rating: 4.5,
-        reviewCount: 1,
-        inStock: true,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '2',
-        name: 'Philips 650W Hand Blender (HL1600/00)',
-        price: 6690,
-        originalPrice: 6990,
-        image: 'https://images.unsplash.com/photo-1603808033192-082d6919d42f?w=400&h=400&fit=crop',
-        discount: 4,
-        badge: 'Official Warranty',
-        rating: 4.3,
-        inStock: true,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '3',
-        name: 'Philips 250W Hand Blender (HL1655/02)',
-        price: 4290,
-        originalPrice: 6900,
-        image: 'https://images.unsplash.com/photo-1603808033192-082d6919d42f?w=400&h=400&fit=crop',
-        discount: 27,
-        badge: 'Official Warranty',
-        rating: 4.4,
-        inStock: true,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '4',
-        name: 'Philips XL Sized Sandwich Maker (HD2288/00)',
-        price: 6690,
-        originalPrice: 9200,
-        image: 'https://images.unsplash.com/photo-1504753793650-d4a2b783c15e?w=400&h=400&fit=crop',
-        discount: 27,
-        badge: 'Official Warranty',
-        rating: 4.2,
-        inStock: true,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '5',
-        name: 'Philips 250W Hand Blender (HR1351/90)',
-        price: 4490,
-        originalPrice: 5890,
-        image: 'https://images.unsplash.com/photo-1603808033192-082d6919d42f?w=400&h=400&fit=crop',
-        discount: 24,
-        badge: 'Official Warranty',
-        rating: 4.3,
-        inStock: true,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '6',
-        name: 'Philips 1000W Compact Hair Dryer (HP8100/46)',
-        price: 1690,
-        originalPrice: 2990,
-        image: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=400&h=400&fit=crop',
-        discount: 43,
-        badge: '2 Years Official Warranty',
-        rating: 4.6,
-        reviewCount: 19,
-        inStock: true,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '7',
-        name: 'Philips 1000W 3 Jars Mixer Grinder with PowerPro Motor (HL7713/01)',
-        price: 8990,
-        originalPrice: 12200,
-        image: 'https://images.unsplash.com/photo-1464120458734-6010a2856b14?w=400&h=400&fit=crop',
-        discount: 26,
-        badge: 'Official Warranty',
-        rating: 4.5,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '8',
-        name: 'Philips 1000W Electric Drip Coffee Maker (HD7430/90)',
-        price: 4990,
-        originalPrice: 6900,
-        image: 'https://images.unsplash.com/photo-1504753793650-d4a2b783c15e?w=400&h=400&fit=crop',
-        discount: 27,
-        badge: 'Official Warranty',
-        rating: 4.4,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '9',
-        name: 'Philips 750W 3 Jars Mixer Grinder (HL7757)-Blue',
-        price: 5990,
-        originalPrice: 10450,
-        image: 'https://images.unsplash.com/photo-1464120458734-6010a2856b14?w=400&h=400&fit=crop',
-        discount: 43,
-        badge: 'Official Warranty',
-        rating: 4.5,
-        reviewCount: 5,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '10',
-        name: 'Philips 1000W 3 Jars Mixer Grinder with PowerPro Motor (HL7713)',
-        price: 8990,
-        originalPrice: 12200,
-        image: 'https://images.unsplash.com/photo-1464120458734-6010a2856b14?w=400&h=400&fit=crop',
-        discount: 26,
-        badge: 'Official Warranty',
-        rating: 4.5,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '11',
-        name: 'Philips 1000W 4 Jar Juicer Mixer Grinder (HL7704/00)',
-        price: 10990,
-        originalPrice: 15300,
-        image: 'https://images.unsplash.com/photo-1603808033192-082d6919d42f?w=400&h=400&fit=crop',
-        discount: 28,
-        badge: 'Official Warranty',
-        rating: 4.4,
-        reviewCount: 4,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '12',
-        name: 'Philips 1000W Compact Hair Dryer (HP8100/60)',
-        price: 1790,
-        originalPrice: 2990,
-        image: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=400&h=400&fit=crop',
-        discount: 41,
-        badge: '2 Years Official Warranty',
-        rating: 4.6,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '13',
-        name: 'Philips 4.2L Air Fryer (NA120/00)',
-        price: 12990,
-        originalPrice: 21400,
-        image: 'https://images.unsplash.com/photo-1608039829570-587539b5532e?w=400&h=400&fit=crop',
-        discount: 39,
-        badge: 'Official Warranty',
-        rating: 4.7,
-        reviewCount: 19,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '14',
-        name: 'Philips 500W Juicer (HL7566/00)',
-        price: 4990,
-        originalPrice: 5990,
-        image: 'https://images.unsplash.com/photo-1603808033192-082d6919d42f?w=400&h=400&fit=crop',
-        discount: 17,
-        badge: 'Official Warranty',
-        rating: 4.3,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '15',
-        name: 'Philips 1200W Handheld Garment Steamer (GC360/30)',
-        price: 3990,
-        originalPrice: 5290,
-        image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=400&h=400&fit=crop',
-        discount: 24,
-        badge: 'Official Warranty',
-        rating: 4.4,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-      {
-        id: '16',
-        name: 'Philips 2400W Easy-Speed Plus Steam Iron (GC2147/30)',
-        price: 3490,
-        originalPrice: 4890,
-        image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=400&h=400&fit=crop',
-        discount: 28,
-        badge: 'Official Warranty',
-        rating: 4.5,
-        reviewCount: 1,
-        inStock: false,
-        soldBy: 'Philips Official',
-      },
-    ],
-  },
-  'official-store': {
-    name: 'Official Store',
-    description: 'Authentic products with official warranty',
-    rating: 4.8,
-    totalProducts: 8,
-    products: [
-      {
-        id: 'store-1',
-        name: 'Samsung Galaxy S24 Ultra 5G',
-        price: 125000,
-        originalPrice: 135000,
-        image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop',
-        discount: 7,
-        rating: 4.9,
-        soldBy: 'Official Store',
-      },
-      {
-        id: 'store-2',
-        name: 'Apple iPhone 15 Pro Max',
-        price: 145000,
-        originalPrice: 155000,
-        image: 'https://images.unsplash.com/photo-1592286927505-53369c45188e?w=400&h=400&fit=crop',
-        discount: 6,
-        rating: 4.9,
-        soldBy: 'Official Store',
-      },
-    ],
-  },
-};
+}
 
-export default async function VendorPage({ 
+// Parse vendor slug to get vendor config
+function parseVendorSlug(slug: string): VendorConfig | null {
+  // Check if it's the official store
+  if (slug === 'official' || slug === 'official-store' || slug === 'seba-electronics') {
+    return {
+      type: 'official',
+      name: 'Seba Electronics Official',
+      description: 'Official Seba Electronics store with authentic products and warranty',
+    };
+  }
+
+  // Check if it's a seller (format: seller-{id} or vendor-{id})
+  const sellerMatch = slug.match(/^(?:seller|vendor)-(\d+)$/);
+  if (sellerMatch) {
+    const vendorId = parseInt(sellerMatch[1], 10);
+    return {
+      type: 'seller',
+      vendorId,
+      name: `Seller Store #${vendorId}`,
+      description: `Products from seller #${vendorId}`,
+    };
+  }
+
+  // Legacy support for old vendor slugs like 'philips-official'
+  // These will show official products by default
+  if (slug.endsWith('-official')) {
+    const brandName = slug.replace('-official', '').split('-').map(
+      word => word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+    return {
+      type: 'official',
+      name: `${brandName} Official`,
+      description: `Official ${brandName} store with authentic products and warranty`,
+    };
+  }
+
+  return null;
+}
+
+export default async function VendorPage({
   params,
-  searchParams 
-}: { 
+  searchParams
+}: {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
-  const vendor = vendorData[slug];
 
-  if (!vendor) {
+  // Parse the vendor slug
+  const vendorConfig = parseVendorSlug(slug);
+
+  if (!vendorConfig) {
     notFound();
   }
 
-  // Pagination logic
+  // Pagination setup
   const currentPage = resolvedSearchParams?.page ? parseInt(resolvedSearchParams.page) : 1;
-  const productsPerPage = 12; // Show 12 products per page (3 rows of 4)
-  const totalPages = Math.ceil(vendor.products.length / productsPerPage);
+  const productsPerPage = 12;
+
+  // Fetch products from API
+  const productsData = await getVendorProducts({
+    vendor_type: vendorConfig.type,
+    vendor_id: vendorConfig.vendorId,
+    page: currentPage,
+    per_page: productsPerPage,
+  });
+
+  // Transform products for ProductCard component
+  const products = productsData.success && productsData.data.length > 0
+    ? productsData.data.map(product => ({
+      id: product.id.toString(),
+      name: product.title,
+      price: product.final_price,
+      originalPrice: product.price !== product.final_price ? product.price : undefined,
+      image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
+      discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
+      badge: vendorConfig.type === 'official' ? 'Official Warranty' : undefined,
+      rating: 4.5,
+      inStock: isProductInStock(product.stock, product.is_out_of_stock),
+      soldBy: vendorConfig.name,
+    }))
+    : [];
+
+  // Calculate pagination
+  const totalPages = productsData.meta?.last_page || 1;
   const validPage = Math.max(1, Math.min(currentPage, totalPages));
-  const startIndex = (validPage - 1) * productsPerPage;
-  const endIndex = startIndex + productsPerPage;
-  const displayedProducts = vendor.products.slice(startIndex, endIndex);
+  const totalProducts = productsData.meta?.total || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -291,53 +110,108 @@ export default async function VendorPage({
         {/* Breadcrumb */}
         <Breadcrumb
           items={[
-            { label: vendor.name },
+            { label: vendorConfig.name },
           ]}
         />
 
+        {/* Vendor Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mt-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{vendorConfig.name}</h1>
+              <p className="text-gray-600 mt-1">{vendorConfig.description}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{totalProducts}</div>
+                <div className="text-sm text-gray-500">Products</div>
+              </div>
+              {vendorConfig.type === 'official' && (
+                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg">
+                  <span className="font-medium">✓ Verified Official Store</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Products Grid */}
         <div className="mt-6">
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {displayedProducts.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
-          </div>
+          {products.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.map((product) => (
+                  <ProductCard key={product.id} {...product} />
+                ))}
+              </div>
 
-          {/* Pagination */}
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <Link
-              href={`/vendor/${slug}${validPage > 1 ? `?page=${validPage - 1}` : ''}`}
-              className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${
-                validPage === 1 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-              }`}
-            >
-              &lt;
-            </Link>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-8 flex items-center justify-center gap-2">
+                  <Link
+                    href={`/vendor/${slug}${validPage > 1 ? `?page=${validPage - 1}` : ''}`}
+                    className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${validPage === 1 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                      }`}
+                  >
+                    &lt;
+                  </Link>
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    // Show pages around current page
+                    let pageNum: number;
+                    if (totalPages <= 7) {
+                      pageNum = i + 1;
+                    } else if (validPage <= 4) {
+                      pageNum = i + 1;
+                    } else if (validPage >= totalPages - 3) {
+                      pageNum = totalPages - 6 + i;
+                    } else {
+                      pageNum = validPage - 3 + i;
+                    }
+                    return pageNum;
+                  }).map((page) => (
+                    <Link
+                      key={page}
+                      href={`/vendor/${slug}${page > 1 ? `?page=${page}` : ''}`}
+                      className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors ${page === validPage
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      {page}
+                    </Link>
+                  ))}
+                  <Link
+                    href={`/vendor/${slug}?page=${validPage + 1}`}
+                    className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${validPage === totalPages ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                      }`}
+                  >
+                    &gt;
+                  </Link>
+                </div>
+              )}
+
+              {/* Results info */}
+              <div className="mt-4 text-center text-sm text-gray-500">
+                Showing page {validPage} of {totalPages} ({totalProducts} products)
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">📦</div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">No Products Found</h2>
+              <p className="text-gray-600 mb-6">
+                This vendor doesn't have any products available at the moment.
+              </p>
               <Link
-                key={page}
-                href={`/vendor/${slug}${page > 1 ? `?page=${page}` : ''}`}
-                className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors ${
-                  page === validPage
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
+                href="/"
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {page}
+                Browse All Products
               </Link>
-            ))}
-            <Link
-              href={`/vendor/${slug}?page=${validPage + 1}`}
-              className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors ${
-                validPage === totalPages ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-              }`}
-            >
-              &gt;
-            </Link>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import ProductCard from '@/app/components/ProductCard';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { ProductsResponse, BrandsResponse, Category } from '@/app/lib/api';
@@ -68,7 +69,7 @@ export default function CategoryPageClient({
 }: CategoryPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
     initialMinPrice || 0,
@@ -77,7 +78,7 @@ export default function CategoryPageClient({
   const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | undefined>(initialSubcategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
@@ -96,7 +97,7 @@ export default function CategoryPageClient({
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
         params.delete(key);
@@ -104,7 +105,7 @@ export default function CategoryPageClient({
         params.set(key, String(value));
       }
     });
-    
+
     router.push(`/category/${currentCategory.slug}?${params.toString()}`);
   };
 
@@ -150,7 +151,7 @@ export default function CategoryPageClient({
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
         <div className="mb-4">
-          <Breadcrumb 
+          <Breadcrumb
             items={[
               ...(parentCategory ? [
                 { label: parentCategory.name, href: `/category/${parentCategory.slug}` }
@@ -163,9 +164,20 @@ export default function CategoryPageClient({
         {/* Category Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-3xl text-white shadow-lg">
-              {currentCategory.name.charAt(0)}
-            </div>
+            {currentCategory.image ? (
+              <div className="w-16 h-16 rounded-xl overflow-hidden shadow-lg relative bg-white border-2 border-gray-100">
+                <Image
+                  src={currentCategory.image}
+                  alt={currentCategory.name}
+                  fill
+                  className="object-contain p-2"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-3xl text-white shadow-lg">
+                {currentCategory.name.charAt(0)}
+              </div>
+            )}
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">{currentCategory.name}</h1>
               <p className="text-xs sm:text-sm text-gray-600 mt-1">
@@ -200,13 +212,27 @@ export default function CategoryPageClient({
                 >
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {subcategories.map((subcat) => (
-                      <label key={subcat.id} className="flex items-center gap-2 cursor-pointer">
+                      <label key={subcat.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedSubcategoryId === subcat.id}
                           onChange={() => handleSubcategoryChange(subcat.id)}
                           className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
                         />
+                        {subcat.image ? (
+                          <div className="w-8 h-8 rounded-lg overflow-hidden relative bg-white border border-gray-200 flex-shrink-0">
+                            <Image
+                              src={subcat.image}
+                              alt={subcat.name}
+                              fill
+                              className="object-contain p-1"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center text-xs text-white font-semibold flex-shrink-0">
+                            {subcat.name.charAt(0)}
+                          </div>
+                        )}
                         <span className="text-sm text-gray-700">{subcat.name}</span>
                       </label>
                     ))}
@@ -322,7 +348,7 @@ export default function CategoryPageClient({
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
                   {products.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -349,7 +375,7 @@ export default function CategoryPageClient({
                     >
                       Previous
                     </button>
-                    
+
                     <div className="flex items-center gap-2">
                       {[...Array(Math.min(5, meta.last_page))].map((_, i) => {
                         const page = i + 1;
@@ -357,11 +383,10 @@ export default function CategoryPageClient({
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                              initialPage === page
-                                ? 'bg-blue-600 text-white'
-                                : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             {page}
                           </button>
@@ -417,13 +442,27 @@ export default function CategoryPageClient({
                 >
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {subcategories.map((subcat) => (
-                      <label key={subcat.id} className="flex items-center gap-2 cursor-pointer">
+                      <label key={subcat.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedSubcategoryId === subcat.id}
                           onChange={() => handleSubcategoryChange(subcat.id)}
                           className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
                         />
+                        {subcat.image ? (
+                          <div className="w-8 h-8 rounded-lg overflow-hidden relative bg-white border border-gray-200 flex-shrink-0">
+                            <Image
+                              src={subcat.image}
+                              alt={subcat.name}
+                              fill
+                              className="object-contain p-1"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center text-xs text-white font-semibold flex-shrink-0">
+                            {subcat.name.charAt(0)}
+                          </div>
+                        )}
                         <span className="text-sm text-gray-700">{subcat.name}</span>
                       </label>
                     ))}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiX, FiStar, FiUpload, FiTrash2 } from 'react-icons/fi';
 import Image from 'next/image';
 
@@ -39,7 +40,14 @@ export default function ReviewForm({
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [mounted, setMounted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Ensure component is mounted on client before rendering portal
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -118,10 +126,10 @@ export default function ReviewForm({
         onClose();
     };
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+    const modalContent = (
+        <div className="fixed mt-10 inset-0 z-50 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
                 {/* Backdrop */}
                 <div
@@ -130,9 +138,9 @@ export default function ReviewForm({
                 />
 
                 {/* Modal */}
-                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all">
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col transform transition-all">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
                         <h2 className="text-xl font-bold text-gray-900">
                             {mode === 'edit' ? 'Edit Your Review' : 'Write a Review'}
                         </h2>
@@ -145,7 +153,7 @@ export default function ReviewForm({
                     </div>
 
                     {/* Content */}
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
                         {/* Product Name */}
                         {productName && (
                             <div className="text-sm text-gray-600">
@@ -171,8 +179,8 @@ export default function ReviewForm({
                                         <FiStar
                                             size={28}
                                             className={`transition-colors ${star <= (hoveredRating || rating)
-                                                    ? 'fill-yellow-400 text-yellow-400'
-                                                    : 'text-gray-300'
+                                                ? 'fill-yellow-400 text-yellow-400'
+                                                : 'text-gray-300'
                                                 }`}
                                         />
                                     </button>
@@ -304,4 +312,6 @@ export default function ReviewForm({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

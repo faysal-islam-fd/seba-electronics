@@ -14,11 +14,13 @@ import {
     FiHeart,
     FiLogOut,
     FiChevronRight,
+    FiPieChart,
 } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 
 const navigationItems = [
     { id: 'account', label: 'Account Information', icon: FiUser, href: '/account' },
+    { id: 'statistics', label: 'Statistics', icon: FiPieChart, href: '/account/statistics' },
     { id: 'orders', label: 'My Orders', icon: FiShoppingBag, href: '/account/orders' },
     { id: 'wishlist', label: 'My Wishlist', icon: FiHeart, href: '/account/wishlist' },
     { id: 'service-requests', label: 'Service Requests', icon: FiShield, href: '/account/service-requests' },

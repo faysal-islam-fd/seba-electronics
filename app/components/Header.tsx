@@ -653,30 +653,39 @@ export default function Header() {
                   const isExpanded = mobileExpandedCategory === item.name;
                   return (
                     <div key={item.id} className="border border-gray-100 rounded-lg">
-                      <button
-                        onClick={() =>
-                          setMobileExpandedCategory(isExpanded ? null : item.name)
-                        }
-                        className="w-full flex items-center justify-between gap-2 sm:gap-3 py-1.5 sm:py-2 px-2.5 sm:px-3 text-left"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="flex items-center justify-between w-full">
+                        <Link
+                          href={`/category/${item.slug}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex-1 flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2.5 sm:px-3 hover:bg-gray-50 transition-colors"
+                        >
                           <span className="text-lg sm:text-xl">{getCategoryIcon(item.name)}</span>
                           <span className="font-medium text-sm sm:text-base text-gray-800">{item.name}</span>
-                        </div>
-                        <FiChevronRight
-                          size={16}
-                          className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''
-                            }`}
-                        />
-                      </button>
+                        </Link>
+                        {item.children && item.children.length > 0 && (
+                          <button
+                            onClick={() =>
+                              setMobileExpandedCategory(isExpanded ? null : item.name)
+                            }
+                            className="p-2 sm:p-2.5 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded-r-lg transition-colors"
+                            aria-label={isExpanded ? "Collapse category" : "Expand category"}
+                          >
+                            <FiChevronRight
+                              size={16}
+                              className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+
                       {isExpanded && item.children && item.children.length > 0 && (
-                        <div className="bg-gray-50 px-3 sm:px-5 py-2 sm:py-3 space-y-1.5 sm:space-y-2">
+                        <div className="bg-gray-50 px-3 sm:px-5 py-2 sm:py-3 space-y-1.5 sm:space-y-2 border-t border-gray-100">
                           {item.children.map((sub) => (
                             <div key={sub.id} className="space-y-1">
                               <Link
-                                href={`/category/${sub.slug}`}
+                                href={`/category/${item.slug}/${sub.slug}`}
                                 onClick={() => setMobileMenuOpen(false)}
-                                className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase block hover:text-blue-600"
+                                className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase block hover:text-blue-600 py-1"
                               >
                                 {sub.name}
                               </Link>
@@ -685,7 +694,7 @@ export default function Header() {
                                   {sub.children.map((subItem) => (
                                     <Link
                                       key={subItem.id}
-                                      href={`/category/${subItem.slug}`}
+                                      href={`/category/${item.slug}/${sub.slug}/${subItem.slug}`}
                                       onClick={() => setMobileMenuOpen(false)}
                                       className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
                                     >

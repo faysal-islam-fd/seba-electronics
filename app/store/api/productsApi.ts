@@ -98,6 +98,9 @@ export interface ProductDetailResponse {
   data: ProductDetail;
 }
 
+// Vendor type for API
+export type VendorType = 'official' | 'seller';
+
 export interface ProductsQueryParams {
   page?: number;
   per_page?: number;
@@ -105,6 +108,7 @@ export interface ProductsQueryParams {
   category_id?: number;
   brand_id?: number;
   vendor_id?: number;
+  vendor_type?: VendorType; // 'official' or 'seller'
   min_price?: number;
   max_price?: number;
   sort?: 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
@@ -137,6 +141,14 @@ export const productsApi = apiSlice.injectEndpoints({
       query: (identifier) => `/products/${identifier}`,
       providesTags: (result, error, id) => [{ type: 'Products', id }],
     }),
+    // Vendor products endpoint - supports both official and seller vendor types
+    getVendorProducts: builder.query<ProductsResponse, ProductsQueryParams & { vendor_type: VendorType; vendor_id?: number }>({
+      query: (params) => ({
+        url: '/products',
+        params,
+      }),
+      providesTags: ['Products'],
+    }),
   }),
 });
 
@@ -145,5 +157,6 @@ export const {
   useGetFeaturedProductsQuery,
   useGetTopSellingProductsQuery,
   useGetProductDetailsQuery,
+  useGetVendorProductsQuery,
 } = productsApi;
 

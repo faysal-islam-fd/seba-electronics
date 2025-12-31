@@ -8,6 +8,7 @@ import { useGetMyReviewsQuery, useDeleteReviewMutation, useUpdateReviewMutation 
 import { useToast } from '@/app/context/ToastContext';
 import { useConfirm } from '@/app/context/ConfirmContext';
 import ReviewForm from '@/app/components/ReviewForm';
+import { normalizeImageUrl } from '@/app/utils/imageUtils';
 
 export default function MyReviewsPage() {
     const { data: reviewsData, isLoading, error, refetch } = useGetMyReviewsQuery();
@@ -87,8 +88,8 @@ export default function MyReviewsPage() {
                         key={star}
                         size={16}
                         className={`${star <= rating
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-gray-300'
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
                             }`}
                     />
                 ))}
@@ -235,13 +236,13 @@ export default function MyReviewsPage() {
                                     {/* Review Images */}
                                     {review.images && review.images.length > 0 && (
                                         <div className="flex gap-2 mt-3">
-                                            {review.images.slice(0, 3).map((img: { id: number; image_path: string }, idx: number) => (
+                                            {review.images.slice(0, 3).map((img: string, idx: number) => (
                                                 <div
-                                                    key={img.id}
+                                                    key={idx}
                                                     className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100"
                                                 >
                                                     <Image
-                                                        src={img.image_path}
+                                                        src={normalizeImageUrl(img)}
                                                         alt={`Review image ${idx + 1}`}
                                                         width={48}
                                                         height={48}

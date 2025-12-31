@@ -14,9 +14,12 @@ export default function NewServiceRequestPage() {
   const { showError, showWarning } = useAlert();
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string | null>(null);
   const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
-  const [type, setType] = useState<'full_order' | 'single_item'>('full_order');
+  const [type, setType] = useState<'warranty' | 'repair' | 'other'>('warranty');
   const [reason, setReason] = useState<'defective' | 'wrong_item' | 'not_as_described' | 'damaged' | 'changed_mind' | 'other'>('defective');
   const [description, setDescription] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [refundMethod, setRefundMethod] = useState<'original' | 'store_credit' | 'bank_transfer'>('original');
   const [refundAccountInfo, setRefundAccountInfo] = useState('');
   const [images, setImages] = useState<File[]>([]);
@@ -80,13 +83,35 @@ export default function NewServiceRequestPage() {
       return;
     }
 
-    if (type === 'single_item' && !selectedOrderItemId) {
-      showWarning('Please select an item for service request', 'Item Required');
+    if (!selectedOrderItemId) {
+      showWarning('Please select a product for service request', 'Item Required');
       return;
     }
 
     if (!description.trim() || description.trim().length < 10) {
       showWarning('Please provide a detailed description (at least 10 characters)', 'Description Required');
+      return;
+    }
+
+    if (!customerName.trim()) {
+      showWarning('Please provide your name', 'Name Required');
+      return;
+    }
+
+    if (!customerPhone.trim()) {
+      showWarning('Please provide your phone number', 'Phone Required');
+      return;
+    }
+
+    // Validate phone format (Bangladesh phone: 11 digits, starts with 01)
+    const phoneRegex = /^01[0-9]{9}$/;
+    if (!phoneRegex.test(customerPhone.trim())) {
+      showWarning('Please provide a valid Bangladesh phone number (11 digits, starting with 01)', 'Invalid Phone');
+      return;
+    }
+
+    if (!customerAddress.trim()) {
+      showWarning('Please provide your address', 'Address Required');
       return;
     }
 
@@ -102,10 +127,13 @@ export default function NewServiceRequestPage() {
     try {
       const requestData = {
         order_number: selectedOrderNumber,
-        order_item_id: (type === 'single_item' && selectedOrderItemId !== null) ? selectedOrderItemId : undefined,
+        order_item_id: selectedOrderItemId,
         type,
         reason,
         description: description.trim(),
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        customer_address: customerAddress.trim(),
         images: images.length > 0 ? images : undefined,
         refund_method: refundMethod,
         refund_account_info: refundMethod === 'bank_transfer' ? refundAccountInfo.trim() : undefined,
@@ -170,32 +198,27 @@ export default function NewServiceRequestPage() {
           {/* Request Type */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Return Type <span className="text-red-500">*</span>
+              Service Type <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-3">
-              {(['full_order', 'single_item'] as const).map((reqType) => (
+            <div className="grid grid-cols-3 gap-3">
+              {(['warranty', 'repair', 'other'] as const).map((reqType) => (
                 <button
                   key={reqType}
                   type="button"
-                  onClick={() => {
-                    setType(reqType);
-                    if (reqType === 'full_order') {
-                      setSelectedOrderItemId(null);
-                    }
-                  }}
+                  onClick={() => setType(reqType)}
                   className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${type === reqType
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                 >
-                  {reqType === 'full_order' ? 'Full Order' : 'Single Item'}
+                  {reqType.charAt(0).toUpperCase() + reqType.slice(1)}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Order Item Selection - Only show if type is single_item */}
-          {selectedOrder && type === 'single_item' && (
+          {/* Order Item Selection - Always show for selecting which product needs service */}
+          {selectedOrder && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Select Product <span className="text-red-500">*</span>
@@ -240,8 +263,8 @@ export default function NewServiceRequestPage() {
                           setSelectedOrderItemId(itemId);
                         }}
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedOrderItemId === itemId
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
                           }`}
                       >
                         <div className="flex gap-4">
@@ -323,6 +346,60 @@ export default function NewServiceRequestPage() {
             {description.trim().length > 0 && description.trim().length < 10 && (
               <p className="text-sm text-red-600 mt-1">Description must be at least 10 characters long</p>
             )}
+          </div>
+
+          {/* Customer Information */}
+          <div className="space-y-4 pt-4 border-t-2 border-gray-200">
+            <h3 className="text-lg font-bold text-gray-900">Customer Information</h3>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Your Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter your full name"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Phone Number <span className="text-red-500">*</span>
+                {customerPhone && (
+                  <span className={`ml-2 text-xs ${/^01[0-9]{9}$/.test(customerPhone.trim()) ? 'text-green-600' : 'text-red-500'}`}>
+                    {/^01[0-9]{9}$/.test(customerPhone.trim()) ? '✓ Valid' : '✗ Invalid format'}
+                  </span>
+                )}
+              </label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="01XXXXXXXXX (11 digits)"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                pattern="^01[0-9]{9}$"
+              />
+              <p className="text-xs text-gray-500 mt-1">Enter Bangladesh phone number (11 digits, starting with 01)</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Address <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                placeholder="Enter your full address (house/flat, road, area, city)"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                rows={3}
+                required
+              />
+            </div>
           </div>
 
           {/* Refund Method */}
@@ -429,20 +506,31 @@ export default function NewServiceRequestPage() {
           )}
 
           {/* Validation Status */}
-          {(!selectedOrderNumber || (type === 'single_item' && !selectedOrderItemId) || description.trim().length < 10 || (refundMethod === 'bank_transfer' && !refundAccountInfo.trim())) && (
-            <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
-              <FiAlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
-              <div className="text-sm text-amber-800">
-                <p className="font-semibold mb-1">Please complete the following:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  {!selectedOrderNumber && <li>Select an order</li>}
-                  {type === 'single_item' && !selectedOrderItemId && <li>Select a product from the order (click on a product card above)</li>}
-                  {description.trim().length < 10 && <li>Provide a detailed description (at least 10 characters)</li>}
-                  {refundMethod === 'bank_transfer' && !refundAccountInfo.trim() && <li>Provide bank account information for bank transfer refund</li>}
-                </ul>
+          {(!selectedOrderNumber ||
+            !selectedOrderItemId ||
+            description.trim().length < 10 ||
+            !customerName.trim() ||
+            !customerPhone.trim() ||
+            !/^01[0-9]{9}$/.test(customerPhone.trim()) ||
+            !customerAddress.trim() ||
+            (refundMethod === 'bank_transfer' && !refundAccountInfo.trim())) && (
+              <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
+                <FiAlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold mb-1">Please complete the following:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {!selectedOrderNumber && <li>Select an order</li>}
+                    {!selectedOrderItemId && <li>Select a product from the order (click on a product card above)</li>}
+                    {description.trim().length < 10 && <li>Provide a detailed description (at least 10 characters)</li>}
+                    {!customerName.trim() && <li>Enter your name</li>}
+                    {!customerPhone.trim() && <li>Enter your phone number</li>}
+                    {customerPhone.trim() && !/^01[0-9]{9}$/.test(customerPhone.trim()) && <li>Enter a valid Bangladesh phone number (11 digits, starting with 01)</li>}
+                    {!customerAddress.trim() && <li>Enter your address</li>}
+                    {refundMethod === 'bank_transfer' && !refundAccountInfo.trim() && <li>Provide bank account information for bank transfer refund</li>}
+                  </ul>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Submit Button */}
           <div className="flex gap-3 pt-4 border-t-2 border-gray-200">
@@ -458,21 +546,33 @@ export default function NewServiceRequestPage() {
                 isLoading ||
                 isSubmitting ||
                 !selectedOrderNumber ||
-                (type === 'single_item' && !selectedOrderItemId) ||
+                !selectedOrderItemId ||
                 description.trim().length < 10 ||
+                !customerName.trim() ||
+                !customerPhone.trim() ||
+                !/^01[0-9]{9}$/.test(customerPhone.trim()) ||
+                !customerAddress.trim() ||
                 (refundMethod === 'bank_transfer' && !refundAccountInfo.trim())
               }
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-bold transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-sm"
               title={
                 !selectedOrderNumber
                   ? 'Please select an order'
-                  : type === 'single_item' && !selectedOrderItemId
+                  : !selectedOrderItemId
                     ? 'Please select a product from the order'
                     : description.trim().length < 10
                       ? 'Please provide a detailed description (at least 10 characters)'
-                      : refundMethod === 'bank_transfer' && !refundAccountInfo.trim()
-                        ? 'Please provide bank account information'
-                        : ''
+                      : !customerName.trim()
+                        ? 'Please enter your name'
+                        : !customerPhone.trim()
+                          ? 'Please enter your phone number'
+                          : !/^01[0-9]{9}$/.test(customerPhone.trim())
+                            ? 'Please enter a valid phone number'
+                            : !customerAddress.trim()
+                              ? 'Please enter your address'
+                              : refundMethod === 'bank_transfer' && !refundAccountInfo.trim()
+                                ? 'Please provide bank account information'
+                                : ''
               }
             >
               {(isLoading || isSubmitting) ? (

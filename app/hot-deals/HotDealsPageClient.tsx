@@ -61,7 +61,7 @@ export default function HotDealsPageClient({
 }: HotDealsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
     initialMinPrice || 0,
@@ -69,7 +69,7 @@ export default function HotDealsPageClient({
   ]);
   const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
@@ -81,7 +81,7 @@ export default function HotDealsPageClient({
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
         params.delete(key);
@@ -89,7 +89,7 @@ export default function HotDealsPageClient({
         params.set(key, String(value));
       }
     });
-    
+
     router.push(`/hot-deals?${params.toString()}`);
   };
 
@@ -128,7 +128,7 @@ export default function HotDealsPageClient({
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
         <div className="mb-4">
-          <Breadcrumb 
+          <Breadcrumb
             items={[
               { label: 'Hot Deals', href: '/hot-deals' },
             ]}
@@ -298,7 +298,7 @@ export default function HotDealsPageClient({
                     >
                       Previous
                     </button>
-                    
+
                     <div className="flex items-center gap-2">
                       {[...Array(Math.min(5, meta.last_page))].map((_, i) => {
                         const page = i + 1;
@@ -306,11 +306,10 @@ export default function HotDealsPageClient({
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                              initialPage === page
+                            className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
                                 ? 'bg-orange-500 text-white'
                                 : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
+                              }`}
                           >
                             {page}
                           </button>

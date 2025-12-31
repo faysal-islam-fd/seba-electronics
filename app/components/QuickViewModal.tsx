@@ -40,15 +40,15 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
   const { showSuccess, showError } = useToast();
   const { showWarning, showError: showAlertError } = useAlert();
   const router = useRouter();
-  
+
   // Convert id to number for API calls
   const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-  
+
   // Check if product is in wishlist
   const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn || !isOpen });
   const [addToWishlist] = useAddToWishlistMutation();
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
-  
+
   const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   // Fetch full product details when modal opens
@@ -65,14 +65,14 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
   // Extract all unique variations from attributes (for variable products)
   const variations = useMemo(() => {
     if (!isVariableProduct || !fullProduct?.attributes) return [];
-    
+
     const variationsMap: Record<string, Set<string>> = {};
-    
+
     fullProduct.attributes.forEach((attr: any) => {
       attr.values?.forEach((val: any) => {
         const variationName = val.variation?.name;
         const variationValue = val.variation_value?.value;
-        
+
         if (variationName && variationValue) {
           if (!variationsMap[variationName]) {
             variationsMap[variationName] = new Set();
@@ -81,7 +81,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
         }
       });
     });
-    
+
     return Object.entries(variationsMap).map(([name, values]) => ({
       name,
       values: Array.from(values),
@@ -91,10 +91,10 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
   // Find selected attribute based on selected variations (for variable products)
   const selectedAttribute = useMemo(() => {
     if (!isVariableProduct || !fullProduct?.attributes) return null;
-    
+
     const selectedKeys = Object.keys(selectedVariations);
     if (selectedKeys.length === 0) return fullProduct.attributes[0];
-    
+
     return fullProduct.attributes.find((attr: any) => {
       return attr.values?.every((val: any) => {
         const varName = val.variation?.name;
@@ -139,11 +139,11 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
     }
     return fullProduct?.sku || '';
   }, [isVariableProduct, selectedAttribute, fullProduct?.sku]);
-  
+
   // Calculate final price with discount
   const finalPrice = useMemo(() => {
     if (!currentDiscount || currentDiscount === 0) return currentPrice;
-    
+
     if (currentDiscountType === 'percent') {
       return currentPrice - (currentPrice * currentDiscount / 100);
     }
@@ -194,7 +194,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
 
   const handleAddToCart = () => {
     if (currentStock === 0) return;
-    
+
     // For variable products, add variation info to name
     let productName = fullProduct?.title || product.name;
     if (isVariableProduct && Object.keys(selectedVariations).length > 0) {
@@ -203,35 +203,35 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
         .join(', ');
       productName = `${productName} (${variationText})`;
     }
-    
+
     // For variable products, ensure a variation is selected
     if (isVariableProduct && !selectedAttribute) {
       showWarning('Please select a product variation before adding to cart', 'Variation Required');
       setIsAdding(false);
       return;
     }
-    
+
     // Extract product_id - convert string id to number if needed
     const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-    
+
     // Extract product_attribute_id for variable products
     // Try multiple possible field names for the attribute ID
     let attributeId: number | undefined;
     if (isVariableProduct && selectedAttribute) {
       // Try different possible field names for the attribute ID
-      attributeId = (selectedAttribute as any).id || 
-                    (selectedAttribute as any).attribute_id || 
-                    (selectedAttribute as any).product_attribute_id ||
-                    (selectedAttribute as any).product_attribute?.id ||
-                    undefined;
-      
+      attributeId = (selectedAttribute as any).id ||
+        (selectedAttribute as any).attribute_id ||
+        (selectedAttribute as any).product_attribute_id ||
+        (selectedAttribute as any).product_attribute?.id ||
+        undefined;
+
       // Debug logging to help identify the correct field name
       if (!attributeId) {
         console.warn('Attribute ID not found in expected fields. Attribute structure:', selectedAttribute);
         console.warn('Available keys:', Object.keys(selectedAttribute || {}));
       }
     }
-    
+
     // For variable products, product_attribute_id is required
     if (isVariableProduct && !attributeId) {
       console.error('Variable product attribute ID not found. Selected attribute:', selectedAttribute);
@@ -239,7 +239,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
       setIsAdding(false);
       return;
     }
-    
+
     setIsAdding(true);
     addToCart({
       id: isVariableProduct && currentSku ? `${product.id}-${currentSku}` : product.id,
@@ -253,7 +253,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
       product_id: productId,
       product_attribute_id: attributeId,
     });
-    
+
     setTimeout(() => {
       setIsAdding(false);
     }, 500);
@@ -278,7 +278,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
       router.push('/login');
       return;
     }
-    
+
     try {
       if (isWishlisted) {
         await removeFromWishlist(productId).unwrap();
@@ -295,8 +295,8 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
   };
 
   const savings = originalPrice && finalPrice < originalPrice ? originalPrice - finalPrice : 0;
-  const savingsPercentage = originalPrice && finalPrice < originalPrice 
-    ? Math.round((savings / originalPrice) * 100) 
+  const savingsPercentage = originalPrice && finalPrice < originalPrice
+    ? Math.round((savings / originalPrice) * 100)
     : 0;
 
   // Render stars
@@ -326,8 +326,8 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
   const isOutOfStock = currentStock === 0;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-2 sm:p-4" 
+    <div
+      className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-2 sm:p-4"
       onClick={onClose}
     >
       <div
@@ -453,11 +453,10 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
                             <button
                               key={value}
                               onClick={() => handleVariationChange(variation.name, value)}
-                              className={`px-3 sm:px-4 py-1.5 sm:py-2 border-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                                selectedVariations[variation.name] === value
-                                  ? 'border-blue-600 bg-blue-50 text-blue-600'
-                                  : 'border-gray-300 text-gray-700 hover:border-blue-400'
-                              }`}
+                              className={`px-3 sm:px-4 py-1.5 sm:py-2 border-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${selectedVariations[variation.name] === value
+                                ? 'border-blue-600 bg-blue-50 text-blue-600'
+                                : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                                }`}
                             >
                               {value}
                             </button>
@@ -517,24 +516,22 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
                     <button
                       onClick={handleAddToCart}
                       disabled={isOutOfStock || isAdding}
-                      className={`flex-1 py-2 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-200 ${
-                        isAdding
-                          ? 'bg-blue-400 text-white cursor-wait'
-                          : !isOutOfStock
+                      className={`flex-1 py-2 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-200 ${isAdding
+                        ? 'bg-blue-400 text-white cursor-wait'
+                        : !isOutOfStock
                           ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       <FiShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
                       {isAdding ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                     </button>
                     <button
                       onClick={handleWishlist}
-                      className={`p-2 sm:p-3 rounded-lg border-2 transition-all duration-200 ${
-                        isWishlisted
-                          ? 'bg-red-500 border-red-500 text-white'
-                          : 'bg-white border-gray-300 text-gray-700 hover:border-red-500 hover:text-red-500'
-                      }`}
+                      className={`p-2 sm:p-3 rounded-lg border-2 transition-all duration-200 ${isWishlisted
+                        ? 'bg-red-500 border-red-500 text-white'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-red-500 hover:text-red-500'
+                        }`}
                       aria-label="Add to wishlist"
                     >
                       <FiHeart size={16} className="sm:w-[18px] sm:h-[18px]" />
@@ -543,11 +540,10 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
                   <button
                     onClick={handleBuyNow}
                     disabled={isOutOfStock || isAdding}
-                    className={`w-full py-2 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 ${
-                      !isOutOfStock
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className={`w-full py-2 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 ${!isOutOfStock
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-md hover:shadow-lg'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
                   >
                     Buy Now
                   </button>
@@ -563,9 +559,14 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
                 {(fullProduct?.vendor?.name || product.soldBy) && (
                   <div className="pt-1.5 sm:pt-2 border-t border-gray-200">
                     <p className="text-xs sm:text-sm text-gray-600">
-                      Sold by: <span className="font-medium text-gray-900">
+                      Sold by:{' '}
+                      <Link
+                        href={fullProduct?.vendor?.id ? `/vendor/seller-${fullProduct.vendor.id}` : '/vendor/official'}
+                        onClick={onClose}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
                         {fullProduct?.vendor?.name || product.soldBy}
-                      </span>
+                      </Link>
                     </p>
                   </div>
                 )}

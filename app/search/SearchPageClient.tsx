@@ -63,7 +63,7 @@ export default function SearchPageClient({
 }: SearchPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
@@ -72,7 +72,7 @@ export default function SearchPageClient({
   ]);
   const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
@@ -84,7 +84,7 @@ export default function SearchPageClient({
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
         params.delete(key);
@@ -92,7 +92,7 @@ export default function SearchPageClient({
         params.set(key, String(value));
       }
     });
-    
+
     router.push(`/search?${params.toString()}`);
   };
 
@@ -138,7 +138,7 @@ export default function SearchPageClient({
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
         <div className="hidden md:block mb-4">
-          <Breadcrumb 
+          <Breadcrumb
             items={[
               { label: 'Search', href: initialQuery ? `/search?q=${encodeURIComponent(initialQuery)}` : '/search' },
               ...(initialQuery ? [{ label: initialQuery }] : []),
@@ -317,7 +317,7 @@ export default function SearchPageClient({
                     >
                       Previous
                     </button>
-                    
+
                     <div className="flex items-center gap-2">
                       {[...Array(Math.min(5, meta.last_page))].map((_, i) => {
                         const page = i + 1;
@@ -325,11 +325,10 @@ export default function SearchPageClient({
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                              initialPage === page
+                            className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
                                 ? 'bg-blue-600 text-white'
                                 : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
+                              }`}
                           >
                             {page}
                           </button>

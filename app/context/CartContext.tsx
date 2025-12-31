@@ -63,21 +63,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const now = Date.now();
       const lastShown = lastShownToastRef.current;
       const pendingToast = pendingToastRef.current;
-      
+
       // Prevent showing the same toast within 500ms (handles React Strict Mode)
-      const shouldShow = !lastShown || 
-        lastShown.itemId !== pendingToast.itemId || 
+      const shouldShow = !lastShown ||
+        lastShown.itemId !== pendingToast.itemId ||
         (now - lastShown.timestamp) > 500;
-      
+
       if (shouldShow) {
         // Clear any existing timeout
         if (toastTimeoutRef.current) {
           clearTimeout(toastTimeoutRef.current);
         }
-        
+
         // Clear the pending ref immediately to prevent duplicate processing
         pendingToastRef.current = null;
-        
+
         // Set a new timeout to show the toast
         toastTimeoutRef.current = setTimeout(() => {
           showSuccess(pendingToast.message);
@@ -91,7 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         pendingToastRef.current = null;
       }
     }
-    
+
     return () => {
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
@@ -102,17 +102,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCart = (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(cartItem => cartItem.id === item.id);
-      
+
       if (existingItem) {
         // If item already exists, increase quantity
         const newQuantity = existingItem.quantity + (item.quantity || 1);
-        
+
         // Store toast message in ref (will be shown by useEffect)
         pendingToastRef.current = {
           itemId: item.id,
           message: `"${item.name}" quantity updated to ${newQuantity}! 🛒`
         };
-        
+
         return prevItems.map(cartItem =>
           cartItem.id === item.id
             ? { ...cartItem, quantity: newQuantity }
@@ -125,7 +125,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           itemId: item.id,
           message: `"${item.name}" added to cart! 🛒`
         };
-        
+
         return [...prevItems, { ...item, quantity: item.quantity || 1 }];
       }
     });
@@ -140,7 +140,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(id);
       return;
     }
-    
+
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === id ? { ...item, quantity } : item

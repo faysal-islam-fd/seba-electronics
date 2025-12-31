@@ -10,6 +10,7 @@ import { useToast } from '@/app/context/ToastContext';
 import { useRouter } from 'next/navigation';
 import ReviewForm from './ReviewForm';
 import ReviewReplyForm from './ReviewReplyForm';
+import { normalizeImageUrl } from '@/app/utils/imageUtils';
 
 interface ProductTabsProps {
   productId: string | number;
@@ -26,7 +27,7 @@ export interface ProductTabsRef {
 
 const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, description, specifications, features, warranty, shipping }, ref) => {
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
-  
+
   // Expose method to switch to reviews tab from parent
   useImperativeHandle(ref, () => ({
     switchToReviewsTab: () => {
@@ -126,20 +127,20 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
 
   // Safe access to reviews data with fallbacks
   // Handle both new structure (data.data) and legacy structure (data)
-  const reviews = Array.isArray(reviewsData?.data?.data) 
-    ? reviewsData.data.data 
-    : Array.isArray(reviewsData?.data) 
-    ? reviewsData.data 
-    : [];
-  
+  const reviews = Array.isArray(reviewsData?.data?.data)
+    ? reviewsData.data.data
+    : Array.isArray(reviewsData?.data)
+      ? reviewsData.data
+      : [];
+
   // Handle pagination metadata - new structure has it nested in data
-  const paginationMeta = reviewsData?.data?.current_page 
+  const paginationMeta = reviewsData?.data?.current_page
     ? {
-        current_page: reviewsData.data.current_page,
-        per_page: reviewsData.data.per_page,
-        total: reviewsData.data.total,
-        last_page: reviewsData.data.last_page,
-      }
+      current_page: reviewsData.data.current_page,
+      per_page: reviewsData.data.per_page,
+      total: reviewsData.data.total,
+      last_page: reviewsData.data.last_page,
+    }
     : reviewsData?.meta;
 
   // Handle rating summary - new structure has it at root level as 'summary'
@@ -147,7 +148,7 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
 
   // Calculate rating summary if not provided by API
   const calculatedSummary = {
-    average: ratingSummary?.average_rating 
+    average: ratingSummary?.average_rating
       ? parseFloat(String(ratingSummary.average_rating))
       : ratingSummary?.average ?? (reviews.length > 0
         ? reviews.reduce((sum, r) => sum + (parseInt(String(r.rating)) || 0), 0) / reviews.length
@@ -207,7 +208,7 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
 
     // If we have definitive data that user can't review, show error with reason
     if (canReviewData && !canReviewData.can_review) {
-      const errorMessage = canReviewData.reason || 
+      const errorMessage = canReviewData.reason ||
         'You cannot review this product. You may need to purchase and receive this product first.';
       showError(errorMessage);
       return;
@@ -469,11 +470,10 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
                         disabled={isLoadingReviews}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === pageNum
-                            ? 'bg-blue-600 text-white'
-                            : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {pageNum}
                       </button>
@@ -614,13 +614,13 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
                     {/* Review Images */}
                     {review.images && review.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {review.images.map((img: { id: number; image_path: string }) => (
+                        {review.images.map((img: string, idx: number) => (
                           <div
-                            key={img.id}
+                            key={idx}
                             className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100"
                           >
                             <Image
-                              src={img.image_path}
+                              src={normalizeImageUrl(img)}
                               alt="Review image"
                               width={80}
                               height={80}
@@ -693,10 +693,9 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
                           handleMarkHelpful(review.id, !currentHelpful);
                         }}
                         disabled={isMarkingHelpful}
-                        className={`flex items-center gap-1.5 text-sm transition-colors ${
-                          review.user_vote?.is_helpful
-                            ? 'text-blue-600'
-                            : 'text-gray-500 hover:text-blue-600'
+                        className={`flex items-center gap-1.5 text-sm transition-colors ${review.user_vote?.is_helpful
+                          ? 'text-blue-600'
+                          : 'text-gray-500 hover:text-blue-600'
                           }`}
                       >
                         <FiThumbsUp size={14} className={review.user_vote?.is_helpful ? 'fill-current' : ''} />

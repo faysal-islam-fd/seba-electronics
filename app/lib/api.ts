@@ -174,6 +174,79 @@ export async function getProducts(params: {
   }
 }
 
+// Vendor type for API
+export type VendorType = 'official' | 'seller';
+
+// Fetch products by vendor type (SSR)
+export async function getVendorProducts(params: {
+  vendor_type: VendorType;
+  vendor_id?: number; // Required when vendor_type is 'seller'
+  page?: number;
+  per_page?: number;
+  search?: string;
+  category_id?: number;
+  brand_id?: number;
+  min_price?: number;
+  max_price?: number;
+  sort?: 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+}): Promise<ProductsResponse> {
+  const queryParams = new URLSearchParams();
+
+  // Always add vendor_type
+  queryParams.append('vendor_type', params.vendor_type);
+
+  // Add vendor_id only for seller type (required for seller vendor type)
+  if (params.vendor_type === 'seller' && params.vendor_id) {
+    queryParams.append('vendor_id', String(params.vendor_id));
+  }
+
+  // Add other optional parameters
+  Object.entries(params).forEach(([key, value]) => {
+    if (key !== 'vendor_type' && key !== 'vendor_id' && value !== undefined && value !== null) {
+      queryParams.append(key, String(value));
+    }
+  });
+
+  const url = `${BASE_URL}/products?${queryParams.toString()}`;
+
+  console.log(`🌐 Vendor API Request: ${url}`);
+
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 1800 }, // Cache for 30 minutes
+    });
+
+    console.log(`📡 Vendor API Response Status: ${res.status} ${res.statusText}`);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ Vendor API Error Response:`, errorText);
+      throw new Error(`Failed to fetch vendor products: ${res.status}`);
+    }
+
+    const jsonData = await res.json();
+    console.log(`✅ Vendor API Response Data:`, {
+      success: jsonData.success,
+      dataLength: jsonData.data?.length || 0,
+      meta: jsonData.meta,
+    });
+
+    return jsonData;
+  } catch (error) {
+    console.error('❌ Error fetching vendor products:', error);
+    return {
+      success: false,
+      data: [],
+      meta: {
+        current_page: 1,
+        per_page: 15,
+        total: 0,
+        last_page: 1,
+      },
+    };
+  }
+}
+
 // Fetch product reviews (SSR)
 export interface ProductReviewsResponse {
   success: boolean;
