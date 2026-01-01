@@ -10,25 +10,25 @@ import { AlertProvider } from "./context/AlertContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { ReduxProvider } from "./store/Provider";
 
-const montserrat = Montserrat({ 
+const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "Pickaboo - Best Online Shopping in Bangladesh | Electronics & Gadgets",
-  description: "Shop the latest electronics, laptops, smartphones, cameras, and gadgets at Pickaboo. Best prices, genuine products, and fast delivery across Bangladesh.",
+  title: "Sheba Electronics - Best Online Shopping in Bangladesh | Electronics & Gadgets",
+  description: "Shop the latest electronics, laptops, smartphones, cameras, and gadgets at Sheba Electronics. Best prices, genuine products, and fast delivery across Bangladesh.",
   keywords: "online shopping, electronics, laptops, smartphones, cameras, gadgets, Bangladesh",
   openGraph: {
-    title: "Pickaboo - Best Online Shopping in Bangladesh",
+    title: "Sheba Electronics - Best Online Shopping in Bangladesh",
     description: "Shop the latest electronics and gadgets with best prices and fast delivery",
     type: "website",
     locale: "en_BD",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pickaboo - Best Online Shopping in Bangladesh",
+    title: "Sheba Electronics - Best Online Shopping in Bangladesh",
     description: "Shop the latest electronics and gadgets with best prices and fast delivery",
   },
 };
@@ -42,21 +42,21 @@ export default function RootLayout({
     <html lang="en">
       <body className={montserrat.className} suppressHydrationWarning>
         <ReduxProvider>
-        <AuthProvider>
-          <ToastProvider>
-          <AlertProvider>
-          <ConfirmProvider>
-          <CartProvider>
-        <Header />
-        <main className="min-h-screen">
-          {children}
-        </main>
-        <Footer />
-          </CartProvider>
-          </ConfirmProvider>
-          </AlertProvider>
-          </ToastProvider>
-        </AuthProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <AlertProvider>
+                <ConfirmProvider>
+                  <CartProvider>
+                    <Header />
+                    <main className="min-h-screen">
+                      {children}
+                    </main>
+                    <Footer />
+                  </CartProvider>
+                </ConfirmProvider>
+              </AlertProvider>
+            </ToastProvider>
+          </AuthProvider>
         </ReduxProvider>
       </body>
     </html>

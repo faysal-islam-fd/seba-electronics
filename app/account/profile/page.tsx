@@ -11,6 +11,7 @@ import {
   useUpdateProfilePictureMutation,
   useDeleteProfilePictureMutation,
   useChangePasswordMutation,
+  useGetProfileStatisticsQuery,
   useDeleteAccountMutation,
 } from '@/app/store/api/authApi';
 
@@ -18,21 +19,24 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
   const { confirm } = useConfirm();
-
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'delete'>('profile');
+  
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'statistics' | 'delete'>('profile');
   const [isEditMode, setIsEditMode] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  
   // API Mutations
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
   const [updatePicture, { isLoading: isUploadingPicture }] = useUpdateProfilePictureMutation();
   const [deletePicture, { isLoading: isDeletingPicture }] = useDeleteProfilePictureMutation();
   const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation();
   const [deleteAccount, { isLoading: isDeletingAccount }] = useDeleteAccountMutation();
-
-
-
+  
+  // Statistics query - only fetch when on statistics tab
+  const { data: statsData, isLoading: isLoadingStats } = useGetProfileStatisticsQuery(undefined, {
+    skip: activeTab !== 'statistics',
+  });
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -79,7 +83,7 @@ export default function ProfilePage() {
         name: formData.name,
         email: formData.email,
       }).unwrap();
-
+      
       if (result.success) {
         showMessage(result.message || 'Profile updated successfully!');
         setIsEditMode(false);
@@ -108,7 +112,7 @@ export default function ProfilePage() {
     try {
       const formData = new FormData();
       formData.append('profile_picture', file);
-
+      
       const result = await updatePicture(formData).unwrap();
       if (result.success) {
         showMessage(result.message || 'Profile picture updated!');
@@ -147,7 +151,7 @@ export default function ProfilePage() {
   // Change Password
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (passwordData.password !== passwordData.password_confirmation) {
       showMessage('Passwords do not match', true);
       return;
@@ -167,7 +171,7 @@ export default function ProfilePage() {
   // Delete Account
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (deleteData.confirmation !== 'DELETE') {
       showMessage('Please type DELETE to confirm', true);
       return;
@@ -202,6 +206,7 @@ export default function ProfilePage() {
     );
   }
 
+  const stats = statsData?.data;
   const isLoading = isUpdating || isUploadingPicture || isDeletingPicture || isChangingPassword || isDeletingAccount;
 
   return (
@@ -222,15 +227,17 @@ export default function ProfilePage() {
             {[
               { id: 'profile', label: 'Profile Information' },
               { id: 'password', label: 'Change Password' },
+              { id: 'statistics', label: 'Statistics' },
               { id: 'delete', label: 'Delete Account' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id as any); setIsEditMode(false); }}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                }`}
               >
                 {tab.label}
               </button>
@@ -343,17 +350,17 @@ export default function ProfilePage() {
 
                 {isEditMode && (
                   <div className="flex gap-3 pt-2">
-                    <button
-                      type="submit"
+                    <button 
+                      type="submit" 
                       disabled={isUpdating}
                       className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                       <FiSave size={16} />
                       {isUpdating ? 'Saving...' : 'Save Changes'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleCancel}
+                    <button 
+                      type="button" 
+                      onClick={handleCancel} 
                       disabled={isUpdating}
                       className="inline-flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                     >
@@ -370,7 +377,7 @@ export default function ProfilePage() {
           {activeTab === 'password' && (
             <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
               <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Change Password</h2>
-
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
                 <div className="relative">
@@ -413,8 +420,8 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <button
-                type="submit"
+              <button 
+                type="submit" 
                 disabled={isChangingPassword}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
@@ -424,7 +431,54 @@ export default function ProfilePage() {
           )}
 
           {/* Statistics Tab */}
-
+          {activeTab === 'statistics' && (
+            <div>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Account Statistics</h2>
+              {isLoadingStats ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading statistics...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <p className="text-sm text-blue-600 font-medium mb-1">Total Orders</p>
+                    <p className="text-3xl font-bold text-blue-900">{stats?.total_orders || 0}</p>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                    <p className="text-sm text-green-600 font-medium mb-1">Completed</p>
+                    <p className="text-3xl font-bold text-green-900">{stats?.completed_orders || 0}</p>
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <p className="text-sm text-yellow-600 font-medium mb-1">Pending</p>
+                    <p className="text-3xl font-bold text-yellow-900">{stats?.pending_orders || 0}</p>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                    <p className="text-sm text-red-600 font-medium mb-1">Cancelled</p>
+                    <p className="text-3xl font-bold text-red-900">{stats?.cancelled_orders || 0}</p>
+                  </div>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 md:col-span-2">
+                    <p className="text-sm text-purple-600 font-medium mb-1">Total Spent</p>
+                    <p className="text-3xl font-bold text-purple-900">৳ {(stats?.total_spent || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                    <p className="text-sm text-gray-600 font-medium mb-1">Member Since</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {stats?.member_since ? new Date(stats.member_since).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  {stats?.last_order_date && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                      <p className="text-sm text-gray-600 font-medium mb-1">Last Order</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {new Date(stats.last_order_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Delete Account Tab */}
           {activeTab === 'delete' && (
@@ -468,8 +522,8 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <button
-                  type="submit"
+                <button 
+                  type="submit" 
                   disabled={isDeletingAccount}
                   className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >

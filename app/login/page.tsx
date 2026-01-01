@@ -24,14 +24,14 @@ export default function LoginPage() {
   const handleMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     // Validate phone number
     const validation = validatePhoneNumber(mobileNumber);
     if (!validation.isValid) {
       showError(validation.error || 'Invalid phone number');
       return;
     }
-    
+
     // Redirect to registration with mobile number
     router.push(`/register?phone=${encodeURIComponent(mobileNumber)}`);
   };
@@ -40,10 +40,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-    
+
     try {
       const result = await login(email, password);
-      
+
       if (result.success) {
         router.push('/');
       } else {
@@ -78,7 +78,7 @@ export default function LoginPage() {
         {/* Welcome Message */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Welcome to Pickaboo!
+            Welcome to Sheba Electronics!
           </h1>
           <p className="text-xl text-gray-900">Please login.</p>
         </div>
@@ -122,7 +122,7 @@ export default function LoginPage() {
                 Sign Up/Login
               </button>
             </form>
-            
+
             <div className="text-center text-sm text-gray-600">
               <p>Don't have an account? <Link href="/register" className="text-blue-600 hover:underline">Sign up</Link></p>
             </div>
@@ -167,7 +167,7 @@ export default function LoginPage() {
                   {error}
                 </div>
               )}
-              
+
               {/* Email Input */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -216,7 +216,7 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-            
+
             <div className="text-center text-sm text-gray-600">
               <p>Don't have an account? <Link href="/register" className="text-blue-600 hover:underline">Sign up</Link></p>
             </div>

@@ -3,6 +3,10 @@
 import { FiChevronRight } from 'react-icons/fi';
 import { useState } from 'react';
 
+import { useCart } from '@/app/context/CartContext';
+import { useApplyCouponMutation } from '@/app/store/api/ordersApi';
+import { useToast } from '@/app/context/ToastContext';
+
 interface OrderSummaryProps {
   subtotal: number;
   discount?: number;
@@ -16,11 +20,48 @@ export default function OrderSummary({
   shipping,
   itemCount,
 }: OrderSummaryProps) {
+  const { cartItems } = useCart();
+  const [applyCoupon, { isLoading }] = useApplyCouponMutation();
+  const { showSuccess, showError } = useToast();
+
   const [showDiscountCode, setShowDiscountCode] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [showClubPoints, setShowClubPoints] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; amount: number } | null>(null);
 
-  const total = subtotal - discount + shipping;
+  const handleApplyCoupon = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!discountCode.trim()) return;
+
+    try {
+      const items = cartItems.map(item => ({
+        product_id: item.product_id || parseInt(item.id.split('-')[0]) || 0 // Fallback
+      }));
+
+      const result = await applyCoupon({
+        code: discountCode.trim().toUpperCase(),
+        order_amount: subtotal,
+        items,
+      }).unwrap();
+
+      if (result.success && result.discount_amount) {
+        setAppliedCoupon({
+          code: discountCode.trim().toUpperCase(),
+          amount: result.discount_amount
+        });
+        showSuccess(`Coupon applied! You saved ৳${result.discount_amount.toLocaleString()}`);
+        setDiscountCode('');
+      } else {
+        showError(result.message || 'Invalid coupon code');
+      }
+    } catch (error: any) {
+      console.error('Coupon apply error:', error);
+      showError(error.data?.message || 'Failed to apply coupon');
+    }
+  };
+
+  const currentDiscount = appliedCoupon ? appliedCoupon.amount : discount;
+  const total = subtotal - currentDiscount + shipping;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-24">
@@ -44,9 +85,19 @@ export default function OrderSummary({
               placeholder="Enter code"
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-              Apply
+            <button
+              type="button"
+              onClick={handleApplyCoupon}
+              disabled={isLoading || !discountCode.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            >
+              {isLoading ? '...' : 'Apply'}
             </button>
+          </div>
+        )}
+        {appliedCoupon && (
+          <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+            Coupon <strong>{appliedCoupon.code}</strong> applied!
           </div>
         )}
       </div>
@@ -69,29 +120,23 @@ export default function OrderSummary({
 
       {/* Price Breakdown */}
       <div className="space-y-3 border-t border-gray-200 pt-4">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Cart Subtotal ({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
-          <span className="font-medium text-gray-900">৳ {subtotal.toLocaleString()}</span>
-        </div>
-        
-        {discount > 0 && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Discount (Visa Mastercard Offer)</span>
-            <span className="font-medium text-green-600">-৳ {discount.toLocaleString()}</span>
-          </div>
-        )}
-        
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Shipping</span>
-          <span className="font-medium text-gray-900">
-            {shipping === 0 ? 'Free' : `৳ ${shipping.toLocaleString()}`}
-          </span>
+        <div className="flex justify-between text-base font-semibold">
+          <span className="text-gray-900">Cart Subtotal ({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
+          <span className="text-gray-900">৳ {subtotal.toLocaleString()}</span>
         </div>
 
-        <div className="flex justify-between text-lg font-bold pt-3 border-t border-gray-200">
-          <span className="text-gray-900">Total</span>
-          <span className="text-gray-900">৳ {total.toLocaleString()}</span>
-        </div>
+        {currentDiscount > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">
+              Discount {appliedCoupon ? `(${appliedCoupon.code})` : ''}
+            </span>
+            <span className="font-medium text-green-600">-৳ {currentDiscount.toLocaleString()}</span>
+          </div>
+        )}
+
+
+
+
       </div>
     </div>
   );

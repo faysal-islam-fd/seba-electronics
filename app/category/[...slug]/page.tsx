@@ -30,11 +30,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const categoryName = category?.name || lastSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
   return {
-    title: `${categoryName} | Pickaboo`,
-    description: `Shop for ${categoryName} at Pickaboo. Best prices and deals on ${categoryName} in Bangladesh.`,
+    title: `${categoryName} | Sheba Electronics`,
+    description: `Shop for ${categoryName} at Sheba Electronics. Best prices and deals on ${categoryName} in Bangladesh.`,
     openGraph: {
-      title: `${categoryName} | Pickaboo`,
-      description: `Shop for ${categoryName} at Pickaboo.`,
+      title: `${categoryName} | Sheba Electronics`,
+      description: `Shop for ${categoryName} at Sheba Electronics.`,
       images: category?.image ? [category.image] : ['/images/logo.png'],
     },
   };

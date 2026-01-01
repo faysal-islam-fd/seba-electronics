@@ -84,9 +84,8 @@ function ToastItem({ toast, onClose }: ToastProps) {
 
   return (
     <div
-      className={`${getBgColor()} border-2 rounded-xl shadow-2xl p-4 flex items-center gap-4 min-w-[320px] max-w-md transition-all duration-300 ${
-        isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
-      }`}
+      className={`${getBgColor()} border-2 rounded-xl shadow-2xl p-4 flex items-center gap-4 min-w-[320px] max-w-md transition-all duration-300 ${isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
+        }`}
       style={{
         animation: isExiting ? 'none' : 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
@@ -113,7 +112,7 @@ export default function ToastContainer({ toasts, onClose }: ToastContainerProps)
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[10003] flex flex-col gap-3 pointer-events-none max-w-md">
+    <div className="fixed top-4 right-4 z-[100000] flex flex-col gap-3 pointer-events-none max-w-md">
       {toasts.map((toast) => (
         <div key={toast.id} className="pointer-events-auto">
           <ToastItem toast={toast} onClose={onClose} />

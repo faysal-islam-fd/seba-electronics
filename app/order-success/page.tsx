@@ -3,7 +3,8 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { FiCheckCircle, FiPackage, FiHome, FiDollarSign, FiCalendar } from 'react-icons/fi';
+import { FiCheckCircle, FiPackage, FiHome, FiDollarSign, FiCalendar, FiTruck } from 'react-icons/fi';
+import { useAuth } from '@/app/context/AuthContext';
 import { useCart } from '@/app/context/CartContext';
 
 interface OrderDetails {
@@ -18,6 +19,7 @@ interface OrderDetails {
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
+  const { isLoggedIn } = useAuth();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const cartClearedRef = useRef(false);
 
@@ -182,13 +184,32 @@ function OrderSuccessContent() {
               <FiHome size={20} />
               Continue Shopping
             </Link>
-            <Link
-              href="/account/orders"
-              className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-semibold px-6 py-3 rounded-lg transition-colors"
-            >
-              <FiPackage size={20} />
-              View Orders
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/account/orders"
+                className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-semibold px-6 py-3 rounded-lg transition-colors"
+              >
+                <FiPackage size={20} />
+                View Orders
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/my-orders"
+                  className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-semibold px-6 py-3 rounded-lg transition-colors"
+                >
+                  <FiPackage size={20} />
+                  My Orders
+                </Link>
+                <Link
+                  href={`/track-order?order_number=${orderDetails?.order_number || ''}`}
+                  className="inline-flex items-center justify-center gap-2 border-2 border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold px-6 py-3 rounded-lg transition-colors"
+                >
+                  <FiTruck size={20} />
+                  Track This Order
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

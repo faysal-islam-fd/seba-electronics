@@ -25,6 +25,7 @@ interface ProductCardProps {
   reviewCount?: number;
   inStock?: boolean;
   soldBy?: string;
+  type?: string; // 'simple' or 'variable'
 }
 
 export default function ProductCard({
@@ -38,7 +39,8 @@ export default function ProductCard({
   rating = 0,
   reviewCount,
   inStock = true,
-  soldBy
+  soldBy,
+  type
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const { isLoggedIn } = useAuth();
@@ -99,6 +101,12 @@ export default function ProductCard({
     e.stopPropagation();
 
     if (!inStock) return;
+
+    // For variable products, redirect to product details page
+    if (type === 'variable') {
+      router.push(`/product/${id}`);
+      return;
+    }
 
     setIsAdding(true);
     // Extract product_id - convert string id to number if needed
@@ -313,7 +321,7 @@ export default function ProductCard({
               }`}
           >
             <FiShoppingCart size={16} />
-            {isAdding ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}
+            {isAdding ? 'Adding...' : inStock ? (type === 'variable' ? 'Select Options' : 'Add to Cart') : 'Out of Stock'}
           </button>
         </div>
       </div>
@@ -331,7 +339,7 @@ export default function ProductCard({
             }`}
         >
           <FiShoppingCart size={14} className="sm:w-4 sm:h-4" />
-          {isAdding ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}
+          {isAdding ? 'Adding...' : inStock ? (type === 'variable' ? 'Select Options' : 'Add to Cart') : 'Out of Stock'}
         </button>
       </div>
 

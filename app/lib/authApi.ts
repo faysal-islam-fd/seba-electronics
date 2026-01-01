@@ -13,6 +13,7 @@ export interface User {
   email_verified_at?: string;
   created_at?: string;
   updated_at?: string;
+  club_points?: number;
 }
 
 export interface AuthResponse {
@@ -91,15 +92,15 @@ function deleteCookie(name: string): void {
 // Get token from cookie
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  
+
   // Try cookie first
   let token = getCookie('auth_token');
-  
+
   // If not in cookie, try localStorage as fallback
   if (!token) {
     token = localStorage.getItem('auth_token');
   }
-  
+
   // Trim and return
   return token ? token.trim() : null;
 }
@@ -142,14 +143,14 @@ export function getUser(): User | null {
 async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = getAuthToken();
   const headers = new Headers(options.headers);
-  
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  
+
   headers.set('Content-Type', 'application/json');
   headers.set('Accept', 'application/json');
-  
+
   return fetch(url, {
     ...options,
     headers,
@@ -167,16 +168,16 @@ export async function sendRegistrationOTP(phoneNumber: string): Promise<OTPRespo
     },
     body: JSON.stringify({ phone_number: phoneNumber }),
   });
-  
+
   const result = await response.json();
-  
+
   // Handle non-200 status codes
   if (!response.ok && !result.success) {
     const error: any = new Error(result.message || 'Failed to send OTP');
     error.errors = result.errors;
     throw error;
   }
-  
+
   return result;
 }
 
@@ -189,16 +190,16 @@ export async function verifyRegistrationOTP(phoneNumber: string, otp: string): P
     },
     body: JSON.stringify({ phone_number: phoneNumber, otp }),
   });
-  
+
   const result = await response.json();
-  
+
   // Handle non-200 status codes or failed verification
   if (!response.ok && !result.success) {
     const error: any = new Error(result.message || 'OTP verification failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   return result;
 }
 
@@ -217,29 +218,29 @@ export async function completeRegistration(data: {
     },
     body: JSON.stringify(data),
   });
-  
+
   const result = await response.json();
-  
+
   // Handle failed registration
   if (!result.success) {
     const error: any = new Error(result.message || 'Registration failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   // Handle HTTP errors (non-200 status)
   if (!response.ok) {
     const error: any = new Error(result.message || 'Registration failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   // Save token and user on successful registration
   if (result.success && result.data && result.data.token) {
     setAuthToken(result.data.token);
     saveUser(result.data.user);
   }
-  
+
   return result;
 }
 
@@ -254,29 +255,29 @@ export async function login(loginCredential: string, password: string): Promise<
     },
     body: JSON.stringify({ login: loginCredential, password }),
   });
-  
+
   const result = await response.json();
-  
+
   // Handle failed login (API returns success: false for invalid credentials)
   if (!result.success) {
     const error: any = new Error(result.message || 'Invalid credentials');
     error.errors = result.errors;
     throw error;
   }
-  
+
   // Handle HTTP errors (non-200 status)
   if (!response.ok) {
     const error: any = new Error(result.message || 'Login failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   // Save token and user on successful login
   if (result.success && result.data && result.data.token) {
     setAuthToken(result.data.token);
     saveUser(result.data.user);
   }
-  
+
   return result;
 }
 
@@ -284,22 +285,22 @@ export async function login(loginCredential: string, password: string): Promise<
 // Note: Google OAuth endpoint is at /api/customer/auth/google (without /v1)
 export function getGoogleOAuthUrl(redirectUrl?: string): string {
   const oauthBaseUrl = 'https://seba.rangpurit.com/api/customer/auth/google';
-  
+
   if (typeof window === 'undefined') {
     // SSR fallback - return base URL without redirect
     return oauthBaseUrl;
   }
-  
+
   // Set redirect URL directly to /google/process
   // The backend will handle the OAuth callback and redirect here with the token
   const defaultRedirect = `${window.location.origin}/google/process`;
   const finalRedirect = redirectUrl || defaultRedirect;
-  
+
   // Make sure the redirect URL is a full URL (not just a path)
-  const fullRedirectUrl = finalRedirect.startsWith('http') 
-    ? finalRedirect 
+  const fullRedirectUrl = finalRedirect.startsWith('http')
+    ? finalRedirect
     : `${window.location.origin}${finalRedirect.startsWith('/') ? finalRedirect : '/' + finalRedirect}`;
-  
+
   // Pass the redirect URL to the backend
   // The backend will handle OAuth and redirect to this URL with the token
   return `${oauthBaseUrl}?redirect_url=${encodeURIComponent(fullRedirectUrl)}`;
@@ -314,14 +315,14 @@ export async function loginWithGoogleIdToken(idToken: string): Promise<AuthRespo
     },
     body: JSON.stringify({ id_token: idToken }),
   });
-  
+
   const result = await response.json();
-  
+
   if (result.success && result.data.token) {
     setAuthToken(result.data.token);
     saveUser(result.data.user);
   }
-  
+
   return result;
 }
 
@@ -330,13 +331,13 @@ export async function linkGoogleAccount(idToken: string): Promise<{ success: boo
     method: 'POST',
     body: JSON.stringify({ id_token: idToken }),
   });
-  
+
   const result = await response.json();
-  
+
   if (result.success && result.data?.user) {
     saveUser(result.data.user);
   }
-  
+
   return result;
 }
 
@@ -344,7 +345,7 @@ export async function unlinkGoogleAccount(): Promise<{ success: boolean; message
   const response = await authenticatedFetch(`${BASE_URL}/auth/google/unlink`, {
     method: 'DELETE',
   });
-  
+
   return response.json();
 }
 
@@ -359,16 +360,16 @@ export async function sendPasswordResetOTP(phoneNumber: string): Promise<{ succe
     },
     body: JSON.stringify({ phone_number: phoneNumber }),
   });
-  
+
   const result = await response.json();
-  
+
   // Handle non-200 status codes
   if (!response.ok && !result.success) {
     const error: any = new Error(result.message || 'Failed to send OTP');
     error.errors = result.errors;
     throw error;
   }
-  
+
   return result;
 }
 
@@ -386,41 +387,41 @@ export async function resetPassword(data: {
     },
     body: JSON.stringify(data),
   });
-  
+
   const result = await response.json();
-  
+
   // Handle both HTTP errors and API-level failures
   if (!response.ok || !result.success) {
     const error: any = new Error(result.message || 'Password reset failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   if (result.success && result.data && result.data.token) {
     setAuthToken(result.data.token);
     saveUser(result.data.user);
   }
-  
+
   return result;
 }
 
 // Profile Management
 export async function getProfile(): Promise<ProfileResponse> {
   const response = await authenticatedFetch(`${PROFILE_API_BASE}/profile`);
-  
+
   if (!response.ok) {
     if (response.status === 401) {
       removeAuthToken();
     }
     throw new Error('Failed to fetch profile');
   }
-  
+
   const result = await response.json();
-  
+
   if (result.success && result.data) {
     saveUser(result.data);
   }
-  
+
   return result;
 }
 
@@ -432,29 +433,29 @@ export async function updateProfile(data: {
     method: 'PUT',
     body: JSON.stringify(data),
   });
-  
+
   const result = await response.json();
-  
+
   if (!response.ok && !result.success) {
     const error: any = new Error(result.message || 'Profile update failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   if (result.success && result.data?.user) {
     saveUser(result.data.user);
   }
-  
+
   return result;
 }
 
 export async function updateProfilePicture(file: File): Promise<{ success: boolean; message: string; data?: { profile_picture: string } }> {
   const token = getAuthToken();
   if (!token) throw new Error('Not authenticated');
-  
+
   const formData = new FormData();
   formData.append('profile_picture', file);
-  
+
   const response = await fetch(`${PROFILE_API_BASE}/profile/picture`, {
     method: 'POST',
     headers: {
@@ -464,9 +465,9 @@ export async function updateProfilePicture(file: File): Promise<{ success: boole
     },
     body: formData,
   });
-  
+
   const result = await response.json();
-  
+
   // Refresh profile after picture update
   if (result.success) {
     const profileResult = await getProfile();
@@ -474,7 +475,7 @@ export async function updateProfilePicture(file: File): Promise<{ success: boole
       saveUser(profileResult.data);
     }
   }
-  
+
   return result;
 }
 
@@ -482,9 +483,9 @@ export async function deleteProfilePicture(): Promise<{ success: boolean; messag
   const response = await authenticatedFetch(`${PROFILE_API_BASE}/profile/picture`, {
     method: 'DELETE',
   });
-  
+
   const result = await response.json();
-  
+
   // Refresh profile after picture deletion
   if (result.success) {
     const profileResult = await getProfile();
@@ -492,7 +493,7 @@ export async function deleteProfilePicture(): Promise<{ success: boolean; messag
       saveUser(profileResult.data);
     }
   }
-  
+
   return result;
 }
 
@@ -505,25 +506,25 @@ export async function changePassword(data: {
     method: 'PUT',
     body: JSON.stringify(data),
   });
-  
+
   const result = await response.json();
-  
+
   if (!response.ok && !result.success) {
     const error: any = new Error(result.message || 'Password change failed');
     error.errors = result.errors;
     throw error;
   }
-  
+
   return result;
 }
 
 export async function getProfileStatistics(): Promise<StatisticsResponse> {
   const response = await authenticatedFetch(`${PROFILE_API_BASE}/profile/statistics`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch statistics');
   }
-  
+
   return response.json();
 }
 
@@ -535,13 +536,13 @@ export async function deleteAccount(data: {
     method: 'DELETE',
     body: JSON.stringify(data),
   });
-  
+
   const result = await response.json();
-  
+
   if (result.success) {
     removeAuthToken();
   }
-  
+
   return result;
 }
 
@@ -562,7 +563,7 @@ export async function logout(): Promise<{ success: boolean; message: string }> {
   } finally {
     removeAuthToken();
   }
-  
+
   return { success: true, message: 'Logged out successfully' };
 }
 

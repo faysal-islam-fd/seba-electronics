@@ -20,9 +20,9 @@ export default function RelatedProducts({ currentProductId, categoryId }: Relate
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="mt-6">
+        <h2 className="text-2xl  font-bold text-gray-900 mb-6">Related Products</h2>
+        <div className="grid  grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden h-80 animate-pulse">
               <div className="w-full h-40 bg-gray-200"></div>
@@ -43,9 +43,9 @@ export default function RelatedProducts({ currentProductId, categoryId }: Relate
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
+    <div className="mt-6 -mx-3 sm:mx-0">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 px-3 sm:px-0">Related Products</h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 px-1 sm:px-0 auto-rows-fr">
         {relatedProducts.map((product) => (
           <ProductCard
             key={product.id}

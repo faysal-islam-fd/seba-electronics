@@ -31,8 +31,8 @@ const getBanks = (productPrice: number): BankEMI[] => {
 
   return [
     {
-      id: 'pickaboo-ebl',
-      name: 'Pickaboo EBL Mastercard',
+      id: 'sheba-ebl',
+      name: 'Sheba EBL Mastercard',
       options: [
         { months: 3, convenienceFee: 0, monthlyPayment: calculateEMI(productPrice, 3, 0) },
         { months: 6, convenienceFee: 0, monthlyPayment: calculateEMI(productPrice, 6, 0) },
@@ -116,13 +116,13 @@ const getBanks = (productPrice: number): BankEMI[] => {
 };
 
 export default function EMIModal({ isOpen, onClose, productPrice }: EMIModalProps) {
-  const [selectedBank, setSelectedBank] = useState('pickaboo-ebl');
+  const [selectedBank, setSelectedBank] = useState('sheba-ebl');
   const [expandedEMI, setExpandedEMI] = useState<number | null>(0);
 
   // Reset to first bank when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedBank('pickaboo-ebl');
+      setSelectedBank('sheba-ebl');
       setExpandedEMI(0);
     }
   }, [isOpen]);
@@ -169,11 +169,10 @@ export default function EMIModal({ isOpen, onClose, productPrice }: EMIModalProp
                     setSelectedBank(bank.id);
                     setExpandedEMI(0);
                   }}
-                  className={`flex-shrink-0 md:w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg mb-0 md:mb-1 transition-colors ${
-                    selectedBank === bank.id
+                  className={`flex-shrink-0 md:w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg mb-0 md:mb-1 transition-colors ${selectedBank === bank.id
                       ? 'bg-white border-l-4 border-orange-500 shadow-sm'
                       : 'hover:bg-white/50 border-l-4 border-transparent'
-                  }`}
+                    }`}
                 >
                   <span className="text-xs sm:text-sm font-medium text-gray-900 text-left">{bank.name}</span>
                   {selectedBank === bank.id && <FiChevronRight className="text-orange-500 flex-shrink-0 ml-2" size={14} />}

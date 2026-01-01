@@ -27,7 +27,7 @@ export default function CartPage() {
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = 1000; // Mock discount
+  const discount = 0; // No default discount
   const shipping = 0; // Free shipping
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -80,7 +80,7 @@ export default function CartPage() {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="space-y-4">
                   {cartItems.map((item) => (
                     <CartItem
@@ -107,7 +107,7 @@ export default function CartPage() {
           </div>
         </div>
 
-    
+
         {/* Proceed To Checkout Button - Bottom */}
         {cartItems.length > 0 && (
           <div className="mt-6 sm:mt-8">

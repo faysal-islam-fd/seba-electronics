@@ -217,7 +217,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       id: isVariableProduct && currentSku ? `${product.id}-${currentSku}` : product.id,
       name: productName,
       image: product.images?.[0] || product.thumbnail,
-      seller: product.soldBy || (product.brand ? `${product.brand} Official` : 'Official Store'),
+      seller: product.soldBy || `${product.brand} Official`,
       price: finalPrice,
       originalPrice: currentDiscount > 0 ? currentPrice : undefined,
       discount: currentDiscount,
@@ -315,21 +315,17 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
 
         {/* Brand and Seller */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
-          {product.brand && (
-            <>
-              <div>
-                Brand:{' '}
-                <Link href={`/brand/${product.brandSlug || product.brand.toLowerCase()}`} className="font-semibold text-blue-600 hover:underline">
-                  {product.brand}
-                </Link>
-              </div>
-              <span className="text-gray-300 hidden sm:inline">|</span>
-            </>
-          )}
+          <div>
+            Brand:{' '}
+            <Link href={`/brand/${product.brandSlug || product.brand.toLowerCase()}`} className="font-semibold text-blue-600 hover:underline">
+              {product.brand}
+            </Link>
+          </div>
+          <span className="text-gray-300 hidden sm:inline">|</span>
           <div>
             Sold by:{' '}
             <Link
-              href={product.vendor?.id ? `/vendor/seller-${product.vendor.id}` : '/vendor/official'}
+              href={`/vendor/${encodeURIComponent((product.soldBy || 'Official Store').toLowerCase().replace(/\s+/g, '-'))}`}
               className="font-semibold text-blue-600 hover:underline"
             >
               {product.soldBy || 'Official Store'}
@@ -450,12 +446,12 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
           </p>
         </div>
 
-        {/* Pickaboo Assured */}
+        {/* Sheba Assured */}
         <div className="flex items-center gap-2 md:gap-3 cursor-pointer">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
             <FiShoppingCart className="text-white" size={18} />
           </div>
-          <span className="font-semibold text-sm md:text-base text-gray-900">Pickaboo Assured</span>
+          <span className="font-semibold text-sm md:text-base text-gray-900">Sheba Assured</span>
           <span className="ml-auto text-gray-400">&gt;</span>
         </div>
       </div>

@@ -9,10 +9,10 @@ export default function EMIBanner() {
           <div className="flex items-center gap-2 mb-2">
             <span className="bg-white/20 text-xs font-semibold px-2 py-1 rounded">Sponsored</span>
           </div>
-          <h3 className="text-xl font-bold mb-1">0% EMI for up to 6 months with Pickaboo X EBL Card</h3>
+          <h3 className="text-xl font-bold mb-1">0% EMI for up to 6 months with Sheba Electronics X EBL Card</h3>
           <p className="text-sm text-green-50">Apply now and get instant approval</p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           {/* Mastercard Logo Placeholder */}
           <div className="bg-white rounded-lg p-3 hidden md:block">
@@ -20,7 +20,7 @@ export default function EMIBanner() {
               <span className="text-white font-bold text-xs">MC</span>
             </div>
           </div>
-          
+
           <Link
             href="/apply-emi"
             className="bg-white text-green-600 font-semibold px-6 py-3 rounded-lg hover:bg-green-50 transition-colors whitespace-nowrap"

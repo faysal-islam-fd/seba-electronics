@@ -16,6 +16,9 @@ export interface Product {
   is_top_selling: boolean;
   is_low_stock: boolean;
   is_out_of_stock: boolean;
+  // Shipping costs
+  shipping_in_dhaka?: number;
+  shipping_outside_dhaka?: number;
   brand?: {
     id: number;
     name: string;
@@ -70,6 +73,7 @@ export interface ProductDetail extends Product {
     name: string;
     code: string;
   };
+  club_point?: number;
 }
 
 export interface Category {
@@ -124,6 +128,7 @@ export async function getProducts(params: {
   vendor_id?: number;
   min_price?: number;
   max_price?: number;
+  is_new_arrival?: number;
   sort?: 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 } = {}): Promise<ProductsResponse> {
   const queryParams = new URLSearchParams();
@@ -381,6 +386,29 @@ export async function getTopSellingProducts(limit: number = 10): Promise<{ succe
   }
 }
 
+// Fetch new arrival products (SSR)
+export async function getNewArrivals(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
+  try {
+    const res = await getProducts({
+      is_new_arrival: 1,
+      per_page: limit,
+      sort: 'latest'
+    });
+
+    if (!res.success) {
+      return { success: false, data: [] };
+    }
+
+    return {
+      success: true,
+      data: res.data
+    };
+  } catch (error) {
+    console.error('Error fetching new arrivals:', error);
+    return { success: false, data: [] };
+  }
+}
+
 // Fetch product details (SSR)
 export async function getProductDetails(identifier: string | number): Promise<ProductDetailResponse | null> {
   try {
@@ -539,4 +567,72 @@ export async function getHomeCategories(): Promise<HomeCategoriesResponse> {
     };
   }
 }
+
+// Campaigns API
+// -----------------------------------------------------------------------------
+
+export interface Campaign {
+  id: number;
+  name: string;
+  slug: string;
+  image: string;
+  is_lifetime: boolean;
+  start_date: string;
+  end_date: string;
+  products_count?: number;
+}
+
+export interface CampaignsResponse {
+  success: boolean;
+  data: Campaign[];
+}
+
+export interface CampaignDetailsResponse {
+  success: boolean;
+  data: {
+    campaign: Campaign;
+    products: Product[];
+  };
+}
+
+// Fetch all campaigns
+export async function getCampaigns(homePageOnly: boolean = false): Promise<CampaignsResponse> {
+  try {
+    const url = `${BASE_URL}/campaigns${homePageOnly ? '?home_page=1' : ''}`;
+    const res = await fetch(url, {
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch campaigns: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    return {
+      success: false,
+      data: []
+    };
+  }
+}
+
+// Fetch campaign details
+export async function getCampaignDetails(slug: string): Promise<CampaignDetailsResponse | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/campaigns/${slug}`, {
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching campaign details:', error);
+    return null;
+  }
+}
+
 

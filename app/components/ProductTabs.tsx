@@ -10,7 +10,6 @@ import { useToast } from '@/app/context/ToastContext';
 import { useRouter } from 'next/navigation';
 import ReviewForm from './ReviewForm';
 import ReviewReplyForm from './ReviewReplyForm';
-import { normalizeImageUrl } from '@/app/utils/imageUtils';
 
 interface ProductTabsProps {
   productId: string | number;
@@ -319,7 +318,10 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
           <div className="space-y-4 sm:space-y-6">
             <div>
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Product Description</h3>
-              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">{description}</p>
+              <div
+                className="text-sm sm:text-base text-gray-700 leading-relaxed prose prose-sm sm:prose-base max-w-none"
+                dangerouslySetInnerHTML={{ __html: description }}
+              />
             </div>
 
             {features.length > 0 && (
@@ -471,8 +473,8 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
                         onClick={() => setCurrentPage(pageNum)}
                         disabled={isLoadingReviews}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {pageNum}
@@ -614,13 +616,13 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
                     {/* Review Images */}
                     {review.images && review.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {review.images.map((img: string, idx: number) => (
+                        {review.images.map((img: { id: number; image_path: string }) => (
                           <div
-                            key={idx}
+                            key={img.id}
                             className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100"
                           >
                             <Image
-                              src={normalizeImageUrl(img)}
+                              src={img.image_path}
                               alt="Review image"
                               width={80}
                               height={80}
@@ -694,8 +696,8 @@ const ProductTabs = forwardRef<ProductTabsRef, ProductTabsProps>(({ productId, d
                         }}
                         disabled={isMarkingHelpful}
                         className={`flex items-center gap-1.5 text-sm transition-colors ${review.user_vote?.is_helpful
-                          ? 'text-blue-600'
-                          : 'text-gray-500 hover:text-blue-600'
+                            ? 'text-blue-600'
+                            : 'text-gray-500 hover:text-blue-600'
                           }`}
                       >
                         <FiThumbsUp size={14} className={review.user_vote?.is_helpful ? 'fill-current' : ''} />

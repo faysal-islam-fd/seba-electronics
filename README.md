@@ -1,11 +1,11 @@
-# Pickaboo E-commerce Clone
+# Sheba Electronics E-commerce Platform
 
-A fully functional e-commerce frontend UI similar to pickaboo.com, built with Next.js 16, TypeScript, and Tailwind CSS.
+A fully functional e-commerce frontend UI for Sheba Electronics, built with Next.js 16, TypeScript, and Tailwind CSS.
 
 ## 🚀 Features
 
 - ✅ **Next.js SSR** - Server-Side Rendering for improved SEO and faster initial load
-- ✅ **Modern UI** - Clean, responsive design matching Pickaboo's interface
+- ✅ **Modern UI** - Clean, responsive design for Sheba Electronics
 - ✅ **TypeScript** - Type-safe code for better development experience
 - ✅ **Tailwind CSS** - Utility-first CSS framework for rapid styling
 - ✅ **Component Architecture** - Modular, reusable components
@@ -39,7 +39,7 @@ A fully functional e-commerce frontend UI similar to pickaboo.com, built with Ne
 ## 📂 Project Structure
 
 ```
-pickaboo-clone/
+sheba-electronics/
 ├── app/
 │   ├── components/
 │   │   ├── Header.tsx
@@ -69,7 +69,7 @@ pickaboo-clone/
 
 1. Navigate to the project directory:
 ```bash
-cd pickaboo-clone
+cd sheba-electronics
 ```
 
 2. Install dependencies:

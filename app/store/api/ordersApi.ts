@@ -4,17 +4,50 @@ import { getAuthToken } from '@/app/lib/authApi';
 // Order Item Types
 export interface OrderItem {
   product_id: number;
-  product_attribute_id?: number;
+  product_attribute_id?: number | null;
   quantity: number;
+}
+
+// Send OTP Types
+export interface SendOtpRequest {
+  phone: string;
+}
+
+
+
+export interface SendOtpResponse {
+  success: boolean;
+  message: string;
+  otp_hint?: string; // Only shown in development
+}
+
+
+
+// Apply Coupon Types
+export interface ApplyCouponRequest {
+  code: string;
+  order_amount: number;
+  items: { product_id: number }[];
+}
+
+export interface ApplyCouponResponse {
+  success: boolean;
+  message: string;
+  discount_amount?: number;
+  coupon_id?: number;
 }
 
 // Place Order Request Types
 export interface PlaceOrderRequest {
-  // Guest information (for guest orders)
+  // OTP verification (required for order placement)
+  otp: string;
+
+  // Guest information - REQUIRED if user is not logged in (no auth token)
+  // NOTE: guest_name and guest_phone are required if user_id is missing
   guest_name?: string;
   guest_email?: string;
   guest_phone?: string;
-  
+
   // Shipping information
   shipping_name: string;
   shipping_phone: string;
@@ -23,17 +56,25 @@ export interface PlaceOrderRequest {
   shipping_city: string;
   shipping_state?: string;
   shipping_zip?: string;
-  
+
   // Order items
   items: OrderItem[];
-  
+
   // Payment information
   payment_method: 'cod' | 'ssl_commerz';
   is_emi?: boolean;
   emi_months?: number;
-  shipping_charge?: number;
   customer_note?: string;
-  
+
+  // Coupon & Points
+  coupon_code?: string;
+  club_points_used?: number;
+
+  // Location-based shipping
+  // NOTE: shipping_charge is automatically calculated by backend based on is_inside_dhaka
+  is_inside_dhaka: boolean;
+  tax?: number;
+
   // SSL Commerz specific fields
   cus_phone?: string;
 }
@@ -43,6 +84,7 @@ export interface Order {
   order_number: string;
   status: string;
   total: number;
+  payment_method?: string;
   is_emi?: boolean;
   emi_months?: number;
   emi_amount?: number;
@@ -52,7 +94,11 @@ export interface PlaceOrderResponse {
   success: boolean;
   message: string;
   data: {
-    order: Order;
+    order_number: string;
+    status: string;
+    payment_method: string;
+    total: number;
+    order?: Order; // For backwards compatibility
     payment_url?: string;
   };
 }
@@ -188,10 +234,10 @@ export const ordersApi = apiSlice.injectEndpoints({
         // This is the correct endpoint as confirmed by user testing
         // Order numbers like "ORD-20251226-8F27" are URL-safe, no encoding needed
         const cleanOrderNumber = orderNumber.trim();
-        
+
         // Use the authenticated customer endpoint
         const url = `/customer/orders/${cleanOrderNumber}`;
-        
+
         // Debug logging
         console.log('📡 [Order Details] Making request:', {
           orderNumber: cleanOrderNumber,
@@ -202,7 +248,7 @@ export const ordersApi = apiSlice.injectEndpoints({
           tokenPreview: getAuthToken() ? `${getAuthToken()?.substring(0, 20)}...` : null,
           note: 'Using /customer/orders/{orderNumber} endpoint for authenticated users',
         });
-        
+
         return url;
       },
       providesTags: (result, error, orderNumber) => [{ type: 'Orders', id: orderNumber }],
@@ -219,14 +265,14 @@ export const ordersApi = apiSlice.injectEndpoints({
       query: ({ orderNumber, reason }) => {
         // Clean order number (remove any encoding issues)
         const cleanOrderNumber = orderNumber.trim();
-        
+
         console.log('📡 [Cancel Order] Making request:', {
           orderNumber: cleanOrderNumber,
           reason,
           url: `/orders/${cleanOrderNumber}/cancel`,
           fullUrl: `https://seba.rangpurit.com/api/v1/orders/${cleanOrderNumber}/cancel`,
         });
-        
+
         return {
           url: `/orders/${cleanOrderNumber}/cancel`,
           method: 'POST',
@@ -238,6 +284,22 @@ export const ordersApi = apiSlice.injectEndpoints({
         { type: 'Orders', id: orderNumber },
       ],
     }),
+    sendOtp: builder.mutation<SendOtpResponse, SendOtpRequest>({
+      query: (data) => ({
+        url: '/orders/send-otp',
+        method: 'POST',
+        body: data,
+      }),
+      // This is a public endpoint
+    }),
+    applyCoupon: builder.mutation<ApplyCouponResponse, ApplyCouponRequest>({
+      query: (data) => ({
+        url: '/orders/apply-coupon',
+        method: 'POST',
+        body: data,
+      }),
+      // This is a public endpoint
+    }),
   }),
 });
 
@@ -247,5 +309,7 @@ export const {
   useGetOrderDetailsQuery,
   useTrackOrderMutation,
   useCancelOrderMutation,
+  useSendOtpMutation,
+  useApplyCouponMutation,
 } = ordersApi;
 

@@ -8,11 +8,11 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const params = await searchParams;
   const query = (params.q as string) || '';
 
-  const title = query ? `Search results for "${query}" | Pickaboo` : 'Search Products | Pickaboo';
+  const title = query ? `Search results for "${query}" | Sheba Electronics` : 'Search Products | Sheba Electronics';
 
   return {
     title,
-    description: `Search for ${query || 'products'} at Pickaboo.`,
+    description: `Search for ${query || 'products'} at Sheba Electronics.`,
     robots: {
       index: false, // Search results should typically not be indexed
       follow: true,

@@ -22,6 +22,7 @@ async function FeaturedProductsSection() {
       badge: product.is_featured ? 'Featured' : undefined,
       rating: 4.5,
       inStock: isProductInStock(product.stock, product.is_out_of_stock),
+      type: (product as any).attributes && (product as any).attributes.length > 0 ? 'variable' : 'simple',
     }))
     : []; // Empty array if API fails - will show skeletons
 
@@ -48,6 +49,7 @@ async function TopSellingProductsSection() {
       badge: product.is_top_selling ? 'Top Selling' : undefined,
       rating: 4.5,
       inStock: isProductInStock(product.stock, product.is_out_of_stock),
+      type: (product as any).attributes && (product as any).attributes.length > 0 ? 'variable' : 'simple',
     }))
     : []; // Empty array if API fails - will show skeletons
 

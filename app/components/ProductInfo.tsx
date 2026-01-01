@@ -23,6 +23,9 @@ interface Product {
   stockCount: number;
   sku: string;
   images?: string[];
+  // Shipping fields - come as strings from API
+  shipping_in_dhaka?: string | number;
+  shipping_outside_dhaka?: string | number;
 }
 
 interface ProductInfoProps {
@@ -36,15 +39,15 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const { isLoggedIn } = useAuth();
   const { showSuccess, showError } = useToast();
   const router = useRouter();
-  
+
   // Convert id to number for API calls
   const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-  
+
   // Check if product is in wishlist
   const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
   const [addToWishlist] = useAddToWishlistMutation();
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
-  
+
   const isWishlisted = wishlistCheck?.in_wishlist || false;
 
   const increaseQuantity = () => {
@@ -63,7 +66,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     setIsAdding(true);
     // Extract product_id - convert string id to number if needed
     const productId = typeof product.id === 'string' ? parseInt(product.id, 10) : product.id;
-    
+
     addToCart({
       id: product.id,
       name: product.name,
@@ -74,8 +77,11 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       discount: product.discount,
       quantity: quantity,
       product_id: productId,
+      // Pass shipping info
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
     });
-    
+
     // Show feedback
     setTimeout(() => {
       setIsAdding(false);
@@ -211,7 +217,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
               router.push('/login');
               return;
             }
-            
+
             try {
               if (isWishlisted) {
                 await removeFromWishlist(productId).unwrap();
@@ -226,9 +232,8 @@ export default function ProductInfo({ product }: ProductInfoProps) {
               showError(errorMessage);
             }
           }}
-          className={`border-2 ${
-            isWishlisted ? 'border-red-500 text-red-500' : 'border-gray-300 text-gray-700'
-          } hover:border-red-500 hover:text-red-500 font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2`}
+          className={`border-2 ${isWishlisted ? 'border-red-500 text-red-500' : 'border-gray-300 text-gray-700'
+            } hover:border-red-500 hover:text-red-500 font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2`}
         >
           <FiHeart size={22} className={isWishlisted ? 'fill-current' : ''} />
         </button>
@@ -252,8 +257,8 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         <div className="flex items-start gap-3">
           <FiTruck className="text-green-600 mt-1 flex-shrink-0" size={22} />
           <div>
-            <p className="font-semibold text-gray-900">Free Delivery</p>
-            <p className="text-sm text-gray-600">Free shipping on orders above ৳5,000</p>
+            <p className="font-semibold text-gray-900">Fast Delivery</p>
+            <p className="text-sm text-gray-600">Reliable shipping to your doorstep</p>
           </div>
         </div>
         <div className="flex items-start gap-3">

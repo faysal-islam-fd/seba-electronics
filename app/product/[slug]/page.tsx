@@ -13,16 +13,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!data || !data.success) {
     return {
-      title: 'Product Not Found | Pickaboo',
+      title: 'Product Not Found | Sheba Electronics',
       description: 'The product you are looking for does not exist.',
     };
   }
 
   const product = data.data;
-  const title = `${product.title} | Pickaboo`;
+  const title = `${product.title} | Sheba Electronics`;
   const description = product.description
     ? product.description.replace(/<[^>]*>/g, '').slice(0, 160)
-    : `Buy ${product.title} at the best price in Bangladesh from Pickaboo.`;
+    : `Buy ${product.title} at the best price in Bangladesh from Sheba Electronics.`;
 
   const images = (() => {
     const galleryImages = product.galleries
@@ -44,8 +44,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       images: images.length > 0 ? images : ['/images/logo.png'],
       type: 'website',
-      url: `https://pickaboo.com/product/${slug}`, // Adjust base URL as needed
-      siteName: 'Pickaboo',
+      url: `https://shebaelectronics.com/product/${slug}`, // Adjust base URL as needed
+      siteName: 'Sheba Electronics',
       locale: 'en_BD',
     },
     twitter: {
@@ -149,7 +149,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     warranty: apiProduct.warranties?.[0]?.group_name
       ? `${apiProduct.warranties[0].group_name} - ${apiProduct.warranties[0].items?.[0]?.duration} ${apiProduct.warranties[0].items?.[0]?.type}`
       : 'Standard Warranty',
-    shipping: 'Free Delivery in Dhaka (3-5 Days)',
+    shipping: 'Delivery in Dhaka (3-5 Days)',
     soldBy: apiProduct.vendor?.name || 'Official Store',
     // Pass vendor object for proper routing
     vendor: apiProduct.vendor ? {
@@ -160,12 +160,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     emi: apiProduct.is_support_emi ? 'EMI Available' : 'Not Available',
     specialPrice: `৳${apiProduct.final_price.toLocaleString()}`,
     badgeText: apiProduct.is_featured ? 'Featured' : undefined,
-    clubPoints: 0,
+    clubPoints: apiProduct.club_point || 0,
     frequentlyBought: [],
     // Pass raw attributes for variation handling
     attributes: apiProduct.attributes || [],
     type: apiProduct.type,
     isVariableProduct,
+    // Shipping costs for cart
+    shipping_in_dhaka: apiProduct.shipping_in_dhaka || 0,
+    shipping_outside_dhaka: apiProduct.shipping_outside_dhaka || 0,
   };
 
   const breadcrumbItems = [

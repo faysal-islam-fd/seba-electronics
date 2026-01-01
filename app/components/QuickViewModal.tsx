@@ -27,7 +27,10 @@ interface QuickViewModalProps {
     rating?: number;
     reviewCount?: number;
     inStock?: boolean;
+    inStock?: boolean;
     soldBy?: string;
+    shipping_in_dhaka?: string | number;
+    shipping_outside_dhaka?: string | number;
   };
 }
 
@@ -252,6 +255,9 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
       quantity: quantity,
       product_id: productId,
       product_attribute_id: attributeId,
+      // Pass shipping info from full details
+      shipping_in_dhaka: fullProduct?.shipping_in_dhaka || product.shipping_in_dhaka,
+      shipping_outside_dhaka: fullProduct?.shipping_outside_dhaka || product.shipping_outside_dhaka,
     });
 
     setTimeout(() => {

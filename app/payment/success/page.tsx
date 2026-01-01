@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
 import { useCart } from '@/app/context/CartContext';
+import { useAuth } from '@/app/context/AuthContext';
 import { useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
 
 function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
+  const { isLoggedIn, refreshUser } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [message, setMessage] = useState('Processing payment...');
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
@@ -18,8 +20,8 @@ function PaymentSuccessContent() {
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get order number from URL parameter (SSL Commerz sends it as 'order')
-  const orderParam = searchParams.get('order') || 
-    searchParams.get('order_number') || 
+  const orderParam = searchParams.get('order') ||
+    searchParams.get('order_number') ||
     searchParams.get('orderNumber') ||
     searchParams.get('tran_id') ||
     searchParams.get('tranId');
@@ -33,89 +35,107 @@ function PaymentSuccessContent() {
   useEffect(() => {
     if (hasProcessedRef.current || !orderParam) return;
 
-    // If API returned data, process it
-    if (orderData?.success && orderData.data) {
-      hasProcessedRef.current = true;
-      const order = orderData.data;
-      const orderStatus = order.status?.toLowerCase();
-      const paymentStatus = (order as any).payment_status?.toLowerCase();
-      
-      console.log('📦 Order details from API:', {
-        order_number: order.order_number,
-        status: orderStatus,
-        payment_status: paymentStatus,
-      });
-      
-      // Check if order is cancelled or payment failed
-      const isOrderCancelled = orderStatus === 'cancelled';
-      const isPaymentFailed = 
-        paymentStatus === 'failed' || 
-        paymentStatus === 'cancelled' ||
-        orderStatus === 'failed';
-      
-      if (isOrderCancelled || isPaymentFailed) {
-        console.log('❌ Order is cancelled or payment failed according to API');
+    // Async function to handle the payment processing
+    const handlePaymentProcessing = async () => {
+      // If API returned data, process it
+      if (orderData?.success && orderData.data) {
+        hasProcessedRef.current = true;
+        const order = orderData.data;
+        const orderStatus = order.status?.toLowerCase();
+        const paymentStatus = (order as any).payment_status?.toLowerCase();
+
+        console.log('📦 Order details from API:', {
+          order_number: order.order_number,
+          status: orderStatus,
+          payment_status: paymentStatus,
+        });
+
+        // Check if order is cancelled or payment failed
+        const isOrderCancelled = orderStatus === 'cancelled';
+        const isPaymentFailed =
+          paymentStatus === 'failed' ||
+          paymentStatus === 'cancelled' ||
+          orderStatus === 'failed';
+
+        if (isOrderCancelled || isPaymentFailed) {
+          console.log('❌ Order is cancelled or payment failed according to API');
+          setStatus('failed');
+          setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
+
+          setTimeout(() => {
+            const params = new URLSearchParams();
+            params.set('order', order.order_number);
+            router.push(`/payment/failed?${params.toString()}`);
+          }, 2000);
+          return;
+        }
+
+        // Check if order is confirmed/paid
+        const isOrderConfirmed =
+          orderStatus === 'confirmed' ||
+          orderStatus === 'paid' ||
+          orderStatus === 'processing' ||
+          paymentStatus === 'paid' ||
+          paymentStatus === 'success';
+
+        if (isOrderConfirmed) {
+          console.log('✅ Order is confirmed/paid according to API');
+
+          sessionStorage.setItem('lastOrder', JSON.stringify({
+            order_number: order.order_number,
+            status: order.status,
+            total: order.total,
+            is_emi: order.is_emi,
+            emi_months: order.emi_months,
+            emi_amount: order.emi_amount,
+          }));
+          sessionStorage.removeItem('pendingOrder');
+
+          clearCart();
+
+          // Refresh user profile to get updated club points (if logged in)
+          if (isLoggedIn) {
+            try {
+              await refreshUser();
+              console.log('✅ User profile refreshed - club points updated');
+            } catch (error) {
+              console.warn('⚠️ Failed to refresh user profile:', error);
+              // Don't block success flow if refresh fails
+            }
+          }
+
+          setStatus('success');
+          setMessage('Payment completed successfully! Your order is being processed.');
+
+          setTimeout(() => {
+            const params = new URLSearchParams();
+            params.set('order_number', order.order_number);
+            params.set('status', 'paid');
+            params.set('total', order.total.toString());
+            router.push(`/order-success?${params.toString()}`);
+          }, 2000);
+          return;
+        }
+
+        // If order status is unclear (not cancelled, not confirmed), treat as failed to be safe
+        console.warn('⚠️ Order status unclear from API - treating as failed for safety:', {
+          order_status: orderStatus,
+          payment_status: paymentStatus,
+        });
         setStatus('failed');
-        setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
-        
+        setMessage('Payment status could not be verified. Please check your order status in your account or contact support if payment was deducted.');
+
         setTimeout(() => {
           const params = new URLSearchParams();
           params.set('order', order.order_number);
           router.push(`/payment/failed?${params.toString()}`);
         }, 2000);
-        return;
       }
-      
-      // Check if order is confirmed/paid
-      const isOrderConfirmed = 
-        orderStatus === 'confirmed' || 
-        orderStatus === 'paid' ||
-        orderStatus === 'processing' ||
-        paymentStatus === 'paid' ||
-        paymentStatus === 'success';
-      
-      if (isOrderConfirmed) {
-        console.log('✅ Order is confirmed/paid according to API');
-        
-        sessionStorage.setItem('lastOrder', JSON.stringify({
-          order_number: order.order_number,
-          status: order.status,
-          total: order.total,
-          is_emi: order.is_emi,
-          emi_months: order.emi_months,
-          emi_amount: order.emi_amount,
-        }));
-        sessionStorage.removeItem('pendingOrder');
-        
-        clearCart();
-        setStatus('success');
-        setMessage('Payment completed successfully! Your order is being processed.');
-        
-        setTimeout(() => {
-          const params = new URLSearchParams();
-          params.set('order_number', order.order_number);
-          params.set('status', 'paid');
-          params.set('total', order.total.toString());
-          router.push(`/order-success?${params.toString()}`);
-        }, 2000);
-        return;
-      }
+    };
 
-      // If order status is unclear (not cancelled, not confirmed), treat as failed to be safe
-      console.warn('⚠️ Order status unclear from API - treating as failed for safety:', {
-        order_status: orderStatus,
-        payment_status: paymentStatus,
-      });
-      setStatus('failed');
-      setMessage('Payment status could not be verified. Please check your order status in your account or contact support if payment was deducted.');
-      
-      setTimeout(() => {
-        const params = new URLSearchParams();
-        params.set('order', order.order_number);
-        router.push(`/payment/failed?${params.toString()}`);
-      }, 2000);
-    }
-  }, [orderData, orderParam, router, clearCart]);
+    // Call the async function
+    handlePaymentProcessing();
+  }, [orderData, orderParam, router, clearCart, isLoggedIn, refreshUser]);
 
   // Effect 2: Handle initial processing and fallback when API times out or fails
   useEffect(() => {
@@ -156,7 +176,7 @@ function PaymentSuccessContent() {
         // If API is still loading, wait for it (with timeout)
         if (isLoadingOrder && !orderError) {
           console.log('⏳ Waiting for order details from API...');
-          
+
           // Set a timeout fallback - if API takes too long, proceed with URL parameters
           if (!redirectTimeoutRef.current) {
             redirectTimeoutRef.current = setTimeout(() => {
@@ -196,7 +216,7 @@ function PaymentSuccessContent() {
           console.log('❌ Payment explicitly failed based on URL parameters');
           setStatus('failed');
           setMessage('Payment failed. Please try again or choose a different payment method.');
-          
+
           setTimeout(() => {
             const params = new URLSearchParams();
             if (finalOrderNumber) params.set('order', finalOrderNumber);
@@ -239,7 +259,7 @@ function PaymentSuccessContent() {
         // CRITICAL: NEVER assume success without API confirmation!
         // URL parameters can be misleading - the backend API is the ONLY source of truth
         // If API hasn't responded, we must wait or show error - never redirect to success
-        
+
         // If API error or no data after timeout, show error
         if (orderError || (!isLoadingOrder && !orderData)) {
           console.warn('⚠️ API error or no data - cannot verify payment status safely');

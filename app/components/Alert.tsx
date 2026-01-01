@@ -152,3 +152,4 @@ export default function AlertContainer({ alerts, onClose }: AlertContainerProps)
   return <AlertItem alert={currentAlert} onClose={onClose} />;
 }
 
+

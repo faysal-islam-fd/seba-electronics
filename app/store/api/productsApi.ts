@@ -31,6 +31,9 @@ export interface Product {
   brand?: Brand;
   category?: Category;
   categories?: Category[];
+  // Shipping fields
+  shipping_in_dhaka?: number;
+  shipping_outside_dhaka?: number;
   // Additional fields from API
   type?: string;
   description?: string;

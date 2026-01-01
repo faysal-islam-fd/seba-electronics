@@ -5,20 +5,22 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
-import { usePlaceOrderMutation } from '@/app/store/api/ordersApi';
-import { useGetProductDetailsQuery } from '@/app/store/api/productsApi';
+import { usePlaceOrderMutation, useSendOtpMutation, useApplyCouponMutation } from '@/app/store/api/ordersApi';
+import { useVerifyRegistrationOTPMutation } from '@/app/store/api/authApi';
 import Breadcrumb from '@/app/components/Breadcrumb';
-import { FiMapPin, FiCreditCard, FiTruck, FiLock } from 'react-icons/fi';
+import { FiMapPin, FiCreditCard, FiTruck, FiLock, FiCheck, FiTag, FiPhone, FiStar } from 'react-icons/fi';
 import { validatePhoneNumber } from '@/app/utils/phoneValidation';
 import { useToast } from '@/app/context/ToastContext';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, getCartTotal, clearCart } = useCart();
-  const { user, isLoggedIn } = useAuth();
-  const { showError } = useToast();
+  const { cartItems, getCartTotal, clearCart, getShippingTotal } = useCart();
+  const { user, isLoggedIn, refreshUser } = useAuth();
+  const { showError, showSuccess } = useToast();
   const [placeOrder, { isLoading: isPlacingOrder }] = usePlaceOrderMutation();
-  const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
+  const [sendOtp, { isLoading: isSendingOtp }] = useSendOtpMutation();
+  const [applyCoupon, { isLoading: isApplyingCoupon }] = useApplyCouponMutation();
+  const [step, setStep] = useState<'shipping' | 'verification' | 'payment'>('shipping');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Form states
@@ -27,7 +29,7 @@ export default function CheckoutPage() {
     phone: '',
     email: '',
     address: '',
-    city: '',
+    city: '', // Will be 'inside_dhaka' or 'outside_dhaka'
     area: '',
     postalCode: '',
     state: '',
@@ -38,10 +40,35 @@ export default function CheckoutPage() {
   const [emiMonths, setEmiMonths] = useState<number>(3);
   const [customerNote, setCustomerNote] = useState('');
 
+  // OTP States
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+
+  // Coupon States
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discount_amount: number;
+    coupon_id: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  // Club Points States
+  const [useClubPoints, setUseClubPoints] = useState(false);
+  const [clubPointsToUse, setClubPointsToUse] = useState(0);
+  const userClubPoints = user?.club_points || 0;
+  // Each club point = ৳1 discount
+  const maxClubPointsDiscount = Math.min(userClubPoints, Math.floor(getCartTotal() * 0.5)); // Max 50% of cart total
+
+  // Location-based shipping - using product-specific shipping costs
+  const isInsideDhaka = shippingInfo.city === 'inside_dhaka';
+  const shippingCharge = getShippingTotal(isInsideDhaka);
+
   const subtotal = getCartTotal();
-  const shipping: number = 100; // Default shipping charge (can be adjusted)
-  const discount: number = 0; // Will be calculated by backend
-  const total = subtotal - discount + shipping;
+  const discount = appliedCoupon?.discount_amount || 0;
+  const clubPointsDiscount = useClubPoints ? clubPointsToUse : 0;
+  const total = subtotal - discount - clubPointsDiscount + shippingCharge;
 
   // Calculate EMI amount if EMI is selected
   const calculateEMIAmount = () => {
@@ -58,11 +85,12 @@ export default function CheckoutPage() {
 
   const emiAmount = calculateEMIAmount();
 
-  const handleShippingSubmit = (e: React.FormEvent) => {
+  // Handle sending OTP and moving to verification step
+  const handleShippingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // Validate phone number before proceeding to payment
+    // Validate phone number before sending OTP
     const phoneNumber = shippingInfo.phone?.trim() || '';
     if (!phoneNumber) {
       showError('Phone number is required');
@@ -75,7 +103,104 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Send OTP
+    try {
+      const result = await sendOtp({ phone: phoneNumber }).unwrap();
+      if (result.success) {
+        setOtpSent(true);
+        showSuccess(result.message);
+        // Show OTP hint in development if provided
+        if (result.otp_hint) {
+          console.log('📱 OTP Hint (Dev only):', result.otp_hint);
+        }
+        setStep('verification');
+      } else {
+        showError(result.message || 'Failed to send OTP');
+      }
+    } catch (error: any) {
+      console.error('OTP send error:', error);
+      showError(error.data?.message || 'Failed to send OTP. Please try again.');
+    }
+  };
+
+  // Resend OTP
+  const handleResendOtp = async () => {
+    const phoneNumber = shippingInfo.phone?.trim() || '';
+    try {
+      const result = await sendOtp({ phone: phoneNumber }).unwrap();
+      if (result.success) {
+        showSuccess('OTP resent successfully!');
+        if (result.otp_hint) {
+          console.log('📱 OTP Hint (Dev only):', result.otp_hint);
+        }
+      } else {
+        showError(result.message || 'Failed to resend OTP');
+      }
+    } catch (error: any) {
+      showError(error.data?.message || 'Failed to resend OTP');
+    }
+  };
+
+  // Verify OTP (Client-side format check only due to missing API)
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length < 4) {
+      showError('Please enter a valid OTP');
+      return;
+    }
+
+    // Simulate brief processing for UX
+    // setIsVerifyingOtp(true); // If we had state
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    setOtpVerified(true);
     setStep('payment');
+    showSuccess('Proceeding to payment...');
+  };
+
+  // Apply coupon
+  const handleApplyCoupon = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    setCouponError(null);
+    try {
+      const items = cartItems.map(item => ({
+        product_id: item.product_id || extractProductId(item.id)
+      }));
+
+      const result = await applyCoupon({
+        code: couponCode.trim().toUpperCase(),
+        order_amount: subtotal,
+        items,
+      }).unwrap();
+
+      if (result.success && result.discount_amount && result.coupon_id) {
+        setAppliedCoupon({
+          code: couponCode.trim().toUpperCase(),
+          discount_amount: result.discount_amount,
+          coupon_id: result.coupon_id,
+        });
+        showSuccess(`Coupon applied! You saved ৳${result.discount_amount.toLocaleString()}`);
+        setCouponCode('');
+      } else {
+        setCouponError(result.message || 'Invalid coupon code');
+      }
+    } catch (error: any) {
+      console.error('Coupon apply error:', error);
+      setCouponError(error.data?.message || 'Failed to apply coupon');
+    }
+  };
+
+  // Remove applied coupon
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    showSuccess('Coupon removed');
   };
 
   // Helper function to extract product_id from cart item ID
@@ -156,6 +281,27 @@ export default function CheckoutPage() {
       // Get phone number from shipping info (already validated in handleShippingSubmit)
       const phoneNumber = shippingInfo.phone?.trim() || '';
 
+      // Validate OTP is provided
+      if (!otp || otp.length < 4) {
+        setErrorMessage('Please verify your phone number with OTP first');
+        setStep('shipping');
+        return;
+      }
+
+      // For guest checkout, guest_name and guest_phone are REQUIRED
+      if (!isLoggedIn) {
+        if (!shippingInfo.fullName.trim()) {
+          setErrorMessage('Full name is required for guest checkout');
+          setStep('shipping');
+          return;
+        }
+        if (!phoneNumber) {
+          setErrorMessage('Phone number is required for guest checkout');
+          setStep('shipping');
+          return;
+        }
+      }
+
       // Validate EMI fields if EMI is selected
       if (paymentMethod === 'ssl_commerz' && isEmi) {
         if (!emiMonths || emiMonths < 3 || emiMonths > 24) {
@@ -164,19 +310,37 @@ export default function CheckoutPage() {
         }
       }
 
-      // Build order request
+      // Build order request with new API format
       const orderData: any = {
+        // OTP verification (required)
+        otp: otp,
+
+        // Shipping information
         shipping_name: shippingInfo.fullName,
         shipping_phone: phoneNumber,
-        shipping_email: shippingInfo.email || (isLoggedIn ? user?.email : undefined),
         shipping_address: shippingInfo.address,
         shipping_city: shippingInfo.city,
-        shipping_state: shippingInfo.state || shippingInfo.area || undefined,
-        shipping_zip: shippingInfo.postalCode || undefined,
+
+        // Order items
         items,
+
+        // Payment information
         payment_method: paymentMethod,
-        shipping_charge: shipping,
+
+        // Location-based shipping
+        is_inside_dhaka: isInsideDhaka,
+
+        // Tax (defaulting to 0)
+        tax: 0,
+
+        // Club points used for discount
+        club_points_used: clubPointsDiscount,
       };
+
+      // Add coupon code if applied
+      if (appliedCoupon) {
+        orderData.coupon_code = appliedCoupon.code;
+      }
 
       // Add customer note if provided
       if (customerNote.trim()) {
@@ -215,6 +379,19 @@ export default function CheckoutPage() {
         phoneValue: shippingInfo.phone,
         items_count: orderData.items.length,
         fullOrderData: JSON.stringify(orderData, null, 2),
+      });
+
+      // Debug: Log each item's structure
+      console.log('🔍 ORDER ITEMS DETAILS:');
+      orderData.items.forEach((item: any, index: number) => {
+        console.log(`Item ${index}:`, {
+          product_id: item.product_id,
+          product_attribute_id: item.product_attribute_id,
+          quantity: item.quantity,
+          has_attribute_id: !!item.product_attribute_id,
+          attribute_id_type: typeof item.product_attribute_id,
+          full_item: JSON.stringify(item, null, 2),
+        });
       });
 
       // Place order
@@ -294,7 +471,61 @@ export default function CheckoutPage() {
         }
 
         // For COD or other direct payments, clear cart and redirect to success page
+
+        // Store comprehensive order details in localStorage for guest order history
+        if (!isLoggedIn) {
+          const guestOrderDetails = {
+            order_number: orderNumber,
+            status: orderStatus,
+            total: orderTotal,
+            subtotal,
+            shipping: shippingCharge,
+            is_emi: orderIsEmi,
+            emi_months: orderEmiMonths,
+            emi_amount: orderEmiAmount,
+            payment_method: paymentMethod,
+            created_at: new Date().toISOString(),
+            shipping_info: {
+              name: shippingInfo.fullName,
+              phone: shippingInfo.phone,
+              email: shippingInfo.email,
+              address: shippingInfo.address,
+              city: shippingInfo.city,
+              area: shippingInfo.area,
+              postalCode: shippingInfo.postalCode,
+            },
+            items: cartItems.map(item => ({
+              id: item.id,
+              name: item.name,
+              image: item.image,
+              price: item.price,
+              quantity: item.quantity,
+              originalPrice: item.originalPrice,
+            })),
+          };
+
+          // Get existing guest orders from localStorage
+          const existingOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]');
+          // Add new order at the beginning
+          existingOrders.unshift(guestOrderDetails);
+          // Keep only last 20 orders
+          const trimmedOrders = existingOrders.slice(0, 20);
+          localStorage.setItem('guestOrders', JSON.stringify(trimmedOrders));
+        }
+
         clearCart();
+
+        // Refresh user profile to get updated club points (if logged in)
+        if (isLoggedIn) {
+          try {
+            await refreshUser();
+            console.log('✅ User profile refreshed - club points updated');
+          } catch (error) {
+            console.warn('⚠️ Failed to refresh user profile:', error);
+            // Don't block order success page if refresh fails
+          }
+        }
+
         // Store order details in sessionStorage to display on success page
         sessionStorage.setItem('lastOrder', JSON.stringify({
           order_number: orderNumber,
@@ -332,7 +563,17 @@ export default function CheckoutPage() {
             return;
           }
         }
-        setErrorMessage(error.data.message || 'Failed to place order. Please try again.');
+
+        // Handle OTP specific errors
+        const errorMessage = error.data.message || 'Failed to place order.';
+        if (errorMessage.toLowerCase().includes('otp')) {
+          setOtpVerified(false);
+          setStep('verification');
+          showError(errorMessage);
+          return;
+        }
+
+        setErrorMessage(errorMessage);
       } else if (error.message) {
         setErrorMessage(error.message);
       } else {
@@ -375,28 +616,45 @@ export default function CheckoutPage() {
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Main Checkout Form */}
           <div className="flex-1">
-            {/* Progress Steps */}
+            {/* Progress Steps - 3 Steps: Shipping, Verification, Payment */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <div className="flex items-center justify-between">
+                {/* Step 1: Shipping */}
                 <div className={`flex items-center gap-3 ${step === 'shipping' ? 'text-blue-600' : 'text-green-600'}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'shipping' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
-                    }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'shipping' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'}`}>
                     {step === 'shipping' ? '1' : '✓'}
                   </div>
-                  <div>
-                    <p className="font-semibold">Shipping Information</p>
-                    <p className="text-sm text-gray-500">Enter your delivery details</p>
+                  <div className="hidden sm:block">
+                    <p className="font-semibold">Shipping</p>
+                    <p className="text-sm text-gray-500">Delivery details</p>
                   </div>
                 </div>
-                <div className="flex-1 h-0.5 bg-gray-200 mx-4"></div>
-                <div className={`flex items-center gap-3 ${step === 'payment' ? 'text-blue-600' : 'text-gray-400'}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                <div className="flex-1 h-0.5 bg-gray-200 mx-2 sm:mx-4"></div>
+
+                {/* Step 2: Verification */}
+                <div className={`flex items-center gap-3 ${step === 'verification' ? 'text-blue-600' :
+                  step === 'payment' ? 'text-green-600' : 'text-gray-400'
+                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'verification' ? 'bg-blue-600 text-white' :
+                    step === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                     }`}>
-                    2
+                    {step === 'payment' ? '✓' : '2'}
                   </div>
-                  <div>
+                  <div className="hidden sm:block">
+                    <p className="font-semibold">Verify</p>
+                    <p className="text-sm text-gray-500">OTP verification</p>
+                  </div>
+                </div>
+                <div className="flex-1 h-0.5 bg-gray-200 mx-2 sm:mx-4"></div>
+
+                {/* Step 3: Payment */}
+                <div className={`flex items-center gap-3 ${step === 'payment' ? 'text-blue-600' : 'text-gray-400'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    3
+                  </div>
+                  <div className="hidden sm:block">
                     <p className="font-semibold">Payment</p>
-                    <p className="text-sm text-gray-500">Choose payment method</p>
+                    <p className="text-sm text-gray-500">Payment method</p>
                   </div>
                 </div>
               </div>
@@ -471,7 +729,7 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City *
+                        Delivery Area *
                       </label>
                       <select
                         required
@@ -479,12 +737,9 @@ export default function CheckoutPage() {
                         onChange={(e) => setShippingInfo({ ...shippingInfo, city: e.target.value })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="">Select City</option>
-                        <option value="dhaka">Dhaka</option>
-                        <option value="chittagong">Chittagong</option>
-                        <option value="sylhet">Sylhet</option>
-                        <option value="rajshahi">Rajshahi</option>
-                        <option value="khulna">Khulna</option>
+                        <option value="">Select Delivery Area</option>
+                        <option value="inside_dhaka">Inside Dhaka</option>
+                        <option value="outside_dhaka">Outside Dhaka</option>
                       </select>
                     </div>
                     <div>
@@ -517,14 +772,100 @@ export default function CheckoutPage() {
                   <div className="pt-4">
                     <button
                       type="submit"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                      disabled={isSendingOtp}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                      Continue to Payment
+                      {isSendingOtp ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Sending OTP...
+                        </>
+                      ) : (
+                        <>
+                          <FiPhone size={18} />
+                          Send OTP & Continue
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
               </div>
             )}
+
+            {/* OTP Verification Step */}
+            {step === 'verification' && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <FiPhone className="text-blue-600" size={24} />
+                  <h2 className="text-xl font-bold text-gray-900">Verify Your Phone Number</h2>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-800">
+                    We've sent a 6-digit OTP to <span className="font-bold">{shippingInfo.phone}</span>
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Please enter the code to verify your phone number.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Enter OTP *
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest font-mono"
+                      placeholder="• • • • • •"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={isSendingOtp}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-semibold disabled:text-gray-400"
+                    >
+                      {isSendingOtp ? 'Sending...' : 'Resend OTP'}
+                    </button>
+                    <p className="text-xs text-gray-500">
+                      Didn't receive the code?
+                    </p>
+                  </div>
+
+                  <div className="pt-4 space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={!otp || otp.length < 4}
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <FiCheck size={18} />
+                      Verify & Continue to Payment
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep('shipping')}
+                      className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      ← Back to Shipping
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+            {/* Removed Verification Step Block */}
+
+
 
             {/* Payment Method Selection */}
             {step === 'payment' && (
@@ -537,8 +878,8 @@ export default function CheckoutPage() {
                 <div className="space-y-3 mb-6">
                   {/* Cash on Delivery */}
                   <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'cod'
-                      ? 'border-blue-600 bg-blue-50 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    ? 'border-blue-600 bg-blue-50 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}>
                     <input
                       type="radio"
@@ -573,8 +914,8 @@ export default function CheckoutPage() {
 
                   {/* SSL Commerz (Mobile Banking, Cards, Bank Online) */}
                   <label className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'ssl_commerz'
-                      ? 'border-blue-600 bg-blue-50 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    ? 'border-blue-600 bg-blue-50 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}>
                     <input
                       type="radio"
@@ -709,13 +1050,13 @@ export default function CheckoutPage() {
 
                 <div className="pt-6 border-t mt-6 space-y-3">
                   <button
-                    onClick={() => setStep('shipping')}
+                    onClick={() => setStep('verification')}
                     className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Back to Shipping
+                    Back to Verification
                   </button>
                   <button
                     onClick={handlePlaceOrder}
@@ -774,6 +1115,127 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              {/* Coupon Code Section */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <FiTag className="text-blue-600" size={18} />
+                  <span className="font-semibold text-gray-900">Have a Coupon?</span>
+                </div>
+
+                {appliedCoupon ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-green-700">{appliedCoupon.code}</p>
+                        <p className="text-xs text-green-600">
+                          You save ৳{appliedCoupon.discount_amount.toLocaleString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => {
+                          setCouponCode(e.target.value.toUpperCase());
+                          setCouponError(null);
+                        }}
+                        placeholder="Enter coupon code"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={isApplyingCoupon || !couponCode.trim()}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        {isApplyingCoupon ? '...' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-xs text-red-600">{couponError}</p>
+                    )}
+                    <p className="text-xs text-gray-500">Try: SUMMER50 for 20% off</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Club Points Section */}
+              {isLoggedIn && userClubPoints > 0 && (
+                <div className="mb-4 pb-4 border-b border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FiStar className="text-yellow-500" size={18} />
+                    <span className="font-semibold text-gray-900">Club Points</span>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Available Points</p>
+                        <p className="text-lg font-bold text-yellow-600">{userClubPoints.toLocaleString()} pts</p>
+                        <p className="text-xs text-gray-500">= ৳{userClubPoints.toLocaleString()} discount</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={useClubPoints}
+                          onChange={(e) => {
+                            setUseClubPoints(e.target.checked);
+                            if (e.target.checked) {
+                              setClubPointsToUse(maxClubPointsDiscount);
+                            } else {
+                              setClubPointsToUse(0);
+                            }
+                          }}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                      </label>
+                    </div>
+
+                    {useClubPoints && (
+                      <div className="mt-3 pt-3 border-t border-yellow-200">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Points to use (max {maxClubPointsDiscount.toLocaleString()})
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={maxClubPointsDiscount}
+                            value={clubPointsToUse}
+                            onChange={(e) => {
+                              const value = Math.min(maxClubPointsDiscount, Math.max(0, parseInt(e.target.value) || 0));
+                              setClubPointsToUse(value);
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setClubPointsToUse(maxClubPointsDiscount)}
+                            className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            Use Max
+                          </button>
+                        </div>
+                        <p className="text-xs text-green-600 mt-2 font-medium">
+                          You will save ৳{clubPointsToUse.toLocaleString()} on this order!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Price Breakdown */}
               <div className="space-y-3 border-t border-gray-200 pt-4">
                 <div className="flex justify-between text-sm">
@@ -783,19 +1245,32 @@ export default function CheckoutPage() {
 
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Discount</span>
+                    <span className="text-gray-600">
+                      Discount {appliedCoupon ? <span className="text-green-600">({appliedCoupon.code})</span> : ''}
+                    </span>
                     <span className="font-semibold text-green-600">-৳ {discount.toLocaleString()}</span>
                   </div>
                 )}
 
+                {clubPointsDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      Club Points <span className="text-yellow-600">({clubPointsDiscount} pts)</span>
+                    </span>
+                    <span className="font-semibold text-yellow-600">-৳ {clubPointsDiscount.toLocaleString()}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping Charge</span>
-                  <span className="font-semibold text-gray-900">
-                    {shipping === 0 ? (
-                      <span className="text-green-600">Free</span>
-                    ) : (
-                      `৳ ${shipping.toLocaleString()}`
+                  <span className="text-gray-600">
+                    Shipping {shippingInfo.city && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${isInsideDhaka ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {isInsideDhaka ? 'Inside Dhaka' : 'Outside Dhaka'}
+                      </span>
                     )}
+                  </span>
+                  <span className="font-semibold text-gray-900">
+                    ৳ {shippingCharge.toLocaleString()}
                   </span>
                 </div>
 

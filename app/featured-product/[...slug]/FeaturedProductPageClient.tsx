@@ -70,7 +70,7 @@ export default function FeaturedProductPageClient({
 }: FeaturedProductPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
+  
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
     initialMinPrice || 0,
@@ -79,7 +79,7 @@ export default function FeaturedProductPageClient({
   const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | undefined>(initialSubcategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-
+  
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
@@ -97,7 +97,7 @@ export default function FeaturedProductPageClient({
       { label: 'Home', href: '/' },
       { label: 'Featured Categories', href: '/categories' },
     ];
-
+    
     // Add category path items
     categoryPath.forEach((cat, index) => {
       const pathSlugs = categoryPath.slice(0, index + 1).map(c => c.slug);
@@ -106,7 +106,7 @@ export default function FeaturedProductPageClient({
         href: `/featured-product/${pathSlugs.join('/')}`,
       });
     });
-
+    
     return items;
   };
 
@@ -117,7 +117,7 @@ export default function FeaturedProductPageClient({
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
-
+    
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
         params.delete(key);
@@ -125,7 +125,7 @@ export default function FeaturedProductPageClient({
         params.set(key, String(value));
       }
     });
-
+    
     const categoryPathStr = buildCategoryPath();
     router.push(`/featured-product/${categoryPathStr}?${params.toString()}`);
   };
@@ -184,13 +184,13 @@ export default function FeaturedProductPageClient({
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">
-                {parentCategory
-                  ? `${parentCategory.name} - ${currentCategory.name}`
+                {parentCategory 
+                  ? `${parentCategory.name} - ${currentCategory.name}` 
                   : `Featured Category - ${currentCategory.name}`}
               </h1>
               <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                {meta
-                  ? `${meta.total} ${currentCategory.parent_id ? 'subcategory' : 'category'} products available`
+                {meta 
+                  ? `${meta.total} ${currentCategory.parent_id ? 'subcategory' : 'category'} products available` 
                   : 'Loading products...'}
               </p>
             </div>
@@ -376,7 +376,7 @@ export default function FeaturedProductPageClient({
                     >
                       Previous
                     </button>
-
+                    
                     <div className="flex items-center gap-2">
                       {[...Array(Math.min(5, meta.last_page))].map((_, i) => {
                         const page = i + 1;
@@ -384,10 +384,11 @@ export default function FeaturedProductPageClient({
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
+                            className={`w-10 h-10 rounded-lg text-sm font-medium ${
+                              initialPage === page
                                 ? 'bg-orange-500 text-white'
                                 : 'border border-gray-300 hover:bg-gray-50'
-                              }`}
+                            }`}
                           >
                             {page}
                           </button>

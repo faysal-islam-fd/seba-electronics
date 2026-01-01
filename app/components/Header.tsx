@@ -96,11 +96,12 @@ export default function Header() {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setShowSuggestions(false);
+      setSearchQuery(''); // Clear search input after search
     }
   };
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-[9998]">
+    <header className="bg-white shadow-md sticky top-0 z-[99999]">
       <div className="bg-blue-600">
         <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
           <div className="flex flex-col gap-2 sm:gap-3">
@@ -279,7 +280,7 @@ export default function Header() {
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
                                 setShowSuggestions(false);
-                                setSearchQuery(product.name);
+                                setSearchQuery(''); // Clear search input
                                 router.push(`/product/${product.id}`);
                               }}
                               className="w-full flex items-start gap-3 px-3 sm:px-4 py-2.5 hover:bg-gray-50 text-left"
@@ -597,7 +598,7 @@ export default function Header() {
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => {
                               setShowSuggestions(false);
-                              setSearchQuery(product.name);
+                              setSearchQuery(''); // Clear search input
                               router.push(`/product/${product.id}`);
                             }}
                             className="w-full flex items-start gap-3 px-3 sm:px-4 py-2.5 hover:bg-gray-50 text-left"

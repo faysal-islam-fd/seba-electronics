@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'All Categories | Pickaboo',
+  title: 'All Categories | Sheba Electronics',
   description: 'Browse all product categories - Electronics, Home Appliances, Gadgets, and more.',
 };
 
@@ -12,7 +12,7 @@ export default async function CategoriesPage() {
   const categoriesData = await getCategories(true);
   const categories = categoriesData.success ? categoriesData.data : [];
   console.log(categoriesData);
-  
+
   // Separate parent categories and their children
   const parentCategories = categories.filter(cat => !cat.parent_id);
 
@@ -66,7 +66,7 @@ export default async function CategoriesPage() {
                   <h2 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
                     {category.name}
                   </h2>
-                  
+
                   {/* Subcategories */}
                   {category.children && category.children.length > 0 && (
                     <div className="space-y-1">

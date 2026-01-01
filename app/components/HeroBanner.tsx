@@ -12,7 +12,7 @@ function SliderSkeleton() {
     <div className="relative w-full h-full bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse overflow-hidden rounded-xl">
       {/* Shimmer effect */}
       <div className="absolute inset-0 shimmer-animation bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
+      
       {/* Decorative elements */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 opacity-30">
@@ -21,7 +21,7 @@ function SliderSkeleton() {
           <div className="h-3 w-32 bg-white/30 rounded animate-pulse" />
         </div>
       </div>
-
+      
       {/* Bottom dots skeleton */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {[1, 2, 3].map((i) => (
@@ -48,34 +48,27 @@ export default function HeroBanner() {
         id: slider.id,
         image: slider.image_url,
         alt: slider.target?.name || `Slider ${slider.id}`,
-        href: slider.target
-          ? (slider.type === 'category_id'
-            ? `/category/${slider.target.slug}`
-            : slider.target.slug
-              ? `/${slider.target.slug}`
-              : '#')
+        href: slider.target 
+          ? (slider.type === 'category_id' 
+              ? `/category/${slider.target.slug}` 
+              : slider.target.slug 
+                ? `/${slider.target.slug}` 
+                : '#')
           : '#',
       }));
     }
     return [];
   }, [slidersData]);
 
-  // Reset current slide to 0 only if index is out of bounds
   useEffect(() => {
-    if (currentSlide >= slides.length && slides.length > 0) {
-      setCurrentSlide(0);
-    }
-  }, [slides, currentSlide]);
-
-  useEffect(() => {
-    if (isHovered || slides.length <= 1) return;
+    if (isHovered || slides.length === 0) return;
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [isHovered, slides]);
+  }, [isHovered, slides.length]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -110,8 +103,9 @@ export default function HeroBanner() {
           <Link
             key={slide.id}
             href={slide.href}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              }`}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
           >
             <Image
               src={slide.image}
@@ -153,10 +147,11 @@ export default function HeroBanner() {
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`transition-all duration-300 rounded-full ${index === currentSlide
-                ? 'bg-white w-8 sm:w-10 h-2 sm:h-2.5 shadow-lg'
-                : 'bg-white/50 w-2 sm:w-2.5 h-2 sm:h-2.5 hover:bg-white/75 hover:w-4 sm:hover:w-6'
-                }`}
+              className={`transition-all duration-300 rounded-full ${
+                index === currentSlide
+                  ? 'bg-white w-8 sm:w-10 h-2 sm:h-2.5 shadow-lg'
+                  : 'bg-white/50 w-2 sm:w-2.5 h-2 sm:h-2.5 hover:bg-white/75 hover:w-4 sm:hover:w-6'
+              }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}

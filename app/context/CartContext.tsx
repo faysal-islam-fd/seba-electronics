@@ -15,6 +15,9 @@ export interface CartItem {
   // API fields for order placement
   product_id?: number;
   product_attribute_id?: number;
+  // Shipping costs (per unit) - API returns strings "60.00"
+  shipping_in_dhaka?: number | string;
+  shipping_outside_dhaka?: number | string;
 }
 
 interface CartContextType {
@@ -25,6 +28,7 @@ interface CartContextType {
   clearCart: () => void;
   getCartCount: () => number;
   getCartTotal: () => number;
+  getShippingTotal: (isInsideDhaka: boolean) => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -160,6 +164,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  // Calculate total shipping based on location (sums up per-product shipping costs)
+  const getShippingTotal = (isInsideDhaka: boolean): number => {
+    return cartItems.reduce((total, item) => {
+      const shippingValue = isInsideDhaka
+        ? (item.shipping_in_dhaka || 0)
+        : (item.shipping_outside_dhaka || 0);
+
+      const shippingPerUnit = typeof shippingValue === 'string'
+        ? parseFloat(shippingValue)
+        : shippingValue;
+
+      // Debug logging
+      if (shippingPerUnit === 0) {
+        console.warn(`Item ${item.name} has 0 shipping cost. Data:`, {
+          in: item.shipping_in_dhaka,
+          out: item.shipping_outside_dhaka,
+          isInside: isInsideDhaka
+        });
+      }
+
+      return total + (shippingPerUnit * item.quantity);
+    }, 0);
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -170,6 +198,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         getCartCount,
         getCartTotal,
+        getShippingTotal,
       }}
     >
       {children}

@@ -303,6 +303,7 @@ export default function SearchPageClient({
                       badge={product.is_featured ? 'Featured' : undefined}
                       rating={4.5}
                       inStock={isProductInStock(product.stock, product.is_out_of_stock)}
+                      type={(product as any).attributes && (product as any).attributes.length > 0 ? 'variable' : 'simple'}
                     />
                   ))}
                 </div>
@@ -326,8 +327,8 @@ export default function SearchPageClient({
                             key={page}
                             onClick={() => handlePageChange(page)}
                             className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
-                                ? 'bg-blue-600 text-white'
-                                : 'border border-gray-300 hover:bg-gray-50'
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
                               }`}
                           >
                             {page}

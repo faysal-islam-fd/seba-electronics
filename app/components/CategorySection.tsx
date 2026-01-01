@@ -13,6 +13,7 @@ interface Product {
   badge?: string;
   rating?: number;
   inStock?: boolean;
+  type?: string; // 'simple' or 'variable'
 }
 
 interface CategorySectionProps {
