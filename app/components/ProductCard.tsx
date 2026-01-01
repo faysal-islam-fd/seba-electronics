@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiShoppingCart, FiHeart, FiEye } from 'react-icons/fi';
+import { FiShoppingCart, FiHeart, FiEye, FiRefreshCw } from 'react-icons/fi';
 import { FaStar, FaStarHalfAlt } from 'react-icons/fa';
 import { useCart } from '@/app/context/CartContext';
 import { useState } from 'react';
@@ -12,6 +12,8 @@ import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistM
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
 import { useGetProductReviewsQuery } from '@/app/store/api/reviewsApi';
+import { encodeId } from '@/app/utils/encryption';
+import { useAddToCompareMutation, useRemoveFromCompareMutation, useGetComparisonListQuery } from '@/app/store/api/compareApi';
 
 interface ProductCardProps {
   id: string;
@@ -26,6 +28,8 @@ interface ProductCardProps {
   inStock?: boolean;
   soldBy?: string;
   type?: string; // 'simple' or 'variable'
+  shipping_in_dhaka?: number | string;
+  shipping_outside_dhaka?: number | string;
 }
 
 export default function ProductCard({
@@ -40,7 +44,9 @@ export default function ProductCard({
   reviewCount,
   inStock = true,
   soldBy,
-  type
+  type,
+  shipping_in_dhaka,
+  shipping_outside_dhaka
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const { isLoggedIn } = useAuth();
@@ -52,6 +58,35 @@ export default function ProductCard({
 
   // Convert id to number for API calls
   const productId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+  // Compare logic
+  const { data: comparisonList } = useGetComparisonListQuery();
+  const [addToCompare] = useAddToCompareMutation();
+  const [removeFromCompare] = useRemoveFromCompareMutation();
+
+  const isCompared = comparisonList?.data?.some(item => item.id === productId);
+
+  const handleCompare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      if (isCompared) {
+        await removeFromCompare(productId).unwrap();
+        showSuccess('Removed from comparison');
+      } else {
+        if (comparisonList?.data && comparisonList.data.length >= 4) {
+          showError('You can only compare up to 4 products.');
+          return;
+        }
+        await addToCompare(productId).unwrap();
+        showSuccess('Added to comparison');
+      }
+    } catch (error: any) {
+      console.error('Failed to update comparison:', error);
+      showError(error?.data?.message || 'Failed to update comparison');
+    }
+  };
 
   // Check if product is in wishlist
   const { data: wishlistCheck } = useCheckWishlistQuery(productId, { skip: !isLoggedIn });
@@ -104,7 +139,7 @@ export default function ProductCard({
 
     // For variable products, redirect to product details page
     if (type === 'variable') {
-      router.push(`/product/${id}`);
+      router.push(`/product/${encodeId(id)}`);
       return;
     }
 
@@ -122,6 +157,8 @@ export default function ProductCard({
       discount,
       quantity: 1,
       product_id: productId,
+      shipping_in_dhaka,
+      shipping_outside_dhaka,
     });
 
     setTimeout(() => {
@@ -225,11 +262,21 @@ export default function ProductCard({
         >
           <FiEye size={14} className="sm:w-4 sm:h-4" />
         </button>
+        <button
+          onClick={handleCompare}
+          className={`p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${isCompared
+            ? 'bg-blue-500 text-white'
+            : 'bg-white/90 text-gray-700 hover:bg-blue-500 hover:text-white'
+            }`}
+          aria-label="Add to compare"
+        >
+          <FiRefreshCw size={14} className="sm:w-4 sm:h-4" />
+        </button>
       </div>
 
       {/* Image Container */}
       <div className="relative w-full h-36 sm:h-48 md:h-56 lg:h-64 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-        <Link href={`/product/${id}`} className="block w-full h-full">
+        <Link href={`/product/${encodeId(id)}`} className="block w-full h-full">
           <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-4">
             <Image
               src={image}
@@ -254,7 +301,7 @@ export default function ProductCard({
 
       {/* Product Info */}
       <div className="flex-1 flex flex-col gap-1.5 sm:gap-2.5 p-2 sm:p-4">
-        <Link href={`/product/${id}`}>
+        <Link href={`/product/${encodeId(id)}`}>
           <h3 className="text-xs sm:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 hover:text-blue-600 transition-colors min-h-[2rem] sm:min-h-[2.5rem]">
             {name}
           </h3>
@@ -359,6 +406,8 @@ export default function ProductCard({
           reviewCount: displayReviewCount,
           inStock,
           soldBy,
+          shipping_in_dhaka,
+          shipping_outside_dhaka,
         }}
       />
     </div>

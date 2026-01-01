@@ -96,6 +96,9 @@ export default async function VendorPage({
       rating: 4.5,
       inStock: isProductInStock(product.stock, product.is_out_of_stock),
       soldBy: vendorConfig.name,
+      type: product.type || 'simple',
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
     }))
     : [];
 

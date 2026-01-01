@@ -82,10 +82,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
     });
 
     // Log for debugging
-    if (found) {
-      console.log('Found attribute:', found);
-      console.log('Attribute ID field:', found.id, found.attribute_id, found.product_attribute_id);
-    }
+
 
     return found || product.attributes[0];
   }, [selectedVariations, product.attributes, isVariableProduct]);
@@ -186,8 +183,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
     let attributeId: number | undefined;
     if (isVariableProduct && selectedAttribute) {
       // Log the full attribute structure for debugging
-      console.log('Selected Attribute Object:', selectedAttribute);
-      console.log('Attribute Keys:', Object.keys(selectedAttribute || {}));
+
 
       // Try different possible field names for the attribute ID
       attributeId = (selectedAttribute as any).id ||
@@ -202,7 +198,7 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
         console.warn('⚠️ Attribute ID not found in expected fields. Full attribute structure:', JSON.stringify(selectedAttribute, null, 2));
         console.warn('Available keys:', Object.keys(selectedAttribute || {}));
       } else {
-        console.log('✅ Found attribute ID:', attributeId);
+
       }
     }
 
@@ -224,6 +220,8 @@ export default function ProductDetailContent({ product }: ProductDetailContentPr
       quantity,
       product_id: productId,
       product_attribute_id: attributeId,
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
     });
   };
 

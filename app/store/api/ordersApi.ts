@@ -239,15 +239,7 @@ export const ordersApi = apiSlice.injectEndpoints({
         const url = `/customer/orders/${cleanOrderNumber}`;
 
         // Debug logging
-        console.log('📡 [Order Details] Making request:', {
-          orderNumber: cleanOrderNumber,
-          originalOrderNumber: orderNumber,
-          url,
-          fullUrl: `https://seba.rangpurit.com/api/v1${url}`,
-          hasToken: !!getAuthToken(),
-          tokenPreview: getAuthToken() ? `${getAuthToken()?.substring(0, 20)}...` : null,
-          note: 'Using /customer/orders/{orderNumber} endpoint for authenticated users',
-        });
+
 
         return url;
       },
@@ -266,12 +258,7 @@ export const ordersApi = apiSlice.injectEndpoints({
         // Clean order number (remove any encoding issues)
         const cleanOrderNumber = orderNumber.trim();
 
-        console.log('📡 [Cancel Order] Making request:', {
-          orderNumber: cleanOrderNumber,
-          reason,
-          url: `/orders/${cleanOrderNumber}/cancel`,
-          fullUrl: `https://seba.rangpurit.com/api/v1/orders/${cleanOrderNumber}/cancel`,
-        });
+
 
         return {
           url: `/orders/${cleanOrderNumber}/cancel`,

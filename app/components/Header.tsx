@@ -10,6 +10,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { useGetCategoriesQuery } from '@/app/store/api/categoriesApi';
 import { useGetProductsQuery } from '@/app/store/api/productsApi';
 import { useGetWishlistQuery } from '@/app/store/api/wishlistApi';
+import { useGetComparisonListQuery } from '@/app/store/api/compareApi';
 
 const slugify = (value: string) =>
   value
@@ -77,6 +78,10 @@ export default function Header() {
   // Fetch products for search suggestions
   const { data: productsData } = useGetProductsQuery({ per_page: 50 });
   const allProducts = productsData?.data || [];
+
+  // Get comparison count
+  const { data: comparisonData } = useGetComparisonListQuery();
+  const compareCount = comparisonData?.data?.length || 0;
 
   const suggestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -392,6 +397,15 @@ export default function Header() {
                   </Link>
                 )}
 
+                <Link href="/compare" className="text-white hover:text-gray-200 transition-colors relative" title="Compare">
+                  <FiRefreshCw size={25} />
+                  {compareCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      {compareCount}
+                    </span>
+                  )}
+                </Link>
+
                 {isLoggedIn && (
                   <Link href="/account/wishlist" className="text-white hover:text-gray-200 transition-colors relative">
                     <FiHeart size={25} />
@@ -538,6 +552,16 @@ export default function Header() {
                     </div>
                   </Link>
                 )}
+
+                <Link href="/compare" className="text-white hover:text-gray-200 transition-colors relative">
+                  <FiRefreshCw size={20} className="sm:w-6 sm:h-6" />
+                  {compareCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center font-bold">
+                      {compareCount}
+                    </span>
+                  )}
+                </Link>
+
                 {isLoggedIn && (
                   <Link href="/account/wishlist" className="text-white hover:text-gray-200 transition-colors relative">
                     <FiHeart size={20} className="sm:w-6 sm:h-6" />
@@ -624,99 +648,101 @@ export default function Header() {
       </div>
 
       {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        >
+      {
+        mobileMenuOpen && (
           <div
-            className="bg-white w-full h-full shadow-xl overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
           >
-            <div className="p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="font-bold text-base sm:text-lg">Menu</h3>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  aria-label="Close menu"
-                >
-                  <FiX size={20} className="sm:w-6 sm:h-6 text-gray-600" />
-                </button>
-              </div>
+            <div
+              className="bg-white w-full h-full shadow-xl overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="font-bold text-base sm:text-lg">Menu</h3>
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Close menu"
+                  >
+                    <FiX size={20} className="sm:w-6 sm:h-6 text-gray-600" />
+                  </button>
+                </div>
 
 
-              <div className="mb-3 sm:mb-4">
-                <h4 className="font-bold text-sm sm:text-base text-gray-700 mb-2 sm:mb-3">Categories</h4>
-              </div>
-              <nav className="space-y-1.5 sm:space-y-2">
-                {categories.map((item) => {
-                  const isExpanded = mobileExpandedCategory === item.name;
-                  return (
-                    <div key={item.id} className="border border-gray-100 rounded-lg">
-                      <div className="flex items-center justify-between w-full">
-                        <Link
-                          href={`/category/${item.slug}`}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex-1 flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2.5 sm:px-3 hover:bg-gray-50 transition-colors"
-                        >
-                          <span className="text-lg sm:text-xl">{getCategoryIcon(item.name)}</span>
-                          <span className="font-medium text-sm sm:text-base text-gray-800">{item.name}</span>
-                        </Link>
-                        {item.children && item.children.length > 0 && (
-                          <button
-                            onClick={() =>
-                              setMobileExpandedCategory(isExpanded ? null : item.name)
-                            }
-                            className="p-2 sm:p-2.5 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded-r-lg transition-colors"
-                            aria-label={isExpanded ? "Collapse category" : "Expand category"}
+                <div className="mb-3 sm:mb-4">
+                  <h4 className="font-bold text-sm sm:text-base text-gray-700 mb-2 sm:mb-3">Categories</h4>
+                </div>
+                <nav className="space-y-1.5 sm:space-y-2">
+                  {categories.map((item) => {
+                    const isExpanded = mobileExpandedCategory === item.name;
+                    return (
+                      <div key={item.id} className="border border-gray-100 rounded-lg">
+                        <div className="flex items-center justify-between w-full">
+                          <Link
+                            href={`/category/${item.slug}`}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex-1 flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2.5 sm:px-3 hover:bg-gray-50 transition-colors"
                           >
-                            <FiChevronRight
-                              size={16}
-                              className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-                            />
-                          </button>
+                            <span className="text-lg sm:text-xl">{getCategoryIcon(item.name)}</span>
+                            <span className="font-medium text-sm sm:text-base text-gray-800">{item.name}</span>
+                          </Link>
+                          {item.children && item.children.length > 0 && (
+                            <button
+                              onClick={() =>
+                                setMobileExpandedCategory(isExpanded ? null : item.name)
+                              }
+                              className="p-2 sm:p-2.5 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded-r-lg transition-colors"
+                              aria-label={isExpanded ? "Collapse category" : "Expand category"}
+                            >
+                              <FiChevronRight
+                                size={16}
+                                className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                              />
+                            </button>
+                          )}
+                        </div>
+
+                        {isExpanded && item.children && item.children.length > 0 && (
+                          <div className="bg-gray-50 px-3 sm:px-5 py-2 sm:py-3 space-y-1.5 sm:space-y-2 border-t border-gray-100">
+                            {item.children.map((sub) => (
+                              <div key={sub.id} className="space-y-1">
+                                <Link
+                                  href={`/category/${item.slug}/${sub.slug}`}
+                                  onClick={() => setMobileMenuOpen(false)}
+                                  className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase block hover:text-blue-600 py-1"
+                                >
+                                  {sub.name}
+                                </Link>
+                                {sub.children && sub.children.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                    {sub.children.map((subItem) => (
+                                      <Link
+                                        key={subItem.id}
+                                        href={`/category/${item.slug}/${sub.slug}/${subItem.slug}`}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
+                                      >
+                                        {subItem.name}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-
-                      {isExpanded && item.children && item.children.length > 0 && (
-                        <div className="bg-gray-50 px-3 sm:px-5 py-2 sm:py-3 space-y-1.5 sm:space-y-2 border-t border-gray-100">
-                          {item.children.map((sub) => (
-                            <div key={sub.id} className="space-y-1">
-                              <Link
-                                href={`/category/${item.slug}/${sub.slug}`}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase block hover:text-blue-600 py-1"
-                              >
-                                {sub.name}
-                              </Link>
-                              {sub.children && sub.children.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                                  {sub.children.map((subItem) => (
-                                    <Link
-                                      key={subItem.id}
-                                      href={`/category/${item.slug}/${sub.slug}/${subItem.slug}`}
-                                      onClick={() => setMobileMenuOpen(false)}
-                                      className="text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
-                                    >
-                                      {subItem.name}
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </nav>
+                    );
+                  })}
+                </nav>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </header>
+        )
+      }
+    </header >
   );
 }
 

@@ -126,6 +126,7 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
                                 shipping_in_dhaka={product.shipping_in_dhaka}
                                 shipping_outside_dhaka={product.shipping_outside_dhaka}
                                 soldBy={product.brand?.name} // Use brand as seller if no vendor info available in listing
+                                type={product.type || 'simple'}
                             />
                         ))}
                     </div>

@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { getAuthToken } from '@/app/lib/authApi';
+import { getGuestToken } from '@/app/utils/guestToken';
 
 // Helper to get cookie directly (for debugging)
 function getCookie(name: string): string | null {
@@ -31,13 +32,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   const baseUrl = isProfileEndpoint ? CUSTOMER_API_BASE : BASE_URL;
 
   // Debug logging
-  if (isProfileEndpoint) {
-    console.log('📡 [Profile API] Using CUSTOMER_API_BASE:', {
-      url,
-      baseUrl,
-      fullUrl: `${baseUrl}${url}`,
-    });
-  }
+
 
   const baseQuery = fetchBaseQuery({
     baseUrl,
@@ -62,18 +57,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
         headers.set('Authorization', `Bearer ${cleanToken}`);
 
         // Always log to debug 403 errors
-        console.log('🔑 [API] Adding Authorization header:', {
-          endpoint: endpoint || 'unknown',
-          hasToken: true,
-          tokenLength: cleanToken.length,
-          tokenPreview: `${cleanToken.substring(0, 30)}...${cleanToken.substring(cleanToken.length - 20)}`,
-          headerValue: `Bearer ${cleanToken.substring(0, 30)}...`,
-          // Log full token for debugging 403 errors - REMOVE IN PRODUCTION
-          fullToken: cleanToken,
-          cookieToken: typeof document !== 'undefined' ? getCookie('auth_token') : null,
-          localStorageToken: typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null,
-          tokenMatches: cleanToken === (typeof document !== 'undefined' ? getCookie('auth_token') : null)?.trim(),
-        });
+
 
         // Verify header is actually set
         const authHeader = headers.get('Authorization');
@@ -83,21 +67,26 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
             expected: `Bearer ${cleanToken.substring(0, 30)}...`,
           });
         } else {
-          console.log('✅ [API] Authorization header verified:', authHeader.substring(0, 40) + '...');
         }
       } else {
         // Always warn if no token - this is critical
-        console.error('❌ [API] No auth token found!', {
+        /* console.error('❌ [API] No auth token found!', {
           endpoint: endpoint || 'unknown',
           cookies: typeof document !== 'undefined' ? document.cookie : 'N/A',
           localStorage: typeof window !== 'undefined' ? localStorage.getItem('auth_token') : 'N/A',
-        });
+        }); */
+
+        // Add Guest Token if no auth token
+        const guestToken = getGuestToken();
+        if (guestToken) {
+          headers.set('X-Guest-Token', guestToken);
+        }
       }
 
       // Don't set Content-Type for FormData requests (needs browser to set boundary)
       // Check endpoint name for FormData endpoints
       const formDataEndpoints = ['updateProfilePicture', 'createServiceRequest', 'createReturnRequest', 'createReview'];
-      
+
       if (!formDataEndpoints.includes(endpoint || '')) {
         headers.set('Content-Type', 'application/json');
       }
@@ -113,7 +102,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Products', 'Categories', 'Brands', 'FeaturedProducts', 'TopSellingProducts', 'Profile', 'Orders', 'ServiceRequests', 'ReturnRequests', 'Wishlist', 'Reviews', 'Sliders'],
+  tagTypes: ['Products', 'Categories', 'Brands', 'FeaturedProducts', 'TopSellingProducts', 'Profile', 'Orders', 'ServiceRequests', 'ReturnRequests', 'Wishlist', 'Reviews', 'Sliders', 'Compare'],
   endpoints: () => ({}),
 });
 

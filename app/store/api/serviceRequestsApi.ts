@@ -145,16 +145,7 @@ export const serviceRequestsApi = apiSlice.injectEndpoints({
           });
         }
 
-        console.log('Service Request FormData:', {
-          order_number: requestData.order_number,
-          order_item_id: requestData.order_item_id,
-          type: requestData.type,
-          reason: requestData.reason,
-          description: requestData.description,
-          refund_method: requestData.refund_method,
-          refund_account_info: requestData.refund_account_info,
-          images_count: requestData.images?.length || 0,
-        });
+
 
         return {
           url: '/service-requests',

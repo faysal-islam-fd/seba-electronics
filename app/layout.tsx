@@ -9,6 +9,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { AlertProvider } from "./context/AlertContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { ReduxProvider } from "./store/Provider";
+import NextTopLoader from 'nextjs-toploader';
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -41,6 +42,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={montserrat.className} suppressHydrationWarning>
+        <NextTopLoader
+          color="#ffffff"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={2}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 10px #ffffff,0 0 5px #ffffff"
+          zIndex={99999}
+        />
         <ReduxProvider>
           <AuthProvider>
             <ToastProvider>

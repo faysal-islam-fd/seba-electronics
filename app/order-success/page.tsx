@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { FiCheckCircle, FiPackage, FiHome, FiDollarSign, FiCalendar, FiTruck } from 'react-icons/fi';
 import { useAuth } from '@/app/context/AuthContext';
 import { useCart } from '@/app/context/CartContext';
+import { useGetProfileQuery } from '@/app/store/api/authApi';
 
 interface OrderDetails {
   order_number: string;
@@ -19,16 +20,30 @@ interface OrderDetails {
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, refreshUser } = useAuth();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const cartClearedRef = useRef(false);
+
+  // Fetch user profile to get updated club points (only if logged in)
+  const { refetch: refetchProfile } = useGetProfileQuery(undefined, {
+    skip: !isLoggedIn,
+  });
 
   useEffect(() => {
     // Clear cart only once when the component mounts
     if (!cartClearedRef.current) {
       cartClearedRef.current = true;
       clearCart();
-      console.log('🛒 Cart cleared on order success page');
+
+      // Refresh user profile to update club points (if logged in)
+      // Add a small delay to allow backend to process and award club points
+      if (isLoggedIn) {
+        setTimeout(() => {
+          refetchProfile().catch((error) => {
+            console.warn('⚠️ Failed to refresh user profile:', error);
+          });
+        }, 2000); // Wait 2 seconds for backend to process club points
+      }
     }
 
     // Try to get order details from URL params first (for payment callback)
@@ -81,7 +96,8 @@ function OrderSuccessContent() {
         }
       }
     }
-  }, [searchParams]);
+
+  }, [searchParams, clearCart, isLoggedIn, refreshUser]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">

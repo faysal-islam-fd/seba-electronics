@@ -12,6 +12,7 @@ import { normalizeImageUrl } from '@/app/utils/imageUtils';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { FiHeart, FiLoader, FiArrowRight, FiShoppingCart, FiTrash2, FiX } from 'react-icons/fi';
+import { encodeId } from '@/app/utils/encryption';
 
 export default function WishlistPage() {
   const { isLoggedIn } = useAuth();
@@ -115,6 +116,15 @@ export default function WishlistPage() {
     // Use thumbnail_image if available, fallback to thumbnail
     const thumbnail = product.thumbnail_image || product.thumbnail;
 
+    // Check for variable product - redirect to product page
+    // The product type might be under 'type' field or inferred from attributes
+    const productType = product.type || ((product.attributes && product.attributes.length > 0) ? 'variable' : 'simple');
+
+    if (productType === 'variable') {
+      router.push(`/product/${encodeId(productId)}`);
+      return;
+    }
+
     addToCart({
       id: product.id.toString(),
       name: product.title,
@@ -125,6 +135,8 @@ export default function WishlistPage() {
       discount: discountType === 'percent' ? discount : (discount / price * 100),
       quantity: 1,
       product_id: productId,
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
     });
   }, [addToCart]);
 
@@ -255,7 +267,7 @@ export default function WishlistPage() {
                 </button>
 
                 {/* Product Image */}
-                <Link href={`/product/${product.id}`} className="block">
+                <Link href={`/product/${encodeId(product.id)}`} className="block">
                   <div className="relative w-full h-48 sm:h-56 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
                     {thumbnail ? (
                       <Image
@@ -290,7 +302,7 @@ export default function WishlistPage() {
 
                 {/* Product Info */}
                 <div className="p-4 space-y-3">
-                  <Link href={`/product/${product.id}`}>
+                  <Link href={`/product/${encodeId(product.id)}`}>
                     <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 hover:text-blue-600 transition-colors min-h-[2.5rem]">
                       {product.title}
                     </h3>

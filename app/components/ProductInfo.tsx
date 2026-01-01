@@ -8,6 +8,7 @@ import { useCart } from '@/app/context/CartContext';
 import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/app/store/api/wishlistApi';
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
+import { useAddToCompareMutation, useRemoveFromCompareMutation, useGetComparisonListQuery } from '@/app/store/api/compareApi';
 
 interface Product {
   id: string;
@@ -49,6 +50,32 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
 
   const isWishlisted = wishlistCheck?.in_wishlist || false;
+
+  // Compare logic
+  const { data: comparisonList } = useGetComparisonListQuery();
+  const [addToCompare] = useAddToCompareMutation();
+  const [removeFromCompare] = useRemoveFromCompareMutation();
+
+  const isCompared = comparisonList?.data?.some(item => item.id === productId);
+
+  const handleCompare = async () => {
+    try {
+      if (isCompared) {
+        await removeFromCompare(productId).unwrap();
+        showSuccess('Removed from comparison');
+      } else {
+        if (comparisonList?.data && comparisonList.data.length >= 4) {
+          showError('You can only compare up to 4 products.');
+          return;
+        }
+        await addToCompare(productId).unwrap();
+        showSuccess('Added to comparison');
+      }
+    } catch (error: any) {
+      console.error('Failed to update comparison:', error);
+      showError(error?.data?.message || 'Failed to update comparison');
+    }
+  };
 
   const increaseQuantity = () => {
     if (quantity < product.stockCount) {
@@ -239,6 +266,12 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         </button>
         <button className="border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-500 font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
           <FiShare2 size={22} />
+        </button>
+        <button
+          onClick={handleCompare}
+          className={`border-2 ${isCompared ? 'border-blue-500 text-blue-500 bg-blue-50' : 'border-gray-300 text-gray-700'} hover:border-blue-500 hover:text-blue-500 font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2`}
+        >
+          <FiRefreshCw size={22} />
         </button>
       </div>
 

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { usePlaceOrderMutation, useSendOtpMutation, useApplyCouponMutation } from '@/app/store/api/ordersApi';
-import { useVerifyRegistrationOTPMutation } from '@/app/store/api/authApi';
+import { useVerifyRegistrationOTPMutation, useGetProfileQuery } from '@/app/store/api/authApi';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import { FiMapPin, FiCreditCard, FiTruck, FiLock, FiCheck, FiTag, FiPhone, FiStar } from 'react-icons/fi';
 import { validatePhoneNumber } from '@/app/utils/phoneValidation';
@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const [placeOrder, { isLoading: isPlacingOrder }] = usePlaceOrderMutation();
   const [sendOtp, { isLoading: isSendingOtp }] = useSendOtpMutation();
   const [applyCoupon, { isLoading: isApplyingCoupon }] = useApplyCouponMutation();
+  const { refetch: refetchProfile } = useGetProfileQuery(undefined, { skip: !isLoggedIn });
   const [step, setStep] = useState<'shipping' | 'verification' | 'payment'>('shipping');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -110,9 +111,7 @@ export default function CheckoutPage() {
         setOtpSent(true);
         showSuccess(result.message);
         // Show OTP hint in development if provided
-        if (result.otp_hint) {
-          console.log('📱 OTP Hint (Dev only):', result.otp_hint);
-        }
+
         setStep('verification');
       } else {
         showError(result.message || 'Failed to send OTP');
@@ -130,9 +129,7 @@ export default function CheckoutPage() {
       const result = await sendOtp({ phone: phoneNumber }).unwrap();
       if (result.success) {
         showSuccess('OTP resent successfully!');
-        if (result.otp_hint) {
-          console.log('📱 OTP Hint (Dev only):', result.otp_hint);
-        }
+
       } else {
         showError(result.message || 'Failed to resend OTP');
       }
@@ -347,11 +344,12 @@ export default function CheckoutPage() {
         orderData.customer_note = customerNote.trim();
       }
 
-      // Add guest information if not logged in
+      // Add guest information if not logged in - REQUIRED by backend
+      // Backend validates: guest_name and guest_phone are required when user_id is not present
       if (!isLoggedIn) {
-        orderData.guest_name = shippingInfo.fullName;
-        orderData.guest_email = shippingInfo.email;
-        orderData.guest_phone = shippingInfo.phone.trim();
+        orderData.guest_name = shippingInfo.fullName.trim();
+        orderData.guest_email = shippingInfo.email.trim();
+        orderData.guest_phone = phoneNumber; // Already validated and trimmed
       }
 
       // Add SSL Commerz specific fields
@@ -369,30 +367,10 @@ export default function CheckoutPage() {
       }
 
       // Debug: Log order data before sending
-      console.log('📦 Order Data:', {
-        payment_method: orderData.payment_method,
-        is_emi: orderData.is_emi,
-        emi_months: orderData.emi_months,
-        cus_phone: orderData.cus_phone,
-        shipping_phone: orderData.shipping_phone,
-        hasCusPhone: !!orderData.cus_phone,
-        phoneValue: shippingInfo.phone,
-        items_count: orderData.items.length,
-        fullOrderData: JSON.stringify(orderData, null, 2),
-      });
+
 
       // Debug: Log each item's structure
-      console.log('🔍 ORDER ITEMS DETAILS:');
-      orderData.items.forEach((item: any, index: number) => {
-        console.log(`Item ${index}:`, {
-          product_id: item.product_id,
-          product_attribute_id: item.product_attribute_id,
-          quantity: item.quantity,
-          has_attribute_id: !!item.product_attribute_id,
-          attribute_id_type: typeof item.product_attribute_id,
-          full_item: JSON.stringify(item, null, 2),
-        });
-      });
+
 
       // Place order
       const result = await placeOrder(orderData).unwrap();
@@ -400,28 +378,17 @@ export default function CheckoutPage() {
       // Handle different API response structures:
       // SSL Commerz: result.data.order.order_number
       // COD: result.data.order_number
-      const order = result.data.order || result.data;
-      const resultData = result.data as any;
-      const orderNumber = order.order_number || resultData.order_number;
-      const orderStatus = order.status || resultData.status;
-      const orderTotal = order.total || resultData.total;
-      const orderIsEmi = order.is_emi || resultData.is_emi;
-      const orderEmiMonths = order.emi_months || resultData.emi_months;
-      const orderEmiAmount = order.emi_amount || resultData.emi_amount;
-      const paymentUrl = result.data.payment_url;
+      const resultAny = result.data as any;
+      const order = (resultAny.order || result.data) as any;
+      const orderNumber = order.order_number || resultAny.order_number;
+      const orderStatus = order.status || resultAny.status;
+      const orderTotal = order.total || resultAny.total;
+      const orderIsEmi = order.is_emi || resultAny.is_emi;
+      const orderEmiMonths = order.emi_months || resultAny.emi_months;
+      const orderEmiAmount = order.emi_amount || resultAny.emi_amount;
+      const paymentUrl = resultAny.payment_url;
 
-      console.log('✅ Order placed successfully:', {
-        success: result.success,
-        message: result.message,
-        order_number: orderNumber,
-        payment_url: paymentUrl,
-        payment_method: paymentMethod,
-        is_emi: orderIsEmi,
-        emi_months: orderEmiMonths,
-        emi_amount: orderEmiAmount,
-        order_total: orderTotal,
-        response_structure: result.data.order ? 'nested' : 'flat',
-      });
+
 
       if (result.success) {
         // Verify EMI data if EMI was requested
@@ -439,13 +406,6 @@ export default function CheckoutPage() {
 
         // If payment URL is provided (SSL Commerz), redirect to payment gateway
         if (paymentUrl) {
-          console.log('🔗 Redirecting to SSL Commerz payment gateway...', {
-            payment_url: paymentUrl,
-            order_number: orderNumber,
-            is_emi: orderIsEmi,
-            emi_months: orderEmiMonths,
-          });
-
           // Store order details before redirecting for callback handling
           sessionStorage.setItem('pendingOrder', JSON.stringify({
             order_number: orderNumber,
@@ -456,12 +416,7 @@ export default function CheckoutPage() {
             emi_amount: orderEmiAmount,
           }));
 
-          console.log('💾 Order details stored in sessionStorage:', {
-            order_number: orderNumber,
-            status: orderStatus,
-            is_emi: orderIsEmi,
-            emi_months: orderEmiMonths,
-          });
+
 
           // Redirect to payment gateway
           // IMPORTANT: This redirect is what takes the user to SSL Commerz
@@ -518,8 +473,7 @@ export default function CheckoutPage() {
         // Refresh user profile to get updated club points (if logged in)
         if (isLoggedIn) {
           try {
-            await refreshUser();
-            console.log('✅ User profile refreshed - club points updated');
+            await refetchProfile();
           } catch (error) {
             console.warn('⚠️ Failed to refresh user profile:', error);
             // Don't block order success page if refresh fails

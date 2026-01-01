@@ -303,7 +303,9 @@ export default function SearchPageClient({
                       badge={product.is_featured ? 'Featured' : undefined}
                       rating={4.5}
                       inStock={isProductInStock(product.stock, product.is_out_of_stock)}
-                      type={(product as any).attributes && (product as any).attributes.length > 0 ? 'variable' : 'simple'}
+                      type={product.type || 'simple'}
+                      shipping_in_dhaka={product.shipping_in_dhaka}
+                      shipping_outside_dhaka={product.shipping_outside_dhaka}
                     />
                   ))}
                 </div>

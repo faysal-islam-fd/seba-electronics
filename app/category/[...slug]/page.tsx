@@ -89,18 +89,11 @@ export default async function CategoryPage({
   // Start from root categories
   let searchIn = categoriesData.data || [];
 
-  console.log(`🔍 Searching for category path: ${slugs.join(' > ')}`);
-  console.log(`📂 Starting with ${searchIn.length} root categories`);
-  console.log(`📋 Root categories:`, searchIn.map(c => `${c.name} (${c.slug})`).join(', '));
 
-  // Debug: Log all categories and their children
-  if (searchIn.length > 0 && searchIn[0].children) {
-    console.log(`📋 First category children:`, searchIn[0].children.map((c: Category) => `${c.name} (${c.slug})`).join(', '));
-  }
 
   for (let i = 0; i < slugs.length; i++) {
     const slug = slugs[i];
-    console.log(`🔎 Step ${i + 1}: Looking for slug "${slug}" in ${searchIn.length} categories`);
+
 
     // Find category in current search scope (case-insensitive matching)
     // First try exact match, then try case-insensitive
@@ -121,12 +114,11 @@ export default async function CategoryPage({
 
     if (!found) {
       console.error(`❌ Category with slug "${slug}" not found in current scope`);
-      console.error(`📋 Available slugs in scope:`, searchIn.map(c => `${c.slug} (${c.name})`).join(', '));
-      console.error(`📋 Available names in scope:`, searchIn.map(c => c.name).join(', '));
+      console.error(`❌ Category with slug "${slug}" not found in current scope`);
       notFound();
     }
 
-    console.log(`✅ Found: ${found.name} (ID: ${found.id})`);
+
 
     // Track the path
     categoryPath.push(found);
@@ -141,7 +133,6 @@ export default async function CategoryPage({
 
     // Next search in this category's direct children only
     searchIn = found.children || [];
-    console.log(`📂 Next search will be in ${searchIn.length} children of ${found.name}`);
   }
 
   if (!currentCategory) {
@@ -152,10 +143,7 @@ export default async function CategoryPage({
   // Use subcategory ID from query params if provided (for filter selection), otherwise use the one from URL
   const categoryIdToFetch = subcategoryId || currentCategory.id;
 
-  console.log(`📦 Fetching products for category "${currentCategory.name}"`);
-  console.log(`📋 URL: /category/${slugs.join('/')}`);
-  console.log(`📋 Category ID: ${categoryIdToFetch}`);
-  console.log(`📋 API Call: GET /products?category_id=${categoryIdToFetch}&page=${page}&per_page=20&sort=${sort}`);
+
 
   // Fetch products directly from API with category_id
   const productsData = await getProducts({
@@ -168,9 +156,7 @@ export default async function CategoryPage({
     sort,
   });
 
-  console.log(`✅ API Response - success: ${productsData.success}`);
-  console.log(`✅ API Response - products count: ${productsData.data?.length || 0}`);
-  console.log(`✅ API Response - meta:`, JSON.stringify(productsData.meta, null, 2));
+
 
   if (!productsData.success) {
     console.error('❌ API returned success: false');
@@ -179,8 +165,6 @@ export default async function CategoryPage({
   if (!productsData.data || productsData.data.length === 0) {
     console.warn(`⚠️ No products found for category ID ${categoryIdToFetch}`);
   } else {
-    console.log(`✅ Successfully loaded ${productsData.data.length} products`);
-    console.log(`✅ First product:`, productsData.data[0]?.title || 'N/A');
   }
 
   return (
@@ -239,7 +223,7 @@ export async function generateStaticParams() {
 
     generatePaths(categoriesData.data || []);
 
-    console.log(`📦 Generated ${paths.length} static paths for categories`);
+
     return paths;
   } catch (error) {
     console.error('Error generating static params:', error);

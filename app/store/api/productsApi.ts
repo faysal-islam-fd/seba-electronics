@@ -32,8 +32,8 @@ export interface Product {
   category?: Category;
   categories?: Category[];
   // Shipping fields
-  shipping_in_dhaka?: number;
-  shipping_outside_dhaka?: number;
+  shipping_in_dhaka?: number | string;
+  shipping_outside_dhaka?: number | string;
   // Additional fields from API
   type?: string;
   description?: string;
@@ -115,6 +115,7 @@ export interface ProductsQueryParams {
   min_price?: number;
   max_price?: number;
   sort?: 'latest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+  is_new_arrival?: number; // 1 or 0
 }
 
 export const productsApi = apiSlice.injectEndpoints({

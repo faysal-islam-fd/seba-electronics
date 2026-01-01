@@ -49,11 +49,7 @@ function PaymentCallbackContent() {
         searchParams.forEach((value, key) => {
           allParams[key] = value;
         });
-        console.log('🔔 Payment callback received:', {
-          url: window.location.href,
-          allParams,
-          timestamp: new Date().toISOString(),
-        });
+
 
         const paymentStatus = searchParams.get('status') || searchParams.get('Status');
         const valId = searchParams.get('val_id') || searchParams.get('valId') || searchParams.get('valID');
@@ -75,50 +71,40 @@ function PaymentCallbackContent() {
           const order = orderData.data;
           const orderStatus = order.status?.toLowerCase();
           const paymentStatusFromApi = (order as any).payment_status?.toLowerCase();
-          
-          console.log('📦 Order details from API:', {
-            order_number: order.order_number,
-            status: orderStatus,
-            payment_status: paymentStatusFromApi,
-          });
-          
+
+
+
           // Check if order is cancelled or payment failed
           const isOrderCancelled = orderStatus === 'cancelled';
-          const isPaymentFailed = 
-            paymentStatusFromApi === 'failed' || 
+          const isPaymentFailed =
+            paymentStatusFromApi === 'failed' ||
             paymentStatusFromApi === 'cancelled' ||
             orderStatus === 'failed';
-          
+
           if (isOrderCancelled || isPaymentFailed) {
-            console.log('❌ Order is cancelled or payment failed according to API:', {
-              order_status: orderStatus,
-              payment_status: paymentStatusFromApi,
-            });
-            
+
+
             // Redirect to payment failed page
             setStatus('failed');
             setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
-            
+
             setTimeout(() => {
               const params = new URLSearchParams();
               if (finalOrderNumber) params.set('order', finalOrderNumber);
-              console.log('🔗 Redirecting to payment failed page:', `/payment/failed?${params.toString()}`);
               router.push(`/payment/failed?${params.toString()}`);
             }, 2000);
             return;
           }
-          
+
           // Check if order is confirmed/paid - this is the most reliable check
-          const isOrderConfirmed = 
-            orderStatus === 'confirmed' || 
+          const isOrderConfirmed =
+            orderStatus === 'confirmed' ||
             orderStatus === 'paid' ||
             orderStatus === 'processing' ||
             paymentStatusFromApi === 'paid' ||
             paymentStatusFromApi === 'success';
-          
+
           if (isOrderConfirmed) {
-            console.log('✅ Order is confirmed/paid according to API, redirecting to success');
-            
             // Store order details in sessionStorage
             sessionStorage.setItem('lastOrder', JSON.stringify({
               order_number: order.order_number,
@@ -129,157 +115,127 @@ function PaymentCallbackContent() {
               emi_amount: order.emi_amount,
             }));
             sessionStorage.removeItem('pendingOrder');
-            
+
             // Clear the cart after successful payment
             clearCart();
-            console.log('🛒 Cart cleared after successful payment');
-            
+
             // Redirect to order success page
             setStatus('success');
             setMessage('Payment completed successfully! Your order is being processed.');
-            
+
             setTimeout(() => {
               const params = new URLSearchParams();
               if (finalOrderNumber) params.set('order_number', finalOrderNumber);
               params.set('status', 'paid');
               params.set('total', order.total.toString());
-              console.log('🔗 Redirecting to order success page:', `/order-success?${params.toString()}`);
               router.push(`/order-success?${params.toString()}`);
             }, 2000);
             return;
           }
-        }
-        
-        // PRIORITY 2: If API is still loading and we have order number, wait for it
-        if (isLoadingOrder && finalOrderNumber) {
-          console.log('⏳ Waiting for order details from API...');
-          return;
-        }
 
-        // PRIORITY 3: Check URL parameters for payment status indicators
-        // Normalize status values for comparison (case-insensitive)
-        const normalizedStatus = paymentStatus?.toUpperCase();
-        const normalizedPayStatus = payStatus?.toUpperCase();
+          // PRIORITY 2: If API is still loading and we have order number, wait for it
+          if (isLoadingOrder && finalOrderNumber) {
+            return;
+          }
 
-        // Check payment status - SSL Commerz success indicators
-        // Success indicators (in order of reliability):
-        // 1. val_id is present and not '0' or empty (most reliable)
-        // 2. status is 'VALID' or 'SUCCESS'
-        // 3. pay_status is 'SUCCESSFUL' or 'VALID'
-        // 4. tran_id is present (transaction was processed)
-        // 5. bank_tran_id is present (bank processed the transaction)
-        const hasValidId = valId && valId !== '0' && valId !== '' && valId !== 'null';
-        const hasValidStatus = normalizedStatus === 'VALID' || normalizedStatus === 'SUCCESS';
-        const hasValidPayStatus = normalizedPayStatus === 'SUCCESSFUL' || normalizedPayStatus === 'VALID' || normalizedPayStatus === 'SUCCESS';
-        const hasTransactionId = tranId && tranId !== '0' && tranId !== '';
-        const hasBankTranId = bankTranId && bankTranId !== '0' && bankTranId !== '';
+          // PRIORITY 3: Check URL parameters for payment status indicators
+          // Normalize status values for comparison (case-insensitive)
+          const normalizedStatus = paymentStatus?.toUpperCase();
+          const normalizedPayStatus = payStatus?.toUpperCase();
 
-        // Check for explicit failure indicators
-        const isFailed =
-          normalizedStatus === 'FAILED' ||
-          normalizedPayStatus === 'FAILED' ||
-          normalizedStatus === 'CANCELLED' ||
-          normalizedPayStatus === 'CANCELLED' ||
-          (normalizedStatus === 'INVALID' && !hasValidId);
+          // Check payment status - SSL Commerz success indicators
+          // Success indicators (in order of reliability):
+          // 1. val_id is present and not '0' or empty (most reliable)
+          // 2. status is 'VALID' or 'SUCCESS'
+          // 3. pay_status is 'SUCCESSFUL' or 'VALID'
+          // 4. tran_id is present (transaction was processed)
+          // 5. bank_tran_id is present (bank processed the transaction)
+          const hasValidId = valId && valId !== '0' && valId !== '' && valId !== 'null';
+          const hasValidStatus = normalizedStatus === 'VALID' || normalizedStatus === 'SUCCESS';
+          const hasValidPayStatus = normalizedPayStatus === 'SUCCESSFUL' || normalizedPayStatus === 'VALID' || normalizedPayStatus === 'SUCCESS';
+          const hasTransactionId = tranId && tranId !== '0' && tranId !== '';
+          const hasBankTranId = bankTranId && bankTranId !== '0' && bankTranId !== '';
 
-        const isCancelled =
-          normalizedStatus === 'CANCELLED' ||
-          normalizedStatus === 'CANCEL' ||
-          normalizedPayStatus === 'CANCELLED';
+          // Check for explicit failure indicators
+          const isFailed =
+            normalizedStatus === 'FAILED' ||
+            normalizedPayStatus === 'FAILED' ||
+            normalizedStatus === 'CANCELLED' ||
+            normalizedPayStatus === 'CANCELLED' ||
+            (normalizedStatus === 'INVALID' && !hasValidId);
 
-        const hasSuccessIndicators =
-          hasValidId || // Most reliable indicator
-          (hasValidStatus && hasTransactionId) ||
-          (hasValidPayStatus && hasTransactionId) ||
-          (hasBankTranId && normalizedStatus !== 'FAILED' && normalizedStatus !== 'CANCELLED');
+          const isCancelled =
+            normalizedStatus === 'CANCELLED' ||
+            normalizedStatus === 'CANCEL' ||
+            normalizedPayStatus === 'CANCELLED';
 
-        console.log('🔍 Payment status check:', {
-          hasSuccessIndicators,
-          isFailed,
-          isCancelled,
-          paymentStatus,
-          normalizedStatus,
-          payStatus,
-          normalizedPayStatus,
-          valId,
-          hasValidId,
-          tranId,
-          hasTransactionId,
-          bankTranId,
-          hasBankTranId,
-          cardType,
-          cardNo,
-          amount,
-          currency,
-          finalOrderNumber,
-          allParams: allParams,
-          orderDataAvailable: !!orderData,
-        });
+          const hasSuccessIndicators =
+            hasValidId || // Most reliable indicator
+            (hasValidStatus && hasTransactionId) ||
+            (hasValidPayStatus && hasTransactionId) ||
+            (hasBankTranId && normalizedStatus !== 'FAILED' && normalizedStatus !== 'CANCELLED');
 
-        if (isFailed || isCancelled) {
-          console.log('❌ Payment explicitly failed or cancelled');
-          setStatus('failed');
-          setMessage(isCancelled ? 'Payment was cancelled. You can try again when ready.' : 'Payment failed. Please try again or choose a different payment method.');
-          
-          setTimeout(() => {
-            const params = new URLSearchParams();
-            if (finalOrderNumber) params.set('order', finalOrderNumber);
-            router.push(`/payment/failed?${params.toString()}`);
-          }, 2000);
-          return;
-        }
 
-        if (hasSuccessIndicators && hasValidId) {
-          console.log('✅ Payment appears successful based on strong indicators (val_id present)');
-          
-          // Still proceed with caution - if API didn't confirm, wait a bit or proceed if API check failed
-          if (!orderData && !isLoadingOrder) {
-            // API might be slow or failed, but we have strong success indicators
-            const pendingOrder = sessionStorage.getItem('pendingOrder');
-            if (pendingOrder) {
-              try {
-                const order = JSON.parse(pendingOrder);
-                sessionStorage.setItem('lastOrder', pendingOrder);
-                sessionStorage.removeItem('pendingOrder');
-                
-                clearCart();
-                console.log('🛒 Cart cleared after successful payment');
-                
-                setStatus('success');
-                setMessage('Payment completed successfully! Your order is being processed.');
-                
-                setTimeout(() => {
-                  const params = new URLSearchParams();
-                  if (finalOrderNumber) params.set('order_number', finalOrderNumber);
-                  params.set('status', 'paid');
-                  if (amount) params.set('total', amount);
-                  console.log('🔗 Redirecting to order success page:', `/order-success?${params.toString()}`);
-                  router.push(`/order-success?${params.toString()}`);
-                }, 2000);
-                return;
-              } catch (e) {
-                console.error('Failed to parse pending order:', e);
+
+          if (isFailed || isCancelled) {
+            setStatus('failed');
+            setMessage(isCancelled ? 'Payment was cancelled. You can try again when ready.' : 'Payment failed. Please try again or choose a different payment method.');
+
+            setTimeout(() => {
+              const params = new URLSearchParams();
+              if (finalOrderNumber) params.set('order', finalOrderNumber);
+              router.push(`/payment/failed?${params.toString()}`);
+            }, 2000);
+            return;
+          }
+
+          if (hasSuccessIndicators && hasValidId) {
+            // Still proceed with caution - if API didn't confirm, wait a bit or proceed if API check failed
+            if (!orderData && !isLoadingOrder) {
+              // API might be slow or failed, but we have strong success indicators
+              const pendingOrder = sessionStorage.getItem('pendingOrder');
+              if (pendingOrder) {
+                try {
+                  const order = JSON.parse(pendingOrder);
+                  sessionStorage.setItem('lastOrder', pendingOrder);
+                  sessionStorage.removeItem('pendingOrder');
+
+                  clearCart();
+
+                  setStatus('success');
+                  setMessage('Payment completed successfully! Your order is being processed.');
+
+                  setTimeout(() => {
+                    const params = new URLSearchParams();
+                    if (finalOrderNumber) params.set('order_number', finalOrderNumber);
+                    params.set('status', 'paid');
+                    if (amount) params.set('total', amount);
+                    router.push(`/order-success?${params.toString()}`);
+                  }, 2000);
+                  return;
+                } catch (e) {
+                  console.error('Failed to parse pending order:', e);
+                }
               }
             }
+          } else {
+            // If we reach here, status is unclear - don't assume success
+            // Wait for API response or show error
+            if (!orderData && !isLoadingOrder) {
+              console.warn('⚠️ Payment status unclear - no API data and no strong success indicators');
+              setStatus('failed');
+              setMessage('Unable to verify payment status. Please check your order status in your account or contact support if payment was deducted.');
+            }
           }
-        } else {
-          // If we reach here, status is unclear - don't assume success
-          // Wait for API response or show error
-          if (!orderData && !isLoadingOrder) {
-            console.warn('⚠️ Payment status unclear - no API data and no strong success indicators');
-            setStatus('failed');
-            setMessage('Unable to verify payment status. Please check your order status in your account or contact support if payment was deducted.');
-          }
+        } catch (error) {
+          console.error('Payment callback error:', error);
+          setStatus('failed');
+          setMessage('An error occurred while processing your payment. Please contact support if payment was deducted.');
         }
-      } catch (error) {
-        console.error('Payment callback error:', error);
-        setStatus('failed');
-        setMessage('An error occurred while processing your payment. Please contact support if payment was deducted.');
-      }
-    };
+      };
 
-    processPaymentCallback();
-  }, [searchParams, router, clearCart, orderData, isLoadingOrder, finalOrderNumber]);
+      processPaymentCallback();
+    }, [searchParams, router, clearCart, orderData, isLoadingOrder, finalOrderNumber]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4">

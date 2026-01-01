@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const token = getAuthToken();
         const storedUser = getUser();
-        
+
         if (token) {
           // If we have a stored user, set it immediately for faster UI
           if (storedUser) {
@@ -33,17 +33,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Set loading to false early if we have cached user data
             setIsLoading(false);
           }
-          
+
           // Always verify token by fetching profile to ensure it's valid
           // Use Promise.race to add a timeout
           try {
             const profilePromise = getProfile();
-            const timeoutPromise = new Promise<never>((_, reject) => 
+            const timeoutPromise = new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
             );
-            
+
             const profileResult = await Promise.race([profilePromise, timeoutPromise]);
-            
+
             if (profileResult.success && profileResult.data) {
               setUserState(profileResult.data);
               // Save the fresh user data
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     };
-    
+
     loadUser();
   }, []);
 
@@ -93,8 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const profileResult = await getProfile();
-      if (profileResult.success) {
+      if (profileResult.success && profileResult.data) {
         setUserState(profileResult.data);
+        // Save the updated user data to localStorage (includes updated club points)
+        saveUser(profileResult.data);
       }
     } catch (error) {
       console.error('Failed to refresh user:', error);
@@ -105,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { login: loginApi } = await import('@/app/lib/authApi');
       const result = await loginApi(loginCredential, password);
-      
+
       if (result.success && result.data) {
         setUserState(result.data.user);
         return { success: true };
@@ -114,8 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: error.message || 'Login failed',
         errors: error.errors
       };
@@ -135,11 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoggedIn: !!user, 
+    <AuthContext.Provider value={{
+      user,
+      isLoggedIn: !!user,
       isLoading,
-      login, 
+      login,
       logout,
       refreshUser,
       setUser,

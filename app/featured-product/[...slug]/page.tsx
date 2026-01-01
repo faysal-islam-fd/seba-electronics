@@ -17,11 +17,11 @@ async function getFeaturedProductsByCategory(params: {
   sort?: string;
 }): Promise<ProductsResponse> {
   const queryParams = new URLSearchParams();
-  
+
   // Fetch products from the specified category/subcategory
   queryParams.append('per_page', '100');
   queryParams.append('category_id', String(params.category_id));
-  
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && key !== 'page' && key !== 'per_page' && key !== 'category_id') {
       queryParams.append(key, String(value));
@@ -29,12 +29,12 @@ async function getFeaturedProductsByCategory(params: {
   });
 
   const url = `${BASE_URL}/products?${queryParams.toString()}`;
-  
+
   try {
     const res = await fetch(url, {
       next: { revalidate: 1800 },
     });
-    
+
     if (!res.ok) {
       return {
         success: false,
@@ -42,18 +42,18 @@ async function getFeaturedProductsByCategory(params: {
         meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 },
       };
     }
-    
+
     const jsonData = await res.json();
-    
+
     // Filter for featured products (products marked as featured)
     const featuredProducts = jsonData.data?.filter((p: any) => p.is_featured) || [];
-    
+
     // Apply pagination
     const page = params.page || 1;
     const perPage = params.per_page || 20;
     const startIndex = (page - 1) * perPage;
     const paginatedProducts = featuredProducts.slice(startIndex, startIndex + perPage);
-    
+
     return {
       success: true,
       data: paginatedProducts,
@@ -84,10 +84,10 @@ export default async function FeaturedProductPage({
 }) {
   const { slug: slugArray } = await params;
   const searchParamsResolved = await searchParams;
-  
+
   // Handle both single slug (category) and multiple slugs (category/subcategory/...)
   const slugs = Array.isArray(slugArray) ? slugArray : [slugArray];
-  
+
   const page = parseInt((searchParamsResolved.page as string) || '1');
   const sort = (searchParamsResolved.sort as any) || 'latest';
   const minPrice = searchParamsResolved.min_price ? parseInt(searchParamsResolved.min_price as string) : undefined;
@@ -123,17 +123,17 @@ export default async function FeaturedProductPage({
   // Start from root categories
   let searchIn = categoriesData.data || [];
 
-  console.log(`🔍 Featured Category - Searching for category path: ${slugs.join(' > ')}`);
-  
+
+
   // Helper to find category with its full path from root
   const findCategoryWithPath = (categories: Category[], targetSlug: string, currentPath: Category[] = []): { category: Category; path: Category[] } | null => {
     for (const cat of categories) {
       const newPath = [...currentPath, cat];
-      
+
       if (cat.slug === targetSlug || cat.slug.toLowerCase() === targetSlug.toLowerCase()) {
         return { category: cat, path: newPath };
       }
-      
+
       if (cat.children && cat.children.length > 0) {
         const found = findCategoryWithPath(cat.children, targetSlug, newPath);
         if (found) return found;
@@ -148,7 +148,7 @@ export default async function FeaturedProductPage({
     if (result) {
       currentCategory = result.category;
       categoryPath.push(...result.path);
-      
+
       // Set parent if path has more than one item (meaning it's a subcategory)
       if (result.path.length > 1) {
         parentCategory = result.path[result.path.length - 2];
@@ -161,23 +161,23 @@ export default async function FeaturedProductPage({
     // Multiple slugs - traverse path as before
     for (let i = 0; i < slugs.length; i++) {
       const slug = slugs[i];
-      
+
       // Find category in current search scope (case-insensitive matching)
       let found = searchIn.find(cat => cat.slug === slug);
-      
+
       if (!found) {
         // Try case-insensitive match
         found = searchIn.find(cat => cat.slug.toLowerCase() === slug.toLowerCase());
       }
-      
+
       if (!found) {
         // Try matching by name (fallback)
-        found = searchIn.find(cat => 
+        found = searchIn.find(cat =>
           cat.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
           cat.name.toLowerCase().replace(/\s+/g, '') === slug.toLowerCase().replace(/-/g, '')
         );
       }
-      
+
       if (!found) {
         console.error(`❌ Category with slug "${slug}" not found in current scope`);
         notFound();
@@ -185,15 +185,15 @@ export default async function FeaturedProductPage({
 
       // Track the path
       categoryPath.push(found);
-      
+
       // Set parent if this is not the last slug
       if (i < slugs.length - 1) {
         parentCategory = found;
       }
-      
+
       // Set current category (the deepest one)
       currentCategory = found;
-      
+
       // Next search in this category's direct children only
       searchIn = found.children || [];
     }
@@ -207,18 +207,14 @@ export default async function FeaturedProductPage({
   // Determine if currentCategory is a category or subcategory
   // If it has a parent_id, it's a subcategory; otherwise it's a category
   const isSubcategory = currentCategory.parent_id !== null && currentCategory.parent_id !== undefined;
-  
+
   // Use subcategory ID from query params if provided (for filter selection), 
   // otherwise use the current category/subcategory ID from URL path
   // This handles both: /featured-product/category and /featured-product/category/subcategory
   // When navigating, always use the deepest category/subcategory in the path
   const categoryIdToFetch = subcategoryId || currentCategory.id;
 
-  console.log(`📦 Fetching products for ${isSubcategory ? 'subcategory' : 'category'}: "${currentCategory.name}"`);
-  console.log(`📋 URL: /featured-product/${slugs.join('/')}`);
-  console.log(`📋 Category ID: ${categoryIdToFetch}`);
-  console.log(`📋 Is Subcategory: ${isSubcategory}`);
-  console.log(`📋 Category Path Length: ${categoryPath.length}`);
+
 
   // Fetch products filtered by category (can be category or subcategory)
   // If it's a subcategory, it will show products under that subcategory
@@ -233,8 +229,7 @@ export default async function FeaturedProductPage({
     sort,
   });
 
-  console.log(`✅ Featured Category API Response - success: ${productsData.success}`);
-  console.log(`✅ Featured Category API Response - products count: ${productsData.data?.length || 0}`);
+
 
   return (
     <Suspense fallback={
@@ -272,7 +267,7 @@ export const dynamicParams = true;
 export async function generateStaticParams() {
   try {
     const categoriesData = await getCategories(true); // Get with children to generate subcategory paths
-    
+
     if (!categoriesData.success) {
       return [];
     }
@@ -284,7 +279,7 @@ export async function generateStaticParams() {
       for (const category of categories) {
         const currentPath = [...parentSlugs, category.slug];
         paths.push({ slug: currentPath });
-        
+
         if (category.children && category.children.length > 0) {
           generatePaths(category.children, currentPath);
         }
@@ -292,8 +287,8 @@ export async function generateStaticParams() {
     };
 
     generatePaths(categoriesData.data || []);
-    
-    console.log(`📦 Generated ${paths.length} static paths for featured categories`);
+
+
     return paths;
   } catch (error) {
     console.error('Error generating static params for featured categories:', error);

@@ -20,7 +20,7 @@ export default function CartPage() {
 
   const handleSaveForLater = (id: string) => {
     // In real app, this would move item to saved items
-    console.log('Save for later:', id);
+
     // For now, just remove from cart
     removeFromCart(id);
   };

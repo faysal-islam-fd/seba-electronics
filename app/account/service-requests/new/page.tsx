@@ -74,7 +74,7 @@ export default function NewServiceRequestPage() {
 
     // Prevent double submission
     if (submitInProgress.current || isSubmitting || isLoading) {
-      console.log('Submission already in progress, ignoring...');
+
       return;
     }
 
@@ -138,11 +138,11 @@ export default function NewServiceRequestPage() {
         refund_method: refundMethod,
         refund_account_info: refundMethod === 'bank_transfer' ? refundAccountInfo.trim() : undefined,
       };
-      console.log('Creating service request with data:', requestData);
+
 
       const result = await createRequest(requestData).unwrap();
 
-      console.log('Service request created successfully:', result);
+
       router.push(`/account/service-requests/${result.data.id}`);
     } catch (err: any) {
       console.error('Failed to create service request:', err);
@@ -233,7 +233,7 @@ export default function NewServiceRequestPage() {
                 <div className="space-y-3">
                   {orderItems.map((item: any, index: number) => {
                     // Debug: Log each item structure
-                    console.log(`Item ${index}:`, item, 'Keys:', Object.keys(item));
+
 
                     // Handle different item structures:
                     // - Flat structure: product_name, product_image, product_id (from order details)
@@ -247,19 +247,13 @@ export default function NewServiceRequestPage() {
                     // Try multiple possible field names
                     const itemId = item.order_item_id || item.id || item.item_id || item.pivot?.id || item.product_id || index + 1;
 
-                    console.log(`Item ${index} - Using ID:`, itemId, 'from fields:', {
-                      order_item_id: item.order_item_id,
-                      id: item.id,
-                      item_id: item.item_id,
-                      product_id: item.product_id,
-                      pivot_id: item.pivot?.id
-                    });
+
 
                     return (
                       <div
                         key={`${itemId}-${index}`}
                         onClick={() => {
-                          console.log('Selected item:', { itemId, item });
+
                           setSelectedOrderItemId(itemId);
                         }}
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedOrderItemId === itemId

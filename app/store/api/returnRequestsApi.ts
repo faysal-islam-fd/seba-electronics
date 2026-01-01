@@ -120,11 +120,11 @@ export const returnRequestsApi = apiSlice.injectEndpoints({
         formData.append('reason', requestData.reason);
         formData.append('description', requestData.description);
         formData.append('refund_method', requestData.refund_method);
-        
+
         if (requestData.refund_account_info) {
           formData.append('refund_account_info', requestData.refund_account_info);
         }
-        
+
         // Append images if provided
         if (requestData.images && requestData.images.length > 0) {
           requestData.images.forEach((image) => {
@@ -132,12 +132,7 @@ export const returnRequestsApi = apiSlice.injectEndpoints({
           });
         }
 
-        console.log('Return Request FormData:', {
-          order_number: requestData.order_number,
-          order_item_id: requestData.order_item_id,
-          type: requestData.type,
-          reason: requestData.reason,
-        });
+
 
         return {
           url: '/return-requests',

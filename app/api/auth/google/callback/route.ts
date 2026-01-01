@@ -8,18 +8,13 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
     const state = searchParams.get('state');
 
-    // Log for debugging
-    console.log('OAuth callback received:', {
-      code: code ? 'present' : 'missing',
-      state: state ? 'present' : 'missing',
-      allParams: Object.fromEntries(searchParams.entries())
-    });
+
 
     if (!code || !state) {
       // If we don't have code/state, check if we have token (backend might redirect directly with token)
       const token = searchParams.get('token');
       const success = searchParams.get('success');
-      
+
       if (token && success === 'true') {
         // Backend redirected directly with token, redirect to /google/process
         const params = new URLSearchParams();
@@ -30,7 +25,7 @@ export async function GET(request: NextRequest) {
           new URL(`/google/process?${params.toString()}`, request.url)
         );
       }
-      
+
       // No code/state and no token - error
       console.error('Missing required OAuth parameters:', { code, state, token, success });
       return NextResponse.redirect(
@@ -46,8 +41,8 @@ export async function GET(request: NextRequest) {
         const url = new URL(finalRedirectParam);
         frontendRedirectUrl = url.pathname;
       } catch {
-        frontendRedirectUrl = finalRedirectParam.startsWith('/') 
-          ? finalRedirectParam 
+        frontendRedirectUrl = finalRedirectParam.startsWith('/')
+          ? finalRedirectParam
           : `/${finalRedirectParam}`;
       }
     } else {
@@ -61,8 +56,8 @@ export async function GET(request: NextRequest) {
             frontendRedirectUrl = url.pathname;
           } catch {
             // If it's not a full URL, use it as is
-            frontendRedirectUrl = decodedState.redirect_url.startsWith('/') 
-              ? decodedState.redirect_url 
+            frontendRedirectUrl = decodedState.redirect_url.startsWith('/')
+              ? decodedState.redirect_url
               : `/${decodedState.redirect_url}`;
           }
         }
@@ -74,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Call the backend callback endpoint to exchange code for token
     const backendCallbackUrl = `${BACKEND_BASE_URL}/auth/google/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
-    
+
     try {
       const response = await fetch(backendCallbackUrl, {
         method: 'GET',
@@ -94,11 +89,11 @@ export async function GET(request: NextRequest) {
             success: 'true',
             token: data.data.token,
           });
-          
+
           if (data.data.user) {
             params.append('user', Buffer.from(JSON.stringify(data.data.user)).toString('base64'));
           }
-          
+
           if (data.data.is_new_user) {
             params.append('is_new_user', 'true');
           }
@@ -121,12 +116,12 @@ export async function GET(request: NextRequest) {
                 success: 'true',
                 token: token,
               });
-              
+
               const user = redirectUrl.searchParams.get('user');
               if (user) {
                 params.append('user', user);
               }
-              
+
               const isNewUser = redirectUrl.searchParams.get('is_new_user');
               if (isNewUser) {
                 params.append('is_new_user', isNewUser);

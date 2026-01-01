@@ -7,6 +7,7 @@ import { FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { useGetOrderDetailsQuery } from '@/app/store/api/ordersApi';
+import { useGetProfileQuery } from '@/app/store/api/authApi';
 
 function PaymentSuccessContent() {
   const router = useRouter();
@@ -31,6 +32,11 @@ function PaymentSuccessContent() {
     skip: !orderParam,
   });
 
+  // Fetch user profile to get updated club points (only if logged in)
+  const { refetch: refetchProfile } = useGetProfileQuery(undefined, {
+    skip: !isLoggedIn,
+  });
+
   // Effect 1: Handle API response when it arrives
   useEffect(() => {
     if (hasProcessedRef.current || !orderParam) return;
@@ -44,11 +50,7 @@ function PaymentSuccessContent() {
         const orderStatus = order.status?.toLowerCase();
         const paymentStatus = (order as any).payment_status?.toLowerCase();
 
-        console.log('📦 Order details from API:', {
-          order_number: order.order_number,
-          status: orderStatus,
-          payment_status: paymentStatus,
-        });
+
 
         // Check if order is cancelled or payment failed
         const isOrderCancelled = orderStatus === 'cancelled';
@@ -58,7 +60,7 @@ function PaymentSuccessContent() {
           orderStatus === 'failed';
 
         if (isOrderCancelled || isPaymentFailed) {
-          console.log('❌ Order is cancelled or payment failed according to API');
+
           setStatus('failed');
           setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
 
@@ -79,7 +81,7 @@ function PaymentSuccessContent() {
           paymentStatus === 'success';
 
         if (isOrderConfirmed) {
-          console.log('✅ Order is confirmed/paid according to API');
+
 
           sessionStorage.setItem('lastOrder', JSON.stringify({
             order_number: order.order_number,
@@ -96,8 +98,9 @@ function PaymentSuccessContent() {
           // Refresh user profile to get updated club points (if logged in)
           if (isLoggedIn) {
             try {
-              await refreshUser();
-              console.log('✅ User profile refreshed - club points updated');
+              // Use RTK Query refetch to update profile with new club points
+              await refetchProfile();
+
             } catch (error) {
               console.warn('⚠️ Failed to refresh user profile:', error);
               // Don't block success flow if refresh fails
@@ -118,10 +121,7 @@ function PaymentSuccessContent() {
         }
 
         // If order status is unclear (not cancelled, not confirmed), treat as failed to be safe
-        console.warn('⚠️ Order status unclear from API - treating as failed for safety:', {
-          order_status: orderStatus,
-          payment_status: paymentStatus,
-        });
+
         setStatus('failed');
         setMessage('Payment status could not be verified. Please check your order status in your account or contact support if payment was deducted.');
 
@@ -148,11 +148,6 @@ function PaymentSuccessContent() {
         searchParams.forEach((value, key) => {
           allParams[key] = value;
         });
-        console.log('🔔 Payment success callback received:', {
-          url: window.location.href,
-          allParams,
-          timestamp: new Date().toISOString(),
-        });
 
         // Try to get order number from sessionStorage if not in URL
         let finalOrderNumber = orderParam;
@@ -173,14 +168,11 @@ function PaymentSuccessContent() {
           setOrderNumber(finalOrderNumber);
         }
 
-        // If API is still loading, wait for it (with timeout)
         if (isLoadingOrder && !orderError) {
-          console.log('⏳ Waiting for order details from API...');
 
           // Set a timeout fallback - if API takes too long, proceed with URL parameters
           if (!redirectTimeoutRef.current) {
             redirectTimeoutRef.current = setTimeout(() => {
-              console.log('⏱️ API timeout - proceeding with URL parameter check');
               hasProcessedRef.current = false; // Allow processing to continue
             }, 5000); // Wait 5 seconds max for API
           }
@@ -213,7 +205,7 @@ function PaymentSuccessContent() {
           (normalizedStatus === 'INVALID' && !valId);
 
         if (isFailed) {
-          console.log('❌ Payment explicitly failed based on URL parameters');
+          hasProcessedRef.current = true;
           setStatus('failed');
           setMessage('Payment failed. Please try again or choose a different payment method.');
 
@@ -238,23 +230,7 @@ function PaymentSuccessContent() {
           (hasValidPayStatus && hasTransactionId) ||
           (hasBankTranId && normalizedStatus !== 'FAILED' && normalizedStatus !== 'CANCELLED');
 
-        console.log('🔍 Payment status check:', {
-          hasSuccessIndicators,
-          paymentStatus,
-          normalizedStatus,
-          payStatus,
-          normalizedPayStatus,
-          valId,
-          hasValidId,
-          tranId,
-          hasTransactionId,
-          bankTranId,
-          hasBankTranId,
-          amount,
-          finalOrderNumber,
-          allParams: allParams,
-          orderDataAvailable: !!orderData,
-        });
+
 
         // CRITICAL: NEVER assume success without API confirmation!
         // URL parameters can be misleading - the backend API is the ONLY source of truth
@@ -269,9 +245,7 @@ function PaymentSuccessContent() {
           return;
         }
 
-        // If API is still loading, keep waiting (timeout already set above)
         if (isLoadingOrder) {
-          console.log('⏳ Still waiting for API response to verify payment status...');
           return;
         }
 

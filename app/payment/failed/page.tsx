@@ -12,10 +12,10 @@ function PaymentFailedContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [message, setMessage] = useState('Processing payment...');
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  
+
   // Get order number from URL
   const orderParam = searchParams.get('order') || searchParams.get('order_number') || searchParams.get('orderNumber');
-  
+
   // Fetch order details to verify actual status
   const { data: orderData, isLoading: isLoadingOrder, error: orderError } = useGetOrderDetailsQuery(orderParam || '', {
     skip: !orderParam,
@@ -29,11 +29,7 @@ function PaymentFailedContent() {
         searchParams.forEach((value, key) => {
           allParams[key] = value;
         });
-        console.log('🔔 Payment failed page received:', {
-          url: window.location.href,
-          allParams,
-          timestamp: new Date().toISOString(),
-        });
+
 
         // Try to get order number from sessionStorage if not in URL
         let finalOrderNumber = orderParam;
@@ -53,49 +49,43 @@ function PaymentFailedContent() {
         if (finalOrderNumber) {
           setOrderNumber(finalOrderNumber);
         }
-        
+
         // PRIORITY 1: Check order status from API (most reliable)
         if (orderData?.success && orderData.data) {
           const order = orderData.data;
           const orderStatus = order.status?.toLowerCase();
           const paymentStatus = (order as any).payment_status?.toLowerCase();
-          
-          console.log('📦 Order details from API:', {
-            order_number: order.order_number,
-            status: orderStatus,
-            payment_status: paymentStatus,
-          });
-          
+
+
+
           // Check if order is cancelled or payment failed
           const isOrderCancelled = orderStatus === 'cancelled';
-          const isPaymentFailed = 
-            paymentStatus === 'failed' || 
+          const isPaymentFailed =
+            paymentStatus === 'failed' ||
             paymentStatus === 'cancelled' ||
             orderStatus === 'failed';
-          
+
           // If we're on the failed page and API confirms it's failed/cancelled, show failed
           if (isOrderCancelled || isPaymentFailed) {
-            console.log('❌ Order is cancelled or payment failed according to API - showing failed page');
             setStatus('failed');
             setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
             return;
           }
-          
+
           // CRITICAL: We're on the /payment/failed page
           // Only redirect to success if API EXPLICITLY confirms order is paid
           // Otherwise, show failed (safety first)
-          
-          const isOrderConfirmed = 
+
+          const isOrderConfirmed =
             (orderStatus === 'confirmed' || orderStatus === 'paid' || orderStatus === 'processing');
-          const isPaymentPaid = 
+          const isPaymentPaid =
             paymentStatus === 'paid' || paymentStatus === 'success';
-          
+
           // ONLY redirect if BOTH conditions are true:
           // 1. Order status is confirmed/paid/processing
           // 2. Payment status is explicitly paid/success
           if (isOrderConfirmed && isPaymentPaid) {
-            console.log('✅ Order is confirmed AND payment is paid according to API, redirecting to success');
-            
+
             sessionStorage.setItem('lastOrder', JSON.stringify({
               order_number: order.order_number,
               status: order.status,
@@ -105,7 +95,7 @@ function PaymentFailedContent() {
               emi_amount: order.emi_amount,
             }));
             sessionStorage.removeItem('pendingOrder');
-            
+
             const params = new URLSearchParams();
             params.set('order_number', order.order_number);
             params.set('status', 'paid');
@@ -113,26 +103,19 @@ function PaymentFailedContent() {
             router.replace(`/order-success?${params.toString()}`);
             return;
           }
-          
+
           // If we reach here, order is NOT explicitly confirmed/paid
           // Show failed page (we're on /payment/failed for a reason)
-          console.log('❌ Order is NOT confirmed/paid - showing failed page:', {
-            order_status: orderStatus,
-            payment_status: paymentStatus,
-            isOrderConfirmed,
-            isPaymentPaid,
-          });
+
           setStatus('failed');
           setMessage('Payment failed. Your order has been cancelled. Please try again or choose a different payment method.');
           return;
         }
-        
-        // PRIORITY 2: If API is still loading, wait for it
+
         if (isLoadingOrder && orderParam) {
-          console.log('⏳ Waiting for order details from API...');
           return;
         }
-        
+
         // PRIORITY 3: If API error or no data, show failed (we're on failed page)
         if (orderError || (!isLoadingOrder && !orderData)) {
           console.warn('⚠️ API error or no data - showing failed page');
@@ -140,10 +123,9 @@ function PaymentFailedContent() {
           setMessage('Payment failed. Please try again or choose a different payment method.');
           return;
         }
-        
+
         // If we reach here and API didn't confirm, show failed
         // We're on the /payment/failed page, so we should show failed
-        console.log('❌ Showing failed page - API did not confirm success');
         setStatus('failed');
         setMessage('Payment failed. Please try again or choose a different payment method.');
       } catch (error) {

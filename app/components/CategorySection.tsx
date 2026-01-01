@@ -14,6 +14,8 @@ interface Product {
   rating?: number;
   inStock?: boolean;
   type?: string; // 'simple' or 'variable'
+  shipping_in_dhaka?: number | string;
+  shipping_outside_dhaka?: number | string;
 }
 
 interface CategorySectionProps {

@@ -12,6 +12,7 @@ import { useCheckWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistM
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
 import { useAlert } from '@/app/context/AlertContext';
+import { encodeId } from '@/app/utils/encryption';
 
 interface QuickViewModalProps {
   isOpen: boolean;
@@ -26,7 +27,6 @@ interface QuickViewModalProps {
     badge?: string;
     rating?: number;
     reviewCount?: number;
-    inStock?: boolean;
     inStock?: boolean;
     soldBy?: string;
     shipping_in_dhaka?: string | number;
@@ -275,7 +275,7 @@ export default function QuickViewModal({ isOpen, onClose, product }: QuickViewMo
 
   const handleViewDetails = () => {
     onClose();
-    router.push(`/product/${product.id}`);
+    router.push(`/product/${encodeId(product.id)}`);
   };
 
   const handleWishlist = async () => {

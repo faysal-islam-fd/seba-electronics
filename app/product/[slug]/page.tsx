@@ -5,11 +5,17 @@ import RelatedProducts from '@/app/components/RelatedProducts';
 import Breadcrumb from '@/app/components/Breadcrumb';
 import ProductDetailContent from '@/app/components/ProductDetailContent';
 import { getProductDetails, getProductReviews, getBrands } from '@/app/lib/api';
+import { decodeId } from '@/app/utils/encryption';
 
 // Generate Metadata for SEO
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getProductDetails(slug);
+
+  // Try to decode the slug (if it's an encrypted ID)
+  const decodedId = decodeId(slug);
+  const identifier = decodedId !== null ? decodedId : slug;
+
+  const data = await getProductDetails(identifier);
 
   if (!data || !data.success) {
     return {
@@ -62,7 +68,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
 
   // 1. Fetch product details first
-  const data = await getProductDetails(slug);
+  // Try to decode the slug (if it's an encrypted ID)
+  const decodedId = decodeId(slug);
+  const identifier = decodedId !== null ? decodedId : slug;
+
+  const data = await getProductDetails(identifier);
 
   if (!data || !data.success) {
     notFound();

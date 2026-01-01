@@ -16,9 +16,9 @@ export interface Product {
   is_top_selling: boolean;
   is_low_stock: boolean;
   is_out_of_stock: boolean;
-  // Shipping costs
-  shipping_in_dhaka?: number;
-  shipping_outside_dhaka?: number;
+  type?: 'single' | 'variable'; // Product type - single or variable
+  shipping_in_dhaka?: string | number;
+  shipping_outside_dhaka?: string | number;
   brand?: {
     id: number;
     name: string;
@@ -141,14 +141,14 @@ export async function getProducts(params: {
 
   const url = `${BASE_URL}/products?${queryParams.toString()}`;
 
-  console.log(`🌐 API Request: ${url}`);
+
 
   try {
     const res = await fetch(url, {
       next: { revalidate: 1800 }, // Cache for 30 minutes
     });
 
-    console.log(`📡 API Response Status: ${res.status} ${res.statusText}`);
+
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -157,11 +157,7 @@ export async function getProducts(params: {
     }
 
     const jsonData = await res.json();
-    console.log(`✅ API Response Data:`, {
-      success: jsonData.success,
-      dataLength: jsonData.data?.length || 0,
-      meta: jsonData.meta,
-    });
+
 
     return jsonData;
   } catch (error) {
@@ -177,6 +173,11 @@ export async function getProducts(params: {
       },
     };
   }
+}
+
+// Fetch new arrival products (SSR)
+export async function getNewArrivalProducts(limit: number = 10): Promise<ProductsResponse> {
+  return getProducts({ is_new_arrival: 1, per_page: limit, sort: 'latest' });
 }
 
 // Vendor type for API
@@ -214,14 +215,14 @@ export async function getVendorProducts(params: {
 
   const url = `${BASE_URL}/products?${queryParams.toString()}`;
 
-  console.log(`🌐 Vendor API Request: ${url}`);
+
 
   try {
     const res = await fetch(url, {
       next: { revalidate: 1800 }, // Cache for 30 minutes
     });
 
-    console.log(`📡 Vendor API Response Status: ${res.status} ${res.statusText}`);
+
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -230,11 +231,7 @@ export async function getVendorProducts(params: {
     }
 
     const jsonData = await res.json();
-    console.log(`✅ Vendor API Response Data:`, {
-      success: jsonData.success,
-      dataLength: jsonData.data?.length || 0,
-      meta: jsonData.meta,
-    });
+
 
     return jsonData;
   } catch (error) {
@@ -308,7 +305,7 @@ export async function getProductReviews(productId: string | number): Promise<Pro
 // Note: Using /products endpoint with filtering since /products/featured returns 500
 export async function getFeaturedProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
   try {
-    console.log('🔄 Fetching featured products from /products endpoint...');
+
 
     // Fetch more products and filter for featured ones
     const res = await fetch(`${BASE_URL}/products?per_page=50`, {
@@ -330,7 +327,7 @@ export async function getFeaturedProducts(limit: number = 10): Promise<{ success
     // Filter for featured products
     const featuredProducts = result.data.filter((p: Product) => p.is_featured).slice(0, limit);
 
-    console.log(`✅ Found ${featuredProducts.length} featured products`);
+
 
     return {
       success: true,
@@ -346,7 +343,7 @@ export async function getFeaturedProducts(limit: number = 10): Promise<{ success
 // Note: Using /products endpoint with filtering since /products/top-selling returns 500
 export async function getTopSellingProducts(limit: number = 10): Promise<{ success: boolean; data: Product[] }> {
   try {
-    console.log('🔄 Fetching top-selling products from /products endpoint...');
+
 
     // Fetch more products and filter for top-selling ones
     const res = await fetch(`${BASE_URL}/products?per_page=50`, {
@@ -370,11 +367,11 @@ export async function getTopSellingProducts(limit: number = 10): Promise<{ succe
 
     // If no products are marked as top-selling, use the latest products
     if (topSellingProducts.length === 0) {
-      console.log('ℹ️ No top-selling products marked, using latest products');
+
       topSellingProducts = result.data;
     }
 
-    console.log(`✅ Found ${topSellingProducts.slice(0, limit).length} top-selling products`);
+
 
     return {
       success: true,
@@ -442,18 +439,9 @@ export async function getCategories(withChildren: boolean = false): Promise<Cate
 
     const data = await res.json();
 
-    // Debug logging
     if (withChildren) {
-      console.log('📦 Categories API Response:', JSON.stringify(data, null, 2));
       if (data.success && data.data) {
-        data.data.forEach((cat: any) => {
-          console.log(`  - ${cat.name} (${cat.slug}) has ${cat.children?.length || 0} children`);
-          if (cat.children && cat.children.length > 0) {
-            cat.children.forEach((child: any) => {
-              console.log(`    └─ ${child.name} (${child.slug})`);
-            });
-          }
-        });
+        // Log removed
       }
     }
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FiStore, FiHome, FiArrowLeft, FiSearch } from 'react-icons/fi';
+import { FiShoppingBag, FiHome, FiArrowLeft, FiSearch } from 'react-icons/fi';
 
 export default function VendorNotFound() {
   return (
@@ -9,7 +9,7 @@ export default function VendorNotFound() {
         <div className="relative mb-6 sm:mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-amber-500 rounded-full blur-3xl opacity-20 animate-pulse"></div>
           <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center shadow-2xl">
-            <FiStore className="text-white w-12 h-12 sm:w-16 sm:h-16" />
+            <FiShoppingBag className="text-white w-12 h-12 sm:w-16 sm:h-16" />
           </div>
         </div>
 
@@ -25,7 +25,7 @@ export default function VendorNotFound() {
 
         {/* Description */}
         <p className="text-sm sm:text-base md:text-lg text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto px-2">
-          The vendor store you're looking for doesn't exist or may have been removed. 
+          The vendor store you're looking for doesn't exist or may have been removed.
           Check out our other vendors or browse products.
         </p>
 
@@ -38,7 +38,7 @@ export default function VendorNotFound() {
             <FiSearch size={18} className="sm:w-5 sm:h-5" />
             Browse Products
           </Link>
-          
+
           <Link
             href="/"
             className="group inline-flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-md hover:shadow-lg text-sm sm:text-base"

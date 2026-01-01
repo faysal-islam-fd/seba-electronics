@@ -64,7 +64,7 @@ export default function BrandPageClient({
 }: BrandPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
     initialMinPrice || 0,
@@ -72,7 +72,7 @@ export default function BrandPageClient({
   ]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(initialCategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     categories: false,
@@ -84,7 +84,7 @@ export default function BrandPageClient({
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
         params.delete(key);
@@ -92,7 +92,7 @@ export default function BrandPageClient({
         params.set(key, String(value));
       }
     });
-    
+
     router.push(`/brand/${currentBrand.slug}?${params.toString()}`);
   };
 
@@ -131,7 +131,7 @@ export default function BrandPageClient({
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
         <div className="mb-4">
-          <Breadcrumb 
+          <Breadcrumb
             items={[
               { label: 'Brands', href: '/brands' },
               { label: currentBrand.name },
@@ -299,6 +299,9 @@ export default function BrandPageClient({
                       badge={product.is_featured ? 'Featured' : undefined}
                       rating={4.5}
                       inStock={isProductInStock(product.stock, product.is_out_of_stock)}
+                      type={product.type || 'simple'}
+                      shipping_in_dhaka={product.shipping_in_dhaka}
+                      shipping_outside_dhaka={product.shipping_outside_dhaka}
                     />
                   ))}
                 </div>
@@ -313,7 +316,7 @@ export default function BrandPageClient({
                     >
                       Previous
                     </button>
-                    
+
                     <div className="flex items-center gap-2">
                       {[...Array(Math.min(5, meta.last_page))].map((_, i) => {
                         const page = i + 1;
@@ -321,11 +324,10 @@ export default function BrandPageClient({
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                              initialPage === page
-                                ? 'bg-blue-600 text-white'
-                                : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             {page}
                           </button>

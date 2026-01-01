@@ -4,8 +4,73 @@ import CategorySidebar from './components/CategorySidebar';
 import CategorySection from './components/CategorySection';
 import CategoryCardSection from './components/CategoryCardSection';
 import ProductCardSkeleton from './components/ProductCardSkeleton';
-import { getFeaturedProducts, getTopSellingProducts, getHomeCategories, getCategories } from './lib/api';
+import { getFeaturedProducts, getTopSellingProducts, getHomeCategories, getCategories, getNewArrivalProducts, getCampaigns } from './lib/api';
+import CampaignCard from './components/CampaignCard';
 import { isProductInStock } from './utils/stockUtils';
+
+// Separate async components for Suspense
+async function NewArrivalsSection() {
+  const newArrivalsData = await getNewArrivalProducts(8);
+
+  const newArrivals = newArrivalsData.success && newArrivalsData.data.length > 0
+    ? newArrivalsData.data.map(product => ({
+      id: product.id.toString(),
+      name: product.title,
+      price: product.final_price,
+      originalPrice: product.price !== product.final_price ? product.price : undefined,
+      image: (product as any).thumbnail_image || product.thumbnail || '/products/placeholder.jpg',
+      discount: product.discount_percentage ? Math.round(product.discount_percentage) : undefined,
+      badge: 'New',
+      rating: 4.5,
+      inStock: isProductInStock(product.stock, product.is_out_of_stock),
+      type: product.type || 'simple',
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
+    }))
+    : []; // Empty array if API fails - will show skeletons
+
+  return (
+    <CategorySection
+      title="New Arrivals"
+      products={newArrivals}
+      viewAllLink="/search?sort=latest"
+    />
+
+  );
+}
+
+// Separate async components for Suspense
+async function CampaignsSection() {
+  const campaignsData = await getCampaigns(true); // Get homepage campaigns
+
+  if (!campaignsData.success || campaignsData.data.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="container mx-auto px-3 sm:px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+          Campaigns
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {campaignsData.data.map((campaign) => (
+          <CampaignCard
+            key={campaign.id}
+            id={campaign.id}
+            name={campaign.name}
+            slug={campaign.slug}
+            image={campaign.image}
+            startDate={campaign.start_date}
+            endDate={campaign.end_date}
+            productsCount={campaign.products_count}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 // Separate async components for Suspense
 async function FeaturedProductsSection() {
@@ -22,7 +87,9 @@ async function FeaturedProductsSection() {
       badge: product.is_featured ? 'Featured' : undefined,
       rating: 4.5,
       inStock: isProductInStock(product.stock, product.is_out_of_stock),
-      type: (product as any).attributes && (product as any).attributes.length > 0 ? 'variable' : 'simple',
+      type: product.type || 'simple',
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
     }))
     : []; // Empty array if API fails - will show skeletons
 
@@ -49,7 +116,9 @@ async function TopSellingProductsSection() {
       badge: product.is_top_selling ? 'Top Selling' : undefined,
       rating: 4.5,
       inStock: isProductInStock(product.stock, product.is_out_of_stock),
-      type: (product as any).attributes && (product as any).attributes.length > 0 ? 'variable' : 'simple',
+      type: product.type || 'simple',
+      shipping_in_dhaka: product.shipping_in_dhaka,
+      shipping_outside_dhaka: product.shipping_outside_dhaka,
     }))
     : []; // Empty array if API fails - will show skeletons
 
@@ -126,6 +195,11 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* Campaigns Section */}
+      <Suspense fallback={null}>
+        <CampaignsSection />
+      </Suspense>
+
       {/* Dynamic Category Card Sections from API */}
       {homeCategoriesData.success && homeCategoriesData.data.length > 0 && (
         <div className="container mx-auto px-3 sm:px-4 py-8">
@@ -174,6 +248,11 @@ export default async function Home() {
 
       {/* Main Content */}
       <div className="container mx-auto px-3 sm:px-4 py-8 space-y-10">
+        {/* New Arrivals */}
+        <Suspense fallback={<ProductsSectionSkeleton title="New Arrivals" />}>
+          <NewArrivalsSection />
+        </Suspense>
+
         {/* Featured Products - Hot Deals */}
         <Suspense fallback={<ProductsSectionSkeleton title="Hot Deals" />}>
           <FeaturedProductsSection />

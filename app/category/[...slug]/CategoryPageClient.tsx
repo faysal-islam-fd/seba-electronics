@@ -68,7 +68,7 @@ export default function CategoryPageClient({
 }: CategoryPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [priceRange, setPriceRange] = useState<[number, number]>([
     initialMinPrice || 0,
@@ -77,7 +77,7 @@ export default function CategoryPageClient({
   const [selectedBrandId, setSelectedBrandId] = useState<number | undefined>(initialBrandId);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | undefined>(initialSubcategoryId);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const [filtersOpen, setFiltersOpen] = useState({
     price: false,
     brand: false,
@@ -90,13 +90,11 @@ export default function CategoryPageClient({
   const subcategories = currentCategory.children || [];
 
   // Debug logging
-  console.log('🔍 CategoryPageClient - Products received:', products.length);
-  console.log('🔍 CategoryPageClient - Meta:', meta);
-  console.log('🔍 CategoryPageClient - InitialProducts success:', initialProducts.success);
+
 
   const updateURL = (updates: Record<string, any>) => {
     const params = new URLSearchParams(searchParams);
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '' || value === 0 || value === 300000) {
         params.delete(key);
@@ -104,7 +102,7 @@ export default function CategoryPageClient({
         params.set(key, String(value));
       }
     });
-    
+
     router.push(`/category/${currentCategory.slug}?${params.toString()}`);
   };
 
@@ -150,7 +148,7 @@ export default function CategoryPageClient({
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Breadcrumb */}
         <div className="mb-4">
-          <Breadcrumb 
+          <Breadcrumb
             items={[
               ...(parentCategory ? [
                 { label: parentCategory.name, href: `/category/${parentCategory.slug}` }
@@ -335,6 +333,9 @@ export default function CategoryPageClient({
                       badge={product.is_featured ? 'Featured' : undefined}
                       rating={4.5}
                       inStock={!product.is_out_of_stock}
+                      type={product.type || 'simple'}
+                      shipping_in_dhaka={product.shipping_in_dhaka}
+                      shipping_outside_dhaka={product.shipping_outside_dhaka}
                     />
                   ))}
                 </div>
@@ -349,7 +350,7 @@ export default function CategoryPageClient({
                     >
                       Previous
                     </button>
-                    
+
                     <div className="flex items-center gap-2">
                       {[...Array(Math.min(5, meta.last_page))].map((_, i) => {
                         const page = i + 1;
@@ -357,11 +358,10 @@ export default function CategoryPageClient({
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`w-10 h-10 rounded-lg text-sm font-medium ${
-                              initialPage === page
-                                ? 'bg-blue-600 text-white'
-                                : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`w-10 h-10 rounded-lg text-sm font-medium ${initialPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             {page}
                           </button>

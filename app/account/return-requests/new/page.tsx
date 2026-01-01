@@ -22,7 +22,7 @@ export default function NewReturnRequestPage() {
   const [refundAccountInfo, setRefundAccountInfo] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  
+
   const { data: ordersData } = useGetOrdersQuery({ page: 1, per_page: 100 });
   const { data: orderDetailsData } = useGetOrderDetailsQuery(selectedOrderNumber || '', {
     skip: !selectedOrderNumber,
@@ -61,10 +61,10 @@ export default function NewReturnRequestPage() {
       showWarning('Maximum 5 images allowed', 'Image Limit Reached');
       return;
     }
-    
+
     const newImages = [...images, ...files];
     setImages(newImages);
-    
+
     // Create previews
     const newPreviews = files.map(file => URL.createObjectURL(file));
     setImagePreviews([...imagePreviews, ...newPreviews]);
@@ -81,17 +81,17 @@ export default function NewReturnRequestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedOrderNumber || !selectedOrderItemId) {
       showWarning('Please select an order and item', 'Selection Required');
       return;
     }
-    
+
     if (!description.trim()) {
       showWarning('Please provide a description', 'Description Required');
       return;
     }
-    
+
     if (refundMethod === 'bank_transfer' && !refundAccountInfo.trim()) {
       showWarning('Please provide bank account information for bank transfer refund', 'Account Information Required');
       return;
@@ -108,7 +108,7 @@ export default function NewReturnRequestPage() {
         refund_method: refundMethod,
         refund_account_info: refundMethod === 'bank_transfer' ? refundAccountInfo : undefined,
       }).unwrap();
-      
+
       router.push(`/account/return-requests/${result.data.id}`);
     } catch (err: any) {
       console.error('Failed to create return request:', err);
@@ -170,57 +170,56 @@ export default function NewReturnRequestPage() {
                 </div>
               )}
               {orderItems.length > 0 && (
-              <div className="space-y-3">
-                {orderItems.map((item: any, index: number) => {
-                  // Handle different item structures:
-                  // - Flat structure: product_name, product_image (from order details)
-                  // - Nested structure: product.title, product.thumbnail (from order list)
-                  const productTitle = item.product_name || item.product?.title || item.title || item.name || 'Product';
-                  const productThumbnail = item.product_image || item.product?.thumbnail || item.thumbnail || item.image || '/products/placeholder.jpg';
-                  const itemPrice = item.price || item.unit_price || 0;
-                  const itemQuantity = item.quantity || 1;
-                  
-                  // Prioritize order_item_id from API response
-                  const itemId = item.order_item_id || item.id || item.item_id || index + 1;
-                  
-                  return (
-                    <div
-                      key={`${itemId}-${index}`}
-                      onClick={() => {
-                        console.log('Selected item:', { itemId, item });
-                        setSelectedOrderItemId(itemId);
-                      }}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        selectedOrderItemId === itemId
-                          ? 'border-rose-500 bg-rose-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex gap-4">
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
-                          <Image
-                            src={productThumbnail}
-                            alt={productTitle}
-                            fill
-                            className="object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/products/placeholder.jpg';
-                            }}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 mb-1">{productTitle}</h3>
-                          <p className="text-sm text-gray-600">Quantity: {itemQuantity}</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">৳ {itemPrice.toLocaleString()}</p>
-                          {selectedOrderItemId === itemId && (
-                            <p className="text-xs text-rose-600 mt-1 font-medium">✓ Selected</p>
-                          )}
+                <div className="space-y-3">
+                  {orderItems.map((item: any, index: number) => {
+                    // Handle different item structures:
+                    // - Flat structure: product_name, product_image (from order details)
+                    // - Nested structure: product.title, product.thumbnail (from order list)
+                    const productTitle = item.product_name || item.product?.title || item.title || item.name || 'Product';
+                    const productThumbnail = item.product_image || item.product?.thumbnail || item.thumbnail || item.image || '/products/placeholder.jpg';
+                    const itemPrice = item.price || item.unit_price || 0;
+                    const itemQuantity = item.quantity || 1;
+
+                    // Prioritize order_item_id from API response
+                    const itemId = item.order_item_id || item.id || item.item_id || index + 1;
+
+                    return (
+                      <div
+                        key={`${itemId}-${index}`}
+                        onClick={() => {
+
+                          setSelectedOrderItemId(itemId);
+                        }}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedOrderItemId === itemId
+                            ? 'border-rose-500 bg-rose-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                      >
+                        <div className="flex gap-4">
+                          <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0">
+                            <Image
+                              src={productThumbnail}
+                              alt={productTitle}
+                              fill
+                              className="object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/products/placeholder.jpg';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 mb-1">{productTitle}</h3>
+                            <p className="text-sm text-gray-600">Quantity: {itemQuantity}</p>
+                            <p className="text-sm font-semibold text-gray-900 mt-1">৳ {itemPrice.toLocaleString()}</p>
+                            {selectedOrderItemId === itemId && (
+                              <p className="text-xs text-rose-600 mt-1 font-medium">✓ Selected</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
@@ -236,11 +235,10 @@ export default function NewReturnRequestPage() {
                   key={reqType}
                   type="button"
                   onClick={() => setType(reqType)}
-                  className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${
-                    type === reqType
+                  className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${type === reqType
                       ? 'border-rose-500 bg-rose-50 text-rose-700'
                       : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   {reqType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </button>
@@ -285,7 +283,7 @@ export default function NewReturnRequestPage() {
           {/* Refund Method */}
           <div className="space-y-4 pt-4 border-t-2 border-gray-200">
             <h3 className="text-lg font-bold text-gray-900">Refund Method</h3>
-            
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 How would you like to receive your refund? <span className="text-red-500">*</span>
@@ -296,11 +294,10 @@ export default function NewReturnRequestPage() {
                     key={method}
                     type="button"
                     onClick={() => setRefundMethod(method)}
-                    className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${
-                      refundMethod === method
+                    className={`px-4 py-3 rounded-xl border-2 font-semibold transition-all ${refundMethod === method
                         ? 'border-rose-500 bg-rose-50 text-rose-700'
                         : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     {method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                   </button>
@@ -346,7 +343,7 @@ export default function NewReturnRequestPage() {
                   disabled={images.length >= 5}
                 />
               </label>
-              
+
               {imagePreviews.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                   {imagePreviews.map((preview, index) => (
