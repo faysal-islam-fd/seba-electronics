@@ -120,7 +120,7 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
                                 price={product.final_price}
                                 originalPrice={product.price !== product.final_price ? product.price : undefined}
                                 image={product.thumbnail || '/products/placeholder.jpg'}
-                                discount={product.discount > 0 ? Math.round(product.discount) : undefined}
+                                discount={(product.discount ?? 0) > 0 ? Math.round(product.discount ?? 0) : undefined}
                                 badge={product.is_featured ? 'Featured' : undefined}
                                 inStock={isProductInStock(product.stock, false)} // Assuming is_out_of_stock is usually redundant if stock > 0
                                 shipping_in_dhaka={product.shipping_in_dhaka}
